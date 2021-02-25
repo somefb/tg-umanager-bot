@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "outDir": "./build",
+    "noEmitOnError": true,
+    "target": "es2019",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "declaration": false,
+    "removeComments": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "allowJs": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "build", ".*"]
+}
