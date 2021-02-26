@@ -22,7 +22,6 @@ process.on("uncaughtException", (err) => {
 
 process.on("unhandledRejection", (err) => {
   console.error("Error in the app\n", err);
-  // todo limits 30 usersOrMessages/sec and 20 messagesToSameGroup/minute === error_code 429
 });
 
 process.on("SIGINT", () => {

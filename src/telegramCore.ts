@@ -2,7 +2,7 @@ import FormData from "form-data";
 import { createReadStream } from "fs";
 import http from "http";
 import https, { RequestOptions } from "https";
-import { ApiResponse, Message, P, TelegramPR, Update, WebhookInfo } from "typegram";
+import { ApiError, ApiResponse, Message, P, TelegramPR, Update, WebhookInfo } from "typegram";
 import { ITelegramCore, Opts } from "./types";
 
 type MyHttpOptions<O> = Partial<{
@@ -56,44 +56,62 @@ export default class TelegramCore implements ITelegramCore {
       };
     }
 
-    return new Promise<T>((resolve, reject) => {
-      const req = https
-        .request(
-          url,
-          options,
-          opts?.skipResponse
-            ? undefined
-            : (res) => {
-                let txt = "";
-                res.on("data", (chunk) => {
-                  txt += chunk;
-                });
-                res.on("end", () => {
-                  const result = JSON.parse(txt) as T;
-                  if (!opts?.skipApiErrors && (!result || !((result as unknown) as ApiResponse<unknown>).ok)) {
-                    console.error("TelegramCore. API error: \n" + txt);
-                    reject(result);
-                  } else {
-                    resolve(result);
-                  }
-                });
-              }
-        )
-        .on("error", (err) => {
-          console.error("TelegramCore. HTTP error: \n" + err.message);
-          reject(err);
-        });
+    const makeRequest = () => {
+      return new Promise<T>((resolve, reject) => {
+        const req = https
+          .request(
+            url,
+            options,
+            opts?.skipResponse
+              ? undefined
+              : (res) => {
+                  let txt = "";
+                  res.on("data", (chunk) => {
+                    txt += chunk;
+                  });
+                  res.on("end", () => {
+                    const result = JSON.parse(txt) as T;
+                    if (!opts?.skipApiErrors && (!result || !((result as unknown) as ApiResponse<unknown>).ok)) {
+                      const rErr = (result as unknown) as ApiError | undefined;
+                      if (rErr?.error_code === 429) {
+                        // limits 30 usersOrMessages/sec and 20 messagesToSameGroup/minute === error_code 429
+                        // todo theoreticaly possible: Maximum call stack size exceeded
 
-      if (form) {
-        form.pipe(req);
-      } else {
-        data && req.write(data);
-        req.end();
-      }
-      if (opts?.skipResponse) {
-        resolve(({} as unknown) as T);
-      }
-    });
+                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                        // @ts-ignore
+                        const t = rErr.parameters?.retry_after || 1;
+                        console.warn(`TelegramCore. Got 429 error. Will retry response after ${t} sec`);
+                        setTimeout(() => {
+                          resolve(makeRequest());
+                        }, t);
+                      } else {
+                        console.error("TelegramCore. API error: \n" + txt);
+                        reject(result);
+                      }
+                    } else {
+                      resolve(result);
+                    }
+                  });
+                }
+          )
+          .on("error", (err) => {
+            console.error("TelegramCore. HTTP error: \n" + err.message);
+            reject(err);
+          });
+
+        if (form) {
+          form.pipe(req);
+        } else {
+          data && req.write(data);
+          req.end();
+        }
+        if (opts?.skipResponse) {
+          resolve(({} as unknown) as T);
+        }
+      });
+    };
+
+    return makeRequest();
   }
 
   private httpGet = <T, O extends Record<string, unknown>>(cmd: keyof TelegramPR): Promise<ApiResponse<T>> =>
