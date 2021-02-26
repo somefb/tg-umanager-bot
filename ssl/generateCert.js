@@ -7,45 +7,56 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const selfsigned = require("selfsigned");
 const fs = require("fs");
+const readline = require("readline");
 
 console.log("Certificate. Generating...");
 
-const attrs = [
-  {
-    name: "commonName",
-    // todo fix certificate name
-    value: "ec2-18-157-223-65.eu-central-1.compute.amazonaws.com",
-  },
-  {
-    name: "countryName",
-    value: "BLR",
-  },
-  {
-    shortName: "ST",
-    value: "Minsk",
-  },
-  {
-    name: "localityName",
-    value: "Minsk",
-  },
-  {
-    name: "organizationName",
-    value: "Freedom",
-  },
-  {
-    shortName: "OU",
-    value: "Test",
-  },
-];
-const pems = selfsigned.generate(attrs, {
-  days: 365,
-  algorithm: "sha256",
-  keySize: 2048,
+function createCert(CNvalue) {
+  const attrs = [
+    {
+      name: "commonName",
+      value: CNvalue, // domain wher is certificate will be used: "yoursite.amazonaws.com",
+    },
+    {
+      name: "countryName",
+      value: "BLR",
+    },
+    {
+      shortName: "ST",
+      value: "Minsk",
+    },
+    {
+      name: "localityName",
+      value: "Minsk",
+    },
+    {
+      name: "organizationName",
+      value: "Freedom",
+    },
+    {
+      shortName: "OU",
+      value: "Test",
+    },
+  ];
+  const pems = selfsigned.generate(attrs, {
+    days: 365,
+    algorithm: "sha256",
+    keySize: 2048,
+  });
+
+  //console.log(pems);
+
+  console.log("Certificate. Writing into files...");
+  fs.writeFileSync("./ssl/cert.key", pems.private);
+  fs.writeFileSync("./ssl/cert.pem", pems.cert);
+  console.log("Certificate. Done");
+}
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
 });
-
-//console.log(pems);
-
-console.log("Certificate. Writing into files...");
-fs.writeFileSync("./ssl/cert.key", pems.private);
-fs.writeFileSync("./ssl/cert.pem", pems.cert);
-console.log("Certificate. Done");
+rl.question("Certificate. Enter hostName (CN in certificate) here:", (str) => {
+  rl.close();
+  createCert(str);
+});
