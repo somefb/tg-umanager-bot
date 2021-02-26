@@ -108,7 +108,8 @@ export default class TelegramService implements ITelegramService {
         console.error(
           `TelegramService '${this.cfg.name}'. Error during the setting webhook. Switching to getUpdate();`
         );
-        this.listen(options);
+        // listen by ordinary logic
+        this.listen({ ...options, certPath: undefined, ownDomainURL: undefined, keyPath: undefined });
         return;
       }
     }

@@ -70,7 +70,7 @@ async function runApp() {
             })
             .on("error", (err) => {
               console.error("Impossible to define domainURL\n", err);
-              resolve("undefined");
+              resolve(undefined);
             });
         });
       }
