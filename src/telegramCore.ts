@@ -79,7 +79,7 @@ export default class TelegramCore implements ITelegramCore {
 
                         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                         // @ts-ignore
-                        const t = rErr.parameters?.retry_after || 1;
+                        const t = (rErr.parameters?.retry_after || 1) * 1000;
                         console.warn(`TelegramCore. Got 429 error. Will retry response after ${t} sec`);
                         setTimeout(() => {
                           resolve(makeRequest());
@@ -94,9 +94,16 @@ export default class TelegramCore implements ITelegramCore {
                   });
                 }
           )
-          .on("error", (err) => {
-            console.error("TelegramCore. HTTP error: \n" + err.message);
-            reject(err);
+          .on("error", (err: ErrnoException) => {
+            if (err.code === "ETIMEDOUT") {
+              console.warn("TelegramCore. Got ETIMEDOUT. Will retry response");
+              setTimeout(() => {
+                resolve(makeRequest());
+              }, 50);
+            } else {
+              console.error("TelegramCore. HTTP error: \n" + err.message, err);
+              reject(err);
+            }
           });
 
         if (form) {
@@ -231,4 +238,12 @@ export default class TelegramCore implements ITelegramCore {
   getWebhookInfo(): P<ApiResponse<WebhookInfo>> {
     return this.httpGet("getWebhookInfo");
   }
+}
+
+export interface ErrnoException extends Error {
+  errno?: number;
+  code?: string;
+  path?: string;
+  syscall?: string;
+  stack?: string;
 }

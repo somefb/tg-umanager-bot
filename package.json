@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node build/index.js --https",
     "test": "jest",
-    "serve": "./node_modules/.bin/ts-node src/index.ts",
+    "serve": "cross-env DEBUG=true ./node_modules/.bin/ts-node src/index.ts",
     "test-google": "./node_modules/.bin/ts-node src/googleDrive/check.ts",
     "file-read": "./node_modules/.bin/ts-node src/read.ts",
     "lint": "./node_modules/.bin/eslint --fix --cache ./**/*.{js,jsx,ts,tsx,json}",
@@ -35,6 +35,7 @@
     "@typescript-eslint/parser": "^4.14.1",
     "clean-webpack-plugin": "^3.0.0",
     "copy-webpack-plugin": "^7.0.0",
+    "cross-env": "^7.0.3",
     "editorconfig": "^0.15.3",
     "eslint": "^7.18.0",
     "eslint-config-prettier": "^7.2.0",

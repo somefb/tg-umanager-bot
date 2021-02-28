@@ -38,14 +38,14 @@ export default class TelegramService implements ITelegramService {
         this.gotUpdate(r);
       });
     } else {
-      process.stdout.write(".");
+      process.env.DEBUG && process.stdout.write(".");
     }
 
     this.isPending = false;
   }
 
   gotUpdate(v: Update): void {
-    console.warn("got update", v);
+    process.env.DEBUG && console.log("got update", v);
     try {
       const msg = (v as Tg.Update.MessageUpdate).message;
       if (msg) {
