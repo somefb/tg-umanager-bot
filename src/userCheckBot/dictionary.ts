@@ -91,7 +91,7 @@ const dictionary = [
   },
 ];
 
-const wordPairs: WordPair[] = [];
+export const wordPairs: WordPair[] = [];
 
 dictionary.forEach((s) => {
   s.replacers.forEach((pair) => {
@@ -100,11 +100,6 @@ dictionary.forEach((s) => {
 });
 
 export default dictionary;
-
-interface WordPair {
-  one: string;
-  two: string;
-}
 
 function getRandomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -115,11 +110,6 @@ export function generateUserKey(): { num: number; word: string } {
   const dictVal = dictionary[getRandomInt(0, dictionary.length - 1)];
   const word = dictVal.keyWords[getRandomInt(0, dictVal.keyWords.length - 1)];
   return { num, word };
-}
-
-export interface UserValidationKey {
-  num: number;
-  word: string;
 }
 
 export function shuffleArray<T>(array: T[]): void {
@@ -133,7 +123,7 @@ export function selectRandomFromArray<T>(arr: T[], count: number): T[] {
   const result: T[] = [];
   const excludeInd: boolean[] = new Array(arr.length);
   const lastInd = arr.length - 1;
-  if (arr.length === count) {
+  if (arr.length <= count) {
     return [...arr];
   }
   while (result.length < count) {
@@ -158,4 +148,33 @@ export function selectRandomFromArray<T>(arr: T[], count: number): T[] {
     excludeInd[i] = true;
   }
   return result;
+}
+
+//todo split to columns/rows ???
+export function generateWordPairs(ukey: UserValidationKey, rows: number, columns: number): WordPair[] {
+  const keyPairs = dictionary.find((v) => v.keyWords[0][0] === ukey.word[0])?.replacers;
+  if (!keyPairs) {
+    throw new Error(`word '${ukey.word}' is not defined in dictionary`);
+  }
+
+  const cnt = rows * columns;
+
+  const p = wordPairs.filter((v) => v.one[0] !== ukey.word[0] && v.two[0] !== ukey.word[0]);
+  const arr = selectRandomFromArray(p, cnt - 1);
+
+  const keyPair = keyPairs[getRandomInt(0, keyPairs.length - 1)];
+  const keyPairInd = getRandomInt(0, arr.length - 1);
+  arr.splice(keyPairInd, 0, keyPair);
+
+  return arr;
+}
+
+export interface WordPair {
+  one: string;
+  two: string;
+}
+
+export interface UserValidationKey {
+  num: number;
+  word: string;
 }
