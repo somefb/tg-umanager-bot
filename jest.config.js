@@ -4,4 +4,5 @@ module.exports = {
   testEnvironment: "node",
   verbose: true,
   cache: true,
+  setupFilesAfterEnv: ["jest-expect-message"],
 };

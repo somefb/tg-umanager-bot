@@ -1,6 +1,6 @@
 const dictionary = [
   {
-    keyWord: ["волк", "варан", "вагон"],
+    keyWords: ["волк", "варан", "вагон"],
     replacers: [
       { one: "ожидание", two: "время" },
       { one: "ёмкость", two: "ведро" },
@@ -10,7 +10,7 @@ const dictionary = [
     ],
   },
   {
-    keyWord: ["черепаха", "червь", "чародей"],
+    keyWords: ["черепаха", "червь", "чародей"],
     replacers: [
       { one: "лес", two: "чаща" },
       { one: "правда", two: "честнось" },
@@ -20,7 +20,7 @@ const dictionary = [
     ],
   },
   {
-    keyWord: ["травинка", "терем", "танк"],
+    keyWords: ["травинка", "терем", "танк"],
     replacers: [
       { one: "хруст", two: "треск" },
       { one: "мотоблок", two: "трактор" },
@@ -30,7 +30,7 @@ const dictionary = [
     ],
   },
   {
-    keyWord: ["палец", "поцелуй", "призрак"],
+    keyWords: ["палец", "поцелуй", "призрак"],
     replacers: [
       { one: "русло", two: "приток" },
       { one: "солидарность", two: "помощь" },
@@ -40,7 +40,7 @@ const dictionary = [
     ],
   },
   {
-    keyWord: ["жизнь", "желание", "жаба"],
+    keyWords: ["жизнь", "желание", "жаба"],
     replacers: [
       { one: "скупость", two: "жадность" },
       { one: "грязь", two: "жижа" },
@@ -50,7 +50,7 @@ const dictionary = [
     ],
   },
   {
-    keyWord: ["камень", "канистра", "кит"],
+    keyWords: ["камень", "канистра", "кит"],
     replacers: [
       { one: "стул", two: "кресло" },
       { one: "дьякон", two: "ксёнз" },
@@ -60,7 +60,7 @@ const dictionary = [
     ],
   },
   {
-    keyWord: ["луч", "луна", "лиса"],
+    keyWords: ["луч", "луна", "лиса"],
     replacers: [
       { one: "сундучок", two: "ларец" },
       { one: "крючок", two: "леска" },
@@ -70,7 +70,7 @@ const dictionary = [
     ],
   },
   {
-    keyWord: ["струна", "сова", "слон"],
+    keyWords: ["струна", "сова", "слон"],
     replacers: [
       { one: "мясо", two: "струганина" },
       { one: "белое", two: "сало" },
@@ -80,7 +80,7 @@ const dictionary = [
     ],
   },
   {
-    keyWord: ["апельсин", "ананас", "антилопа"],
+    keyWords: ["апельсин", "ананас", "антилопа"],
     replacers: [
       { one: "качели", two: "аттракцион" },
       { one: "шутка", two: "анекдот" },
@@ -91,4 +91,71 @@ const dictionary = [
   },
 ];
 
+const wordPairs: WordPair[] = [];
+
+dictionary.forEach((s) => {
+  s.replacers.forEach((pair) => {
+    wordPairs.push(pair);
+  });
+});
+
 export default dictionary;
+
+interface WordPair {
+  one: string;
+  two: string;
+}
+
+function getRandomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+export function generateUserKey(): { num: number; word: string } {
+  const num = getRandomInt(1, 9);
+  const dictVal = dictionary[getRandomInt(0, dictionary.length - 1)];
+  const word = dictVal.keyWords[getRandomInt(0, dictVal.keyWords.length - 1)];
+  return { num, word };
+}
+
+export interface UserValidationKey {
+  num: number;
+  word: string;
+}
+
+export function shuffleArray<T>(array: T[]): void {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+export function selectRandomFromArray<T>(arr: T[], count: number): T[] {
+  const result: T[] = [];
+  const excludeInd: boolean[] = new Array(arr.length);
+  const lastInd = arr.length - 1;
+  if (arr.length === count) {
+    return [...arr];
+  }
+  while (result.length < count) {
+    let i = getRandomInt(0, arr.length - 1);
+    if (excludeInd[i]) {
+      let overflow = false;
+      while (true) {
+        if (++i >= lastInd) {
+          i = 0;
+          if (overflow) {
+            throw new Error("Overflow");
+          }
+          overflow = true;
+        }
+        if (!excludeInd[i]) {
+          break;
+        }
+      }
+    }
+
+    result.push(arr[i]);
+    excludeInd[i] = true;
+  }
+  return result;
+}
