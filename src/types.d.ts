@@ -1,4 +1,4 @@
-import { ApiError, ApiResponse, ApiSuccess, BotCommand, Message, Typegram } from "typegram";
+import { ApiError, ApiSuccess, BotCommand, Message, Typegram, Update } from "typegram";
 
 /** This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data in the usual way that files are uploaded via the browser. */
 export type InputFile = { path: string };
@@ -48,10 +48,23 @@ export interface NotifyMessage extends ApiSuccess<Message.TextMessage> {
   cancel: () => Promise<void>;
 }
 
+export type ServiceEventCallback<T> = (event: ServiceEvent<T>) => void;
+
+export interface ServiceEvent<T> {
+  preventDefault: () => void;
+  result: T;
+}
+
+export interface NewTextMessage extends Update.MessageUpdate, Update.AbstractMessageUpdate {
+  message: Update.New & Update.NonChannel & Message.TextMessage;
+}
+
 export interface ITelegramService {
   core: ITelegramCore;
   /** sendMessage for at least 3 seconds and remove message by cancel() trigger */
   notify(args: Opts<"sendMessage">, minNotifyMs?: number): Promise<ApiError | NotifyMessage>;
+
+  onGotCallbackQuery(): Promise<ServiceEvent<Update.CallbackQueryUpdate>>;
 }
 
 export interface TelegramListenOptions {

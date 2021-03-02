@@ -1,7 +1,16 @@
 import * as Tg from "typegram";
-import { ApiResponse, Update } from "typegram";
+import { ApiResponse, Message, Update } from "typegram";
 import TelegramCore from "./telegramCore";
-import { BotConfig, ITelegramService, MyBotCommand, NotifyMessage, Opts, TelegramListenOptions } from "./types";
+import {
+  BotConfig,
+  ITelegramService,
+  MyBotCommand,
+  NewTextMessage,
+  NotifyMessage,
+  Opts,
+  ServiceEvent,
+  TelegramListenOptions,
+} from "./types";
 
 const services: TelegramService[] = [];
 
@@ -47,27 +56,65 @@ export default class TelegramService implements ITelegramService {
   gotUpdate(v: Update): void {
     process.env.DEBUG && console.log("got update", v);
     try {
-      const msg = (v as Tg.Update.MessageUpdate).message;
-      if (msg) {
-        const text = (msg as Tg.Message.TextMessage).text;
-        if (text) {
-          if (text.startsWith("/")) {
-            let end: number | undefined = text.indexOf(" ", 1);
-            if (end === -1) {
-              end = undefined;
-            }
-            const textCmd = text.substring(0, end);
-            // this is command to bot
-            const cmd = this.commands.find((c) => c.command === textCmd);
-            cmd && cmd.callback(msg as Tg.Message.TextMessage, this);
+      let defFn;
+
+      const type: ServiceEvents | null = (() => {
+        if ((v as Update.CallbackQueryUpdate).callback_query) {
+          return ServiceEvents.gotCallbackQuery;
+        }
+        if ((v as Update.MessageUpdate).message) {
+          const msg = (v as Update.MessageUpdate).message;
+          if ((msg as Message.TextMessage).text?.startsWith("/")) {
+            defFn = () => this.gotBotCommand(v as NewTextMessage);
+            return ServiceEvents.gotBotCommand;
+          }
+          return ServiceEvents.gotNewMessage;
+        }
+        if ((v as Update.EditedMessageUpdate).edited_message) {
+          return ServiceEvents.gotEditedMessage;
+        }
+        return null;
+      })();
+
+      let isPrevented = false;
+      const preventDefault = () => {
+        isPrevented = true;
+      };
+
+      const tmpArr: IEventListenerObj[] = [];
+      const isHandled = this.eventListeners.some((e) => {
+        if (e.type === type) {
+          e.resolve({ preventDefault, result: v });
+          if (isPrevented) {
+            return true;
           }
         } else {
-          console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, msg);
+          tmpArr.push(e);
         }
+      });
+      this.eventListeners = tmpArr;
+
+      if (isHandled) {
+        process.env.DEBUG && console.log("Update-handling is prevented", v);
+        return;
+      } else if (!defFn || !defFn()) {
+        console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, v);
       }
     } catch (err) {
       console.error(`TelegramService '${this.cfg.name}'. Error in gotUpdate\n`, err);
     }
+  }
+
+  gotBotCommand(v: NewTextMessage): boolean {
+    const text = v.message.text;
+    let end: number | undefined = text.indexOf(" ", 1);
+    if (end === -1) {
+      end = undefined;
+    }
+    const textCmd = text.substring(0, end);
+    const cmd = this.commands.find((c) => c.command === textCmd);
+    cmd && cmd.callback(v.message, this);
+    return !!cmd;
   }
 
   /** listen for updates */
@@ -159,6 +206,30 @@ export default class TelegramService implements ITelegramService {
     };
     return msg;
   }
+
+  eventListeners: IEventListenerObj[] = [];
+
+  onGotCallbackQuery(): Promise<ServiceEvent<Update.CallbackQueryUpdate>> {
+    return new Promise((resolve) => {
+      this.eventListeners.push({
+        type: ServiceEvents.gotCallbackQuery,
+        resolve: resolve as (v: ServiceEvent<Update>) => void,
+      });
+    });
+  }
+}
+
+interface IEventListenerObj {
+  type: ServiceEvents;
+  resolve: (v: ServiceEvent<Update>) => void;
+}
+
+const enum ServiceEvents {
+  gotUpdate,
+  gotCallbackQuery,
+  gotNewMessage,
+  gotEditedMessage,
+  gotBotCommand,
 }
 
 function processNow() {

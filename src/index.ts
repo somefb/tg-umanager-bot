@@ -121,6 +121,7 @@ async function runApp() {
     });
   } catch (err) {
     console.error("Error in the main module\n" + err);
+    console.trace();
   }
 }
 
