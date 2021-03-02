@@ -4,6 +4,7 @@ import dictionary, {
   selectRandomFromArray,
   UserValidationKey,
   wordPairs,
+  mapToTable,
 } from "./dictionary";
 
 const checkUnique = <T>(arr: T[]): boolean => {
@@ -77,13 +78,13 @@ describe("dictionary functions", () => {
   });
 
   test("generatePairs()", () => {
-    const check = (ukey: UserValidationKey, rows: number, columns: number): void => {
-      const v = generateWordPairs(ukey, rows, columns);
+    const check = (ukey: UserValidationKey, count: number): void => {
+      const v = generateWordPairs(ukey, count);
       const errMsg = `Error for word '${ukey.word}'. Got arr: ${JSON.stringify(v)}`;
 
       // console.warn("got", JSON.stringify(v));
       // length is expected
-      expect(v, errMsg).toHaveLength(rows * columns);
+      expect(v, errMsg).toHaveLength(count);
       // has keyWord
       expect(
         v.some((a) => a.two[0] === ukey.word[0]),
@@ -101,9 +102,33 @@ describe("dictionary functions", () => {
       ).toBeFalsy();
     };
 
-    check({ num: 1, word: dictionary[0].keyWords[0] }, 4, 3);
-    check({ num: 1, word: dictionary[0].keyWords[0] }, 4, 3);
-    check({ num: 1, word: dictionary[1].keyWords[1] }, 4, 3);
-    check({ num: 1, word: dictionary[4].keyWords[2] }, 4, 3);
+    check({ num: 1, word: dictionary[0].keyWords[0] }, 12);
+    check({ num: 1, word: dictionary[0].keyWords[0] }, 10);
+    check({ num: 1, word: dictionary[1].keyWords[1] }, 8);
+    check({ num: 1, word: dictionary[4].keyWords[2] }, 9);
+  });
+
+  test("mapToTable()", () => {
+    const v = mapToTable([1, 2, 3, 4, 5, 6], 2, 3, (item) => item);
+    expect(v).toHaveLength(2);
+    v.forEach((a) => expect(a).toHaveLength(3));
+    expect(v[0][0]).toBe(1);
+    expect(v[0][1]).toBe(2);
+    expect(v[0][2]).toBe(3);
+
+    expect(v[1][0]).toBe(4);
+    expect(v[1][1]).toBe(5);
+    expect(v[1][2]).toBe(6);
+
+    // when arr length less than rows*columns
+    const v2 = mapToTable(["a", "b", "c", "d"], 2, 3, (item) => item);
+    expect(v2).toHaveLength(2);
+    expect(v2[0]).toHaveLength(3);
+    expect(v2[1]).toHaveLength(1);
+
+    expect(v2[0][0]).toBe("a");
+    expect(v2[0][1]).toBe("b");
+    expect(v2[0][2]).toBe("c");
+    expect(v2[1][0]).toBe("d");
   });
 });
