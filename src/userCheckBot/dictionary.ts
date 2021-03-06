@@ -101,8 +101,12 @@ dictionary.forEach((s) => {
 
 export default dictionary;
 
-function getRandomInt(min: number, max: number) {
+export function getRandomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+export function getRandomItem<T>(arr: T[]): T {
+  return arr[getRandomInt(0, arr.length - 1)];
 }
 
 export function generateUserKey(): { num: number; word: string } {
@@ -150,7 +154,6 @@ export function selectRandomFromArray<T>(arr: T[], count: number): T[] {
   return result;
 }
 
-//todo split to columns/rows ???
 export function generateWordPairs(ukey: UserValidationKey, count: number): WordPair[] {
   const keyPairs = dictionary.find((v) => v.keyWords[0][0] === ukey.word[0])?.replacers;
   if (!keyPairs) {
@@ -167,6 +170,49 @@ export function generateWordPairs(ukey: UserValidationKey, count: number): WordP
   return arr;
 }
 
+export function fixOverflowIndex(curIndex: number, lastIndex: number): number {
+  while (curIndex > lastIndex) {
+    curIndex -= lastIndex + 1;
+  }
+  while (curIndex < 0) {
+    curIndex += lastIndex + 1;
+  }
+  return curIndex;
+}
+
+export function generateWordPairsNext(
+  ukey: UserValidationKey,
+  selectedPair: WordPair,
+  previousPairs: WordPair[],
+  isDirect: boolean
+): { pairs: WordPair[]; expected: string; truthy: string } {
+  //todo how to test without shuffle array
+  //shuffleArray(previousPairs);
+
+  const lastIndex = previousPairs.length - 1;
+  let truthyIndex = previousPairs.findIndex((v) => v === selectedPair);
+  const ukeyIndex = previousPairs.findIndex((v) => v.two[0] === ukey.word[0]);
+
+  let expectedIndex = ukeyIndex + (isDirect ? ukey.num : -1 * ukey.num);
+  expectedIndex = fixOverflowIndex(expectedIndex, lastIndex);
+  if (expectedIndex === truthyIndex) {
+    const prevTrythyIndex = truthyIndex;
+
+    while (1) {
+      truthyIndex = fixOverflowIndex(--truthyIndex, lastIndex);
+      if (truthyIndex !== expectedIndex && truthyIndex !== ukeyIndex) {
+        break;
+      }
+    }
+    [previousPairs[truthyIndex], previousPairs[prevTrythyIndex]] = [
+      previousPairs[prevTrythyIndex],
+      previousPairs[truthyIndex],
+    ];
+  }
+
+  return { pairs: previousPairs, expected: previousPairs[expectedIndex].two, truthy: selectedPair.two };
+}
+
 export function mapToTable<T, R>(arr: T[], rows: number, columns: number, callback: (item: T) => R): Array<Array<R>> {
   const result: Array<Array<R>> = [];
   let i = 0;
@@ -175,6 +221,27 @@ export function mapToTable<T, R>(arr: T[], rows: number, columns: number, callba
     result.push(vArr);
     for (let c = 0; c < columns && i < arr.length; ++c, ++i) {
       vArr.push(callback(arr[i]));
+    }
+  }
+
+  return result;
+}
+
+export function mapToTableByColumn<T, R>(
+  arr: T[],
+  rows: number,
+  columns: number,
+  callback: (item: T) => R
+): Array<Array<R>> {
+  const result: Array<Array<R>> = [];
+  for (let i = 0; i < rows; ++i) {
+    result.push([]);
+  }
+
+  let i = 0;
+  for (let c = 0; c < columns; ++c) {
+    for (let r = 0; r < rows && i < arr.length; ++r, ++i) {
+      result[r].push(callback(arr[i]));
     }
   }
 
