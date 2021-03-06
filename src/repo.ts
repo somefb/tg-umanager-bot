@@ -1,6 +1,19 @@
 import fs from "fs";
 import ChatItem from "./chatItem";
 import RepoGoogleDrive from "./googleDrive/repoGoogleDrive";
+import { UserValidationKey } from "./userCheckBot/dictionary";
+
+export class UserItem {
+  id: number;
+  validationKey: UserValidationKey;
+  /** Date in ms when the last validation is done */
+  validationDate = 0;
+
+  constructor(id: number, validationKey: UserValidationKey) {
+    this.id = id;
+    this.validationKey = validationKey;
+  }
+}
 
 /** This is basic singleton storage class for saving configuration etc. */
 export class RepoClass {
@@ -9,6 +22,8 @@ export class RepoClass {
   /**  date as number */
   version?: number;
   chats: ChatItem[] = [];
+  users: UserItem[] = [];
+
   googleDrive = new RepoGoogleDrive();
   // watch-fix: https://github.com/Microsoft/TypeScript/issues/3841#issuecomment-337560146
   ["constructor"]: typeof RepoClass;
@@ -17,6 +32,7 @@ export class RepoClass {
     return {
       version: Date.now(),
       chats: this.chats,
+      users: this.users,
     } as RepoClass;
   }
 
@@ -24,7 +40,8 @@ export class RepoClass {
     if (!v) {
       return;
     }
-    this.chats = v.chats.map((c) => Object.assign(new ChatItem(c.id), c));
+    this.chats = v.chats?.map((c) => Object.assign(new ChatItem(c.id), c)) || this.chats;
+    this.users = v.users?.map((c) => Object.assign(new UserItem(c.id, c.validationKey), c)) || this.users;
   }
 
   async init(filePath: string): Promise<void> {
@@ -66,6 +83,10 @@ export class RepoClass {
       this.chats.push(chat);
     }
     return chat;
+  }
+
+  getUser(id: number | undefined): UserItem | undefined {
+    return this.users.find((v) => v.id === id);
   }
 }
 
