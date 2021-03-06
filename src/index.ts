@@ -6,6 +6,7 @@ import MyBotCommands from "./commands";
 import TelegramService from "./telegramService";
 import { BotConfig, TelegramListenOptions } from "./types";
 import Repo from "./repo";
+import CheckBotCommands from "./userCheckBot";
 
 console.clear();
 
@@ -103,7 +104,7 @@ async function runApp() {
       {
         name: "checkBot",
         token: cfg.botCheckToken,
-        commands: [],
+        commands: CheckBotCommands,
       },
     ];
 
@@ -121,7 +122,7 @@ async function runApp() {
     });
   } catch (err) {
     console.error("Error in the main module\n" + err);
-    console.trace();
+    console.trace(err);
   }
 }
 
