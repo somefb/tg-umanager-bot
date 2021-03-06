@@ -81,21 +81,28 @@ export default class TelegramService implements ITelegramService {
         isPrevented = true;
       };
 
-      const tmpArr: IEventListenerObj[] = [];
-      const isHandled = this.eventListeners.some((e) => {
+      const leftListeners: IEventListenerObj<Update>[] = [];
+      const isHandled = this.eventListeners.some(async (e) => {
         if (e.type === type) {
-          e.resolve({ preventDefault, result: v });
+          if (e.predicate) {
+            if (e.predicate(v)) {
+              isPrevented = true;
+              await e.resolve({ preventDefault, result: v });
+            }
+          } else {
+            await e.resolve({ preventDefault, result: v });
+          }
+
           if (isPrevented) {
             return true;
           }
         } else {
-          tmpArr.push(e);
+          leftListeners.push(e);
         }
       });
-      this.eventListeners = tmpArr;
+      this.eventListeners = leftListeners;
 
       if (isHandled) {
-        process.env.DEBUG && console.log("Update-handling is prevented", v);
         return;
       } else if (!defFn || !defFn()) {
         console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, v);
@@ -207,21 +214,25 @@ export default class TelegramService implements ITelegramService {
     return msg;
   }
 
-  eventListeners: IEventListenerObj[] = [];
+  eventListeners: IEventListenerObj<Update>[] = [];
 
-  onGotCallbackQuery(): Promise<ServiceEvent<Update.CallbackQueryUpdate>> {
+  onGotCallbackQuery(
+    predicate: (e: Update.CallbackQueryUpdate) => boolean
+  ): Promise<ServiceEvent<Update.CallbackQueryUpdate>> {
     return new Promise((resolve) => {
       this.eventListeners.push({
         type: ServiceEvents.gotCallbackQuery,
-        resolve: resolve as (v: ServiceEvent<Update>) => void,
-      });
+        predicate,
+        resolve,
+      } as IEventListenerObj<Update>);
     });
   }
 }
 
-interface IEventListenerObj {
+interface IEventListenerObj<T extends Update> {
   type: ServiceEvents;
-  resolve: (v: ServiceEvent<Update>) => void;
+  predicate?: (e: T) => boolean;
+  resolve: (v: ServiceEvent<T>) => Promise<void>;
 }
 
 const enum ServiceEvents {

@@ -39,6 +39,8 @@ export type ITelegramCore = Pick<
   | "setWebhook"
   | "getWebhookInfo"
   | "deleteWebhook"
+  | "leaveChat"
+  | "editMessageText"
 > & {
   //
   deleteMessageForce(args: Opts<"deleteMessage">): Promise<void>;
@@ -64,7 +66,9 @@ export interface ITelegramService {
   /** sendMessage for at least 3 seconds and remove message by cancel() trigger */
   notify(args: Opts<"sendMessage">, minNotifyMs?: number): Promise<ApiError | NotifyMessage>;
 
-  onGotCallbackQuery(): Promise<ServiceEvent<Update.CallbackQueryUpdate>>;
+  onGotCallbackQuery(
+    predicate: (e: Update.CallbackQueryUpdate) => boolean
+  ): Promise<ServiceEvent<Update.CallbackQueryUpdate>>;
 }
 
 export interface TelegramListenOptions {

@@ -146,6 +146,10 @@ export default class TelegramCore implements ITelegramCore {
     return this.httpPost("sendMessage", args);
   }
 
+  editMessageText(args: Opts<"editMessageText">): P<ApiResponse<true | (Update.Edited & Message.TextMessage)>> {
+    return this.httpPost("editMessageText", args);
+  }
+
   deleteMessage(args: Opts<"deleteMessage">): P<ApiResponse<true>> {
     return this.httpPost("deleteMessage", args);
   }
@@ -237,6 +241,10 @@ export default class TelegramCore implements ITelegramCore {
 
   getWebhookInfo(): P<ApiResponse<WebhookInfo>> {
     return this.httpGet("getWebhookInfo");
+  }
+
+  leaveChat(args: { chat_id: string | number }): P<ApiResponse<true>> {
+    return this.httpPost("leaveChat", args);
   }
 }
 
