@@ -1,4 +1,5 @@
 import arrayFilterRandom from "../helpers/arrayFilterRandom";
+import arrayShuffle from "../helpers/arrayShuffle";
 import fixOverflowIndex from "../helpers/fixOverflowIndex";
 import intGetRandom from "../helpers/intGetRandom";
 
@@ -134,8 +135,7 @@ export function generateWordPairsNext(
   previousPairs: WordPair[],
   isDirect: boolean
 ): { pairs: WordPair[]; expected: string; truthy: string } {
-  //todo how to test without shuffle array
-  //arrayShuffle(previousPairs);
+  arrayShuffle(previousPairs);
 
   const lastIndex = previousPairs.length - 1;
   let truthyIndex = previousPairs.findIndex((v) => v === selectedPair);

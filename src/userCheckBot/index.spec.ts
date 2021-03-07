@@ -27,9 +27,7 @@ const checkUnique = <T>(arr: T[]): boolean => {
 
 beforeAll(() => {
   const m = require("../helpers/arrayShuffle");
-  //todo such mock doesn't work inside module
   m.default = <T>(arr: T[]) => {
-    // console.warn("shuffle");
     return arr;
   };
 });
