@@ -1,8 +1,10 @@
 import Repo from "../repo";
 import { MyBotCommand } from "../types";
+import { MyBotCommandTypes } from "./botCommandTypes";
 
 const CommandClear: MyBotCommand = {
   command: "clear",
+  type: MyBotCommandTypes.group,
   description: "удалить все возможные сообщения", // Possible restrictions: https://core.telegram.org/bots/api#deletemessage",
   callback: async (msg, service) => {
     const resMsg = await service.notify({

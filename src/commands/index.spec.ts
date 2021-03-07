@@ -13,6 +13,9 @@ describe("botCommands", () => {
       test("description length (3..256)", () => {
         expect(v.command.length >= 3 && v.command.length <= 256).toBeTruthy();
       });
+      test("command type is defined", () => {
+        expect(v.type).toBeDefined();
+      });
     });
   });
 });

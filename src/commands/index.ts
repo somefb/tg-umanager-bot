@@ -1,6 +1,7 @@
 import CommandClear from "./clear";
 import CommandClearDisableUntilHere from "./clearDisableUntilHere";
+import CommandHelp from "./help";
 
-const MyBotCommands = [CommandClear, CommandClearDisableUntilHere];
+const MyBotCommands = [CommandHelp, CommandClear, CommandClearDisableUntilHere];
 
 export default MyBotCommands;

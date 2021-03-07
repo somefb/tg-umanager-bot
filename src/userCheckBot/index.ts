@@ -1,6 +1,7 @@
 import { CallbackQuery, Message } from "typegram";
 import arrayGetRandomItem from "../helpers/arrayGetRandomItem";
 import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
+import Repo from "../repo";
 import { ITelegramService, MyBotCommand, Opts } from "../types";
 import { generateWordPairs, generateWordPairsNext } from "./dictionary";
 
@@ -34,16 +35,17 @@ async function callbackStart(msg: Message.TextMessage, service: ITelegramService
   try {
     // todo remove previous if restart
     // todo don't allow to add bot to chat: use event onBotAddedToChat
-    // todo uncomment
-    // const user = Repo.getUser(msg.from?.id);
-    // if (!user) {
-    //   await service.core.sendMessage({
-    //     chat_id: msg.chat.id,
-    //     text: "Упс. Похоже я поломался",
-    //   });
-    //   await service.core.leaveChat({ chat_id: msg.chat.id });
-    //   return;
-    // }
+    const user = Repo.getUser(msg.from?.id);
+    if (!user) {
+      await service.core.sendMessage({
+        chat_id: msg.chat.id,
+        text: "Упс, похоже я поломался",
+      });
+      // todo check this
+      await service.core.leaveChat({ chat_id: msg.chat.id });
+      return;
+    }
+
     const chatId = msg.chat.id;
     let message_id = 0;
 
@@ -81,14 +83,12 @@ async function callbackStart(msg: Message.TextMessage, service: ITelegramService
       return res.result;
     };
 
-    const ukey = { num: 1, word: "волк" };
-
     let validTimes = 0;
     let invalidTimes = 0;
     let msgPrefix = "";
     while (1) {
       // first part
-      const pairs = generateWordPairs(ukey, rows * collumns);
+      const pairs = generateWordPairs(user.validationKey, rows * collumns);
       const r = (await sendMessage(
         msgPrefix + "Выберите слово",
         pairs.map((v) => v.one)
@@ -107,7 +107,7 @@ async function callbackStart(msg: Message.TextMessage, service: ITelegramService
       }
 
       // second part
-      const nextObj = generateWordPairsNext(ukey, trueWordPair, pairs, true);
+      const nextObj = generateWordPairsNext(user.validationKey, trueWordPair, pairs, true);
       await sendMessage(
         `Выберите ассоциацию`,
         nextObj.pairs.map((v) => v.two)
@@ -119,6 +119,8 @@ async function callbackStart(msg: Message.TextMessage, service: ITelegramService
         ++validTimes;
         if (validTimes >= expectedValidTimes) {
           await sendMessage(arrayGetRandomItem(answersExpected_2), null);
+          user.isInvalid = false;
+          user.validationDate = Date.now();
           //todo timeout 10 sec and remove private chat
           break;
         } else {
@@ -133,8 +135,9 @@ async function callbackStart(msg: Message.TextMessage, service: ITelegramService
           await sendMessage(arrayGetRandomItem(answersFalse), null);
         }
         if (invalidTimes >= expectedInvalidTimes) {
-          // todo mark as invalid ???
-          // todo mark as locked - requires more strict validation
+          user.isInvalid = true;
+          user.validationDate = Date.now();
+          user.isLocked = true;
           // todo timeout 10 sec and remove private chat
           break;
         }

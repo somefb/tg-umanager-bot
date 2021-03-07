@@ -1,4 +1,5 @@
 import { ApiError, ApiSuccess, BotCommand, Message, Typegram, Update } from "typegram";
+import { MyBotCommandTypes } from "./commands/botCommandTypes";
 
 /** This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data in the usual way that files are uploaded via the browser. */
 export type InputFile = { path: string };
@@ -63,6 +64,7 @@ export interface NewTextMessage extends Update.MessageUpdate, Update.AbstractMes
 
 export interface ITelegramService {
   core: ITelegramCore;
+  cfg: BotConfig;
   /** sendMessage for at least 3 seconds and remove message by cancel() trigger */
   notify(args: Opts<"sendMessage">, minNotifyMs?: number): Promise<ApiError | NotifyMessage>;
 
@@ -85,7 +87,12 @@ export interface TelegramListenOptions {
   certPath?: string;
 }
 
-export type MyBotCommand = BotCommand & { callback: (msg: Message.TextMessage, service: ITelegramService) => void };
+type valueof<T> = T[keyof T];
+
+export type MyBotCommand = BotCommand & {
+  type?: valueof<typeof MyBotCommandTypes[]>;
+  callback: (msg: Message.TextMessage, service: ITelegramService) => void;
+};
 
 export interface BotConfig {
   name: string;
