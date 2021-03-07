@@ -1,5 +1,6 @@
 import * as Tg from "typegram";
 import { ApiResponse, Message, Update } from "typegram";
+import processNow from "./helpers/processNow";
 import TelegramCore from "./telegramCore";
 import {
   BotConfig,
@@ -241,9 +242,4 @@ const enum ServiceEvents {
   gotNewMessage,
   gotEditedMessage,
   gotBotCommand,
-}
-
-function processNow() {
-  const hr = process.hrtime();
-  return hr[0] * 1000 + hr[1] / 1e6;
 }

@@ -1,16 +1,13 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
+import arrayShuffle from "../helpers/arrayShuffle";
+import fixOverflowIndex from "../helpers/fixOverflowIndex";
 import dictionary, {
   generateWordPairs,
   generateUserKey,
-  selectRandomFromArray,
   UserValidationKey,
   wordPairs,
-  mapToTable,
   generateWordPairsNext,
-  shuffleArray,
-  fixOverflowIndex,
   WordPair,
-  mapToTableByColumn,
 } from "./dictionary";
 
 const checkUnique = <T>(arr: T[]): boolean => {
@@ -29,9 +26,9 @@ const checkUnique = <T>(arr: T[]): boolean => {
 };
 
 beforeAll(() => {
-  const m = require("./dictionary");
+  const m = require("../helpers/arrayShuffle");
   //todo such mock doesn't work inside module
-  m.shuffleArray = <T>(arr: T[]) => {
+  m.default = <T>(arr: T[]) => {
     // console.warn("shuffle");
     return arr;
   };
@@ -70,28 +67,6 @@ describe("dictionary functions", () => {
       expect(v.num >= 1 && v.num <= 9, v.num.toString()).toBeTruthy();
       expect(dictionary.some((d) => d.keyWords.some((k) => k === v.word))).toBeTruthy();
     }
-  });
-
-  test("selectRandomFromArray()", () => {
-    const checkArray = <T>(arr: T[], cnt: number) => {
-      const v = selectRandomFromArray(arr, cnt);
-      //console.warn("got", JSON.stringify(v));
-      expect(v).toHaveLength(cnt);
-      expect(checkUnique(v), JSON.stringify(v)).toBeTruthy();
-      expect(
-        v.some((v) => v == null),
-        JSON.stringify(v)
-      ).toBeFalsy();
-    };
-
-    checkArray(["a", "b", "c", "d", "e"], 2);
-    checkArray(["a", "b", "c", "d", "e"], 2);
-    checkArray(["a", "b", "c", "d", "e"], 2);
-    checkArray(["a", "b", "c", "d", "e"], 2);
-    checkArray(["a", "b", "c", "d", "e"], 2);
-    checkArray(["a", "b", "c", "d", "e"], 3);
-    checkArray(["a", "b", "c", "d", "e"], 4);
-    checkArray(["a", "b", "c", "d", "e"], 5);
   });
 
   test("generatePairs()", () => {
@@ -140,7 +115,7 @@ describe("dictionary functions", () => {
 
     //check if shuffle mocked
     const was = [...pairs];
-    shuffleArray(pairs);
+    arrayShuffle(pairs);
     expect(was.every((v, i) => v === pairs[i])).toBeTruthy();
 
     // ordinary checking
@@ -173,62 +148,5 @@ describe("dictionary functions", () => {
         expect(r.pairs.reduce((acc, v) => (v.two[0] === myPair.two[0] ? acc + 1 : acc), 0)).toBe(1);
       }
     }
-  });
-
-  test("fixOverflowIndex()", () => {
-    expect(fixOverflowIndex(0, 4)).toBe(0);
-    expect(fixOverflowIndex(4, 4)).toBe(4);
-
-    expect(fixOverflowIndex(-1, 4)).toBe(4);
-    expect(fixOverflowIndex(6, 4)).toBe(1);
-  });
-
-  test("mapToTable()", () => {
-    const v = mapToTable([1, 2, 3, 4, 5, 6], 2, 3, (item) => item);
-    expect(v).toHaveLength(2);
-    v.forEach((a) => expect(a).toHaveLength(3));
-    expect(v[0][0]).toBe(1);
-    expect(v[0][1]).toBe(2);
-    expect(v[0][2]).toBe(3);
-
-    expect(v[1][0]).toBe(4);
-    expect(v[1][1]).toBe(5);
-    expect(v[1][2]).toBe(6);
-
-    // when arr length less than rows*columns
-    const v2 = mapToTable(["a", "b", "c", "d"], 2, 3, (item) => item);
-    expect(v2).toHaveLength(2);
-    expect(v2[0]).toHaveLength(3);
-    expect(v2[1]).toHaveLength(1);
-
-    expect(v2[0][0]).toBe("a");
-    expect(v2[0][1]).toBe("b");
-    expect(v2[0][2]).toBe("c");
-    expect(v2[1][0]).toBe("d");
-  });
-
-  test("mapToTableByColumn()", () => {
-    const v = mapToTableByColumn([1, 2, 3, 4, 5, 6], 2, 3, (item) => item);
-    expect(v).toHaveLength(2);
-    v.forEach((a) => expect(a).toHaveLength(3));
-    expect(v[0][0]).toBe(1);
-    expect(v[1][0]).toBe(2);
-
-    expect(v[0][1]).toBe(3);
-    expect(v[1][1]).toBe(4);
-
-    expect(v[0][2]).toBe(5);
-    expect(v[1][2]).toBe(6);
-
-    // when arr length less than rows*columns
-    const v2 = mapToTableByColumn(["a", "b", "c"], 2, 3, (item) => item);
-    expect(v2).toHaveLength(2);
-    expect(v2[0]).toHaveLength(2);
-    expect(v2[1]).toHaveLength(1);
-
-    expect(v2[0][0]).toBe("a");
-    expect(v2[1][0]).toBe("b");
-
-    expect(v2[0][1]).toBe("c");
   });
 });

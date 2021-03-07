@@ -1,6 +1,8 @@
 import { CallbackQuery, Message } from "typegram";
+import arrayGetRandomItem from "../helpers/arrayGetRandomItem";
+import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
 import { ITelegramService, MyBotCommand, Opts } from "../types";
-import { generateWordPairs, generateWordPairsNext, getRandomItem, mapToTableByColumn } from "./dictionary";
+import { generateWordPairs, generateWordPairsNext } from "./dictionary";
 
 // warning: rows*columns > max ukey.num (defined in dictionary.ts)
 const rows = 4;
@@ -51,7 +53,7 @@ async function callbackStart(msg: Message.TextMessage, service: ITelegramService
 
       if (words) {
         args.reply_markup = {
-          inline_keyboard: mapToTableByColumn(words, rows, collumns, (v) => ({
+          inline_keyboard: arrayMapToTableByColumn(words, rows, collumns, (v) => ({
             text: v,
             callback_data: v,
           })),
@@ -107,14 +109,14 @@ async function callbackStart(msg: Message.TextMessage, service: ITelegramService
     const e2 = await service.onGotCallbackQuery((e) => e.callback_query.message?.chat.id === chatId);
     const gotWord2 = (e2.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
     if (gotWord2 === nextObj.expected) {
-      await sendMessage(getRandomItem(answersExpected_1), null);
+      await sendMessage(arrayGetRandomItem(answersExpected_1), null);
       // todo repeat here
     } else {
       // todo mark as invalid after 3 times
       if (gotWord2 === nextObj.truthy) {
-        await sendMessage(getRandomItem(answersTrue), null);
+        await sendMessage(arrayGetRandomItem(answersTrue), null);
       } else {
-        await sendMessage(getRandomItem(answersFalse), null);
+        await sendMessage(arrayGetRandomItem(answersFalse), null);
       }
     }
 

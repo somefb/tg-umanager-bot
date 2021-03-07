@@ -1,3 +1,7 @@
+import arrayFilterRandom from "../helpers/arrayFilterRandom";
+import fixOverflowIndex from "../helpers/fixOverflowIndex";
+import intGetRandom from "../helpers/intGetRandom";
+
 const dictionary = [
   {
     keyWords: ["волк", "варан", "вагон"],
@@ -101,57 +105,11 @@ dictionary.forEach((s) => {
 
 export default dictionary;
 
-export function getRandomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-export function getRandomItem<T>(arr: T[]): T {
-  return arr[getRandomInt(0, arr.length - 1)];
-}
-
 export function generateUserKey(): { num: number; word: string } {
-  const num = getRandomInt(1, 9);
-  const dictVal = dictionary[getRandomInt(0, dictionary.length - 1)];
-  const word = dictVal.keyWords[getRandomInt(0, dictVal.keyWords.length - 1)];
+  const num = intGetRandom(1, 9);
+  const dictVal = dictionary[intGetRandom(0, dictionary.length - 1)];
+  const word = dictVal.keyWords[intGetRandom(0, dictVal.keyWords.length - 1)];
   return { num, word };
-}
-
-export function shuffleArray<T>(array: T[]): void {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-}
-
-export function selectRandomFromArray<T>(arr: T[], count: number): T[] {
-  const result: T[] = [];
-  const excludeInd: boolean[] = new Array(arr.length);
-  const lastInd = arr.length - 1;
-  if (arr.length <= count) {
-    return [...arr];
-  }
-  while (result.length < count) {
-    let i = getRandomInt(0, arr.length - 1);
-    if (excludeInd[i]) {
-      let overflow = false;
-      while (true) {
-        if (++i >= lastInd) {
-          i = 0;
-          if (overflow) {
-            throw new Error("Overflow");
-          }
-          overflow = true;
-        }
-        if (!excludeInd[i]) {
-          break;
-        }
-      }
-    }
-
-    result.push(arr[i]);
-    excludeInd[i] = true;
-  }
-  return result;
 }
 
 export function generateWordPairs(ukey: UserValidationKey, count: number): WordPair[] {
@@ -161,23 +119,13 @@ export function generateWordPairs(ukey: UserValidationKey, count: number): WordP
   }
 
   const p = wordPairs.filter((v) => v.one[0] !== ukey.word[0] && v.two[0] !== ukey.word[0]);
-  const arr = selectRandomFromArray(p, count - 1);
+  const arr = arrayFilterRandom(p, count - 1);
 
-  const keyPair = keyPairs[getRandomInt(0, keyPairs.length - 1)];
-  const keyPairInd = getRandomInt(0, arr.length - 1);
+  const keyPair = keyPairs[intGetRandom(0, keyPairs.length - 1)];
+  const keyPairInd = intGetRandom(0, arr.length - 1);
   arr.splice(keyPairInd, 0, keyPair);
 
   return arr;
-}
-
-export function fixOverflowIndex(curIndex: number, lastIndex: number): number {
-  while (curIndex > lastIndex) {
-    curIndex -= lastIndex + 1;
-  }
-  while (curIndex < 0) {
-    curIndex += lastIndex + 1;
-  }
-  return curIndex;
 }
 
 export function generateWordPairsNext(
@@ -187,7 +135,7 @@ export function generateWordPairsNext(
   isDirect: boolean
 ): { pairs: WordPair[]; expected: string; truthy: string } {
   //todo how to test without shuffle array
-  //shuffleArray(previousPairs);
+  //arrayShuffle(previousPairs);
 
   const lastIndex = previousPairs.length - 1;
   let truthyIndex = previousPairs.findIndex((v) => v === selectedPair);
@@ -211,41 +159,6 @@ export function generateWordPairsNext(
   }
 
   return { pairs: previousPairs, expected: previousPairs[expectedIndex].two, truthy: selectedPair.two };
-}
-
-export function mapToTable<T, R>(arr: T[], rows: number, columns: number, callback: (item: T) => R): Array<Array<R>> {
-  const result: Array<Array<R>> = [];
-  let i = 0;
-  for (let r = 0; r < rows; ++r) {
-    const vArr: Array<R> = [];
-    result.push(vArr);
-    for (let c = 0; c < columns && i < arr.length; ++c, ++i) {
-      vArr.push(callback(arr[i]));
-    }
-  }
-
-  return result;
-}
-
-export function mapToTableByColumn<T, R>(
-  arr: T[],
-  rows: number,
-  columns: number,
-  callback: (item: T) => R
-): Array<Array<R>> {
-  const result: Array<Array<R>> = [];
-  for (let i = 0; i < rows; ++i) {
-    result.push([]);
-  }
-
-  let i = 0;
-  for (let c = 0; c < columns; ++c) {
-    for (let r = 0; r < rows && i < arr.length; ++r, ++i) {
-      result[r].push(callback(arr[i]));
-    }
-  }
-
-  return result;
 }
 
 export interface WordPair {
