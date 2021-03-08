@@ -91,7 +91,8 @@ type valueof<T> = T[keyof T];
 
 export type MyBotCommand = BotCommand & {
   type?: valueof<typeof MyBotCommandTypes[]>;
-  callback: (msg: Message.TextMessage, service: ITelegramService) => void;
+  callback: (msg: Message.TextMessage, service: ITelegramService) => void | Promise<void>;
+  onServiceInit?: (service: ITelegramService) => void;
 };
 
 export interface BotConfig {

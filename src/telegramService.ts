@@ -183,7 +183,10 @@ export default class TelegramService implements ITelegramService {
   async assignCommands(arr: MyBotCommand[]): Promise<void> {
     await this.core.setMyCommands({ commands: arr });
     this.commands = arr;
-    this.commands.forEach((c) => (c.command = "/" + c.command));
+    this.commands.forEach((c) => {
+      c.command = "/" + c.command;
+      c.onServiceInit && c.onServiceInit(this);
+    });
     // todo create command /help with listing of commands
     // const helpCommand: MyBotCommand = {
     //   command: "/help",

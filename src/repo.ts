@@ -1,19 +1,7 @@
 import fs from "fs";
 import ChatItem from "./chatItem";
 import RepoGoogleDrive from "./googleDrive/repoGoogleDrive";
-import { UserValidationKey } from "./userCheckBot/dictionary";
-
-export class UserItem {
-  id: number;
-  validationKey: UserValidationKey;
-  /** Date in ms when the last validation is done */
-  validationDate = 0;
-
-  constructor(id: number, validationKey: UserValidationKey) {
-    this.id = id;
-    this.validationKey = validationKey;
-  }
-}
+import UserItem from "./userItem";
 
 /** This is basic singleton storage class for saving configuration etc. */
 export class RepoClass {
