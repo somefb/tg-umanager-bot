@@ -1,9 +1,12 @@
 import * as Tg from "typegram";
 import { ApiResponse, Message, Update } from "typegram";
+import objectRecursiveSearch from "./helpers/objectRecursiveSearch";
 import processNow from "./helpers/processNow";
 import TelegramCore from "./telegramCore";
 import {
   BotConfig,
+  EventCancellation,
+  EventPredicate,
   ITelegramService,
   MyBotCommand,
   NewTextMessage,
@@ -58,12 +61,14 @@ export default class TelegramService implements ITelegramService {
     process.env.DEBUG && console.log("got update", v);
     try {
       let defFn;
-
+      let chatId: number | undefined;
       const type: ServiceEvents | null = (() => {
         if ((v as Update.CallbackQueryUpdate).callback_query) {
+          chatId = (v as Update.CallbackQueryUpdate).callback_query?.message?.chat.id;
           return ServiceEvents.gotCallbackQuery;
         }
         if ((v as Update.MessageUpdate).message) {
+          chatId = (v as Update.MessageUpdate).message.chat.id;
           const msg = (v as Update.MessageUpdate).message;
           if ((msg as Message.TextMessage).text?.startsWith("/")) {
             defFn = () => this.gotBotCommand(v as NewTextMessage);
@@ -72,8 +77,18 @@ export default class TelegramService implements ITelegramService {
           return ServiceEvents.gotNewMessage;
         }
         if ((v as Update.EditedMessageUpdate).edited_message) {
+          chatId = (v as Update.EditedMessageUpdate).edited_message.chat.id;
           return ServiceEvents.gotEditedMessage;
         }
+
+        objectRecursiveSearch(v, (key, obj) => {
+          if (key === "chat") {
+            chatId = obj[key].id;
+            return true;
+          }
+          return false;
+        });
+
         return null;
       })();
 
@@ -84,9 +99,9 @@ export default class TelegramService implements ITelegramService {
 
       const leftListeners: IEventListenerObj<Update>[] = [];
       const isHandled = this.eventListeners.some(async (e) => {
-        if (e.type === type) {
+        if (e.type === type || e.type === ServiceEvents.gotUpdate) {
           if (e.predicate) {
-            if (e.predicate(v)) {
+            if (e.predicate(v, chatId)) {
               isPrevented = true;
               await e.resolve({ preventDefault, result: v });
             }
@@ -219,23 +234,56 @@ export default class TelegramService implements ITelegramService {
   }
 
   eventListeners: IEventListenerObj<Update>[] = [];
+  private addEventListener<T extends Update>(
+    type: ServiceEvents,
+    predicateOrChatId: number | EventPredicate<T>,
+    cancellation: EventCancellation | undefined
+  ): Promise<ServiceEvent<T>> {
+    const predicate =
+      typeof predicateOrChatId === "function"
+        ? (predicateOrChatId as (e: Update) => boolean)
+        : (_e: Update, chatId?: number) => chatId === (predicateOrChatId as number);
 
-  onGotCallbackQuery(
-    predicate: (e: Update.CallbackQueryUpdate) => boolean
-  ): Promise<ServiceEvent<Update.CallbackQueryUpdate>> {
-    return new Promise((resolve) => {
-      this.eventListeners.push({
-        type: ServiceEvents.gotCallbackQuery,
+    return new Promise((resolve, reject) => {
+      const listener = {
+        type,
         predicate,
         resolve,
-      } as IEventListenerObj<Update>);
+      } as IEventListenerObj<Update>;
+      this.eventListeners.push(listener);
+      cancellation &&
+        cancellation(() => {
+          reject(Object.assign(new Error("Waiting is cancelled via cancellation()"), { isCancelled: true }));
+          this.removeEventListener(listener);
+        });
     });
+  }
+
+  private removeEventListener(listener: IEventListenerObj<Update>) {
+    const i = this.eventListeners.indexOf(listener);
+    if (i !== -1) {
+      this.eventListeners.splice(i, 1);
+    }
+  }
+
+  onGotCallbackQuery(
+    predicateOrChatId: number | EventPredicate<Update.CallbackQueryUpdate>,
+    cancellation?: EventCancellation
+  ): Promise<ServiceEvent<Update.CallbackQueryUpdate>> {
+    return this.addEventListener(ServiceEvents.gotCallbackQuery, predicateOrChatId, cancellation);
+  }
+
+  onGotUpdate(
+    predicateOrChatId: number | EventPredicate<Update>,
+    cancellation?: EventCancellation
+  ): Promise<ServiceEvent<Update>> {
+    return this.addEventListener(ServiceEvents.gotUpdate, predicateOrChatId, cancellation);
   }
 }
 
 interface IEventListenerObj<T extends Update> {
   type: ServiceEvents;
-  predicate?: (e: T) => boolean;
+  predicate?: (e: T, chatId: number | undefined) => boolean;
   resolve: (v: ServiceEvent<T>) => Promise<void>;
 }
 

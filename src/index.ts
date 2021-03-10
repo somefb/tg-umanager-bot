@@ -1,12 +1,11 @@
 import http from "http";
 import path from "path";
-import cfg from "./appSettings.json";
-import cfgPrivate from "./appSettings.private.json";
 import MyBotCommands from "./commands";
 import TelegramService from "./telegramService";
 import { BotConfig, TelegramListenOptions } from "./types";
 import Repo from "./repo";
 import CheckBotCommands from "./userCheckBot";
+import cfg from "./appSettingsGet";
 
 console.clear();
 
@@ -38,7 +37,6 @@ process.on("beforeExit", (code) => {
 async function runApp() {
   try {
     console.log("Starting app. Gathering info...");
-    Object.assign(cfg, cfgPrivate);
 
     // port is defined in .platform\nginx\conf.d\https.conf
     process.env.PORT_HTTPS = process.env.PORT_HTTPS || "9447";

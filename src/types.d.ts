@@ -1,3 +1,4 @@
+import { type } from "os";
 import { ApiError, ApiSuccess, BotCommand, Message, Typegram, Update } from "typegram";
 import { MyBotCommandTypes } from "./commands/botCommandTypes";
 
@@ -62,15 +63,21 @@ export interface NewTextMessage extends Update.MessageUpdate, Update.AbstractMes
   message: Update.New & Update.NonChannel & Message.TextMessage;
 }
 
+export type EventCancellation = (callback: () => void) => void;
+export type EventPredicate<T extends Update> = (e: T, chatId?: number) => boolean;
+export type OnGotEvent<T extends Update> = (
+  predicateOrChatId: number | EventPredicate<T>,
+  cancellation?: EventCancellation
+) => Promise<ServiceEvent<T>>;
+
 export interface ITelegramService {
   core: ITelegramCore;
   cfg: BotConfig;
   /** sendMessage for at least 3 seconds and remove message by cancel() trigger */
   notify(args: Opts<"sendMessage">, minNotifyMs?: number): Promise<ApiError | NotifyMessage>;
 
-  onGotCallbackQuery(
-    predicate: (e: Update.CallbackQueryUpdate) => boolean
-  ): Promise<ServiceEvent<Update.CallbackQueryUpdate>>;
+  onGotUpdate: OnGotEvent<Update>;
+  onGotCallbackQuery: OnGotEvent<Update.CallbackQueryUpdate>;
 }
 
 export interface TelegramListenOptions {
