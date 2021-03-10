@@ -1,6 +1,7 @@
 import Repo from "../repo";
 import { ITelegramService, MyBotCommand } from "../types";
 import UserItem from "../userItem";
+import { generateUserKey } from "./dictionary";
 import validate from "./validate";
 
 export const CheckBot = {
@@ -19,6 +20,7 @@ export const CheckBot = {
     }
     return validate(user, CheckBot.service as ITelegramService);
   },
+  generateUserKey,
 };
 
 // todo use answerCallbackQuery: https://core.telegram.org/bots/api#answercallbackquery
