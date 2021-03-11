@@ -2,7 +2,7 @@ import FormData from "form-data";
 import { createReadStream } from "fs";
 import http from "http";
 import https, { RequestOptions } from "https";
-import { ApiError, ApiResponse, Message, P, TelegramPR, Update, WebhookInfo } from "typegram";
+import { ApiError, ApiResponse, Message, P, R, TelegramPR, Update, UserFromGetMe, WebhookInfo } from "typegram";
 import { ITelegramCore, Opts } from "./types";
 
 type MyHttpOptions<O> = Partial<{
@@ -129,6 +129,10 @@ export default class TelegramCore implements ITelegramCore {
     obj?: O,
     opts?: MyHttpOptions<O>
   ): Promise<ApiResponse<T>> => this.httpRequest<ApiResponse<T>, O>("POST", this.getUrl(cmd), obj, opts);
+
+  getMe(): P<R<UserFromGetMe>> {
+    return this.httpGet("getMe");
+  }
 
   getUpdates(args?: Opts<"getUpdates">): P<ApiResponse<Update[]>> {
     return this.httpPost("getUpdates", args);

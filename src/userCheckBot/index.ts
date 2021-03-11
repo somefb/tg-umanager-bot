@@ -4,11 +4,12 @@ import UserItem from "../userItem";
 import { generateUserKey } from "./dictionary";
 import validate from "./validate";
 
+let myBotUserName = "";
 export const CheckBot = {
-  service: null as ITelegramService | null,
+  service: {} as ITelegramService,
   // todo maybe detect expiry start from lastUserActivity ???
 
-  validateUser: (user: UserItem, validationExpiryMs = 5 * 60 * 1000): Promise<boolean | undefined> => {
+  validateUser(user: UserItem, validationExpiryMs = 5 * 60 * 1000): Promise<boolean | undefined> {
     if (user.isLocked) {
       return Promise.resolve(false);
     }
@@ -18,9 +19,19 @@ export const CheckBot = {
         return Promise.resolve(true);
       }
     }
-    return validate(user, CheckBot.service as ITelegramService);
+    return validate(user, this.service as ITelegramService);
   },
   generateUserKey,
+
+  async getMyUserName(): Promise<string> {
+    if (myBotUserName) {
+      return Promise.resolve(myBotUserName);
+    } else {
+      const r = await this.service.core.getMe();
+      myBotUserName = (r.ok && r.result.username) || myBotUserName;
+      return myBotUserName;
+    }
+  },
 };
 
 // todo use answerCallbackQuery: https://core.telegram.org/bots/api#answercallbackquery
@@ -31,7 +42,10 @@ const CheckBotCommands: MyBotCommand[] = [
     callback: async (msg, service) => {
       // todo remove previous if restart
       // todo don't allow to add bot to chat: use event onBotAddedToChat
-      const user = Repo.getUser(msg.from?.id);
+      const user =
+        Repo.getUser(msg.from?.id) ||
+        ({ id: 1, validationKey: { num: 1, word: "волк" }, checkBotChatId: msg.chat.id } as UserItem);
+
       if (!user) {
         await service.core.sendMessage({
           chat_id: msg.chat.id,

@@ -1,9 +1,41 @@
 import cfg from "../appSettingsGet";
+import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
 import Repo from "../repo";
 import { MyBotCommand } from "../types";
 import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
+
+function getInstructionsText(botName: string) {
+  return [
+    "Проверка проходит следующим образом:\n",
+    `1) вы пишите боту @${botName} и начинаете играть`,
+    "2) из предложенного списка слов выбирайте любое",
+    "3) из последующего списка ассоциаций важно выбрать слово согласно вашему ключу",
+    "\nК примеру ваш ключ '2 танка'",
+    "В списке ассоциаций вы находите любое слово, которое начинается с буквы 'Т' (первая буква вашего ключа) и отсчитываете 2 слова (2 - цифра вашего ключа)",
+    "\nПримечания:",
+    "* если при счёте нужно выбрать слово на 8-м месте, а всего их 6, - то ответ = слово на 2-м месте (счёт продолжается с начала списка - по кругу)",
+    "* каждый раз проверку нужно пройти дважды",
+    "* на проверку выделена 1 минута (с того момента как выберите 1-е слово) и 3 попытки",
+    "* если проверка провалена - вы это узнаете по тому, что бот перестанет отвечать (типа поломался). Также узнают те, кто прошёл проверку и имеет с вами связь (через бота или чат)",
+    "* бот не может удалить персональный чат (ограничение телеграмма). Потому удаляйте такой чат с ботом каждый раз самостоятельно",
+    "* если вы прошли проверку и решили продолжить играть не по правилам описанным выше - вы будете заблокированы автоматически",
+    "* если вы заблокированы - Пока нет возможности разблокировать (скоро реализуем)",
+  ].join("\n");
+}
+
+function getInstructionsMarkup() {
+  return arrayMapToTableByColumn(
+    ["1) вера", "2) Тиран (точка отсчёта)", "3) анис", "4) маслина (ваш ответ)", "5) дерево", "6) куст"],
+    3,
+    2,
+    (v) => ({
+      text: v,
+      callback_data: v,
+    })
+  );
+}
 
 // todo this is test command - remove after tests
 const ValidateMe: MyBotCommand = {
@@ -21,6 +53,7 @@ const ValidateMe: MyBotCommand = {
     if (!user) {
       if (!Repo.users?.length && uid === cfg.ownerUserId) {
         const key = CheckBot.generateUserKey();
+        //todo implement default: sendMessage/query/etc. and wait for any response for specific time (automatically remove)
         const r = await service.core.sendMessage({
           chat_id,
           text: `Ваш ключ:\n\n"${key.num} ${key.word}"\n\nЗапомните его.`,
@@ -38,25 +71,29 @@ const ValidateMe: MyBotCommand = {
 
           try {
             await service.onGotUpdate(chat_id, (e) => (cancellation = e));
+            service.core.deleteMessageForce({ chat_id, message_id: r.result.message_id });
           } catch (err) {
             if (!err.isCancelled) {
               console.error(err);
               return;
             }
           }
-          // todo check this behavior
           clearTimeout(rt);
           user = new UserItem(cfg.ownerUserId, key);
-          console.warn("registered user");
-          await service.core.deleteMessage({ chat_id, message_id: r.ok && r.result.message_id });
+          //todo uncomment
+          //Repo.users.push(user);
+          console.log("registered user");
+
+          await service.core.sendMessage({
+            chat_id,
+            text: getInstructionsText(await CheckBot.getMyUserName()),
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: getInstructionsMarkup() },
+          });
         }
       } else {
-        await service.core.sendMessage({
-          chat_id,
-          // todo change message
-          text: "Вы не зарегестрированы в системе",
-        });
-        return;
+        // todo remove this because access to bot will be restricted
+        console.warn(`User ${msg.from?.username} ${uid} is not registered`);
       }
     }
 

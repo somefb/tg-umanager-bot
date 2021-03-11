@@ -33,6 +33,7 @@ export type InputMediaDocument = DefaultTypegram["InputMediaDocument"];
 
 export type ITelegramCore = Pick<
   DefaultTypegram["TelegramPR"],
+  | "getMe"
   | "unpinAllChatMessages"
   | "getUpdates"
   | "setMyCommands"
