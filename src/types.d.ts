@@ -1,5 +1,5 @@
 import { type } from "os";
-import { ApiError, ApiSuccess, BotCommand, Message, Typegram, Update } from "typegram";
+import { ApiError, ApiResponse, ApiSuccess, BotCommand, Message, Typegram, Update } from "typegram";
 import { MyBotCommandTypes } from "./commands/botCommandTypes";
 
 /** This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data in the usual way that files are uploaded via the browser. */
@@ -76,6 +76,8 @@ export interface ITelegramService {
   cfg: BotConfig;
   /** sendMessage for at least 3 seconds and remove message by cancel() trigger */
   notify(args: Opts<"sendMessage">, minNotifyMs?: number): Promise<ApiError | NotifyMessage>;
+  /** sendMessage that will be deleted by timeout or by userResponse (whatever happens faster) */
+  sendSelfDestroyed(args: Opts<"sendMessage">, deleteTimeoutSec: number): Promise<ApiResponse<Message.TextMessage>>;
 
   onGotUpdate: OnGotEvent<Update>;
   onGotCallbackQuery: OnGotEvent<Update.CallbackQueryUpdate>;

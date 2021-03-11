@@ -6,6 +6,9 @@ import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
 
+const destroyKeyTimeoutSec = 15;
+const destroyInstructionsTimeoutSec = 120;
+
 function getInstructionsText(botName: string) {
   return [
     "Проверка проходит следующим образом:\n",
@@ -53,43 +56,42 @@ const ValidateMe: MyBotCommand = {
     if (!user) {
       if (!Repo.users?.length && uid === cfg.ownerUserId) {
         const key = CheckBot.generateUserKey();
-        //todo implement default: sendMessage/query/etc. and wait for any response for specific time (automatically remove)
-        const r = await service.core.sendMessage({
-          chat_id,
-          text: `Ваш ключ:\n\n"${key.num} ${key.word}"\n\nЗапомните его.`,
-          parse_mode: "HTML",
-          reply_markup: {
-            inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
+        const r = await service.sendSelfDestroyed(
+          {
+            chat_id,
+            text: `Ваш ключ:\n\n"${key.num} ${key.word}"\n\nЗапомните его.`,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
+            },
           },
-        });
+          destroyKeyTimeoutSec
+        );
         if (r.ok) {
-          let cancellation: () => void | undefined;
-          const rt = setTimeout(() => {
-            service.core.deleteMessageForce({ chat_id, message_id: r.result.message_id });
-            cancellation && cancellation();
-          }, 15000); // wait for 15 sec and delete message
-
-          try {
-            await service.onGotUpdate(chat_id, (e) => (cancellation = e));
-            service.core.deleteMessageForce({ chat_id, message_id: r.result.message_id });
-          } catch (err) {
-            if (!err.isCancelled) {
-              console.error(err);
-              return;
-            }
-          }
-          clearTimeout(rt);
           user = new UserItem(cfg.ownerUserId, key);
           //todo uncomment
           //Repo.users.push(user);
           console.log("registered user");
 
-          await service.core.sendMessage({
-            chat_id,
-            text: getInstructionsText(await CheckBot.getMyUserName()),
-            parse_mode: "HTML",
-            reply_markup: { inline_keyboard: getInstructionsMarkup() },
-          });
+          const botName = await CheckBot.getMyUserName();
+          const promiseR2 = service.sendSelfDestroyed(
+            {
+              chat_id,
+              text: getInstructionsText(botName),
+              parse_mode: "HTML",
+              reply_markup: { inline_keyboard: getInstructionsMarkup() },
+            },
+            destroyInstructionsTimeoutSec
+          );
+          // todo we need to detect if userStartedValidation for destroying elements
+          service.sendSelfDestroyed(
+            {
+              chat_id,
+              text: `Если всё понятно, пройдите проверку: ${getInstructionsText(botName)}`,
+            },
+            destroyInstructionsTimeoutSec
+          );
+          await promiseR2;
         }
       } else {
         // todo remove this because access to bot will be restricted

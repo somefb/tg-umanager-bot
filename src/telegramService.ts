@@ -209,6 +209,37 @@ export default class TelegramService implements ITelegramService {
     // };
   }
 
+  async sendSelfDestroyed(
+    args: Opts<"sendMessage">,
+    deleteTimeoutSec: number
+  ): Promise<Tg.ApiResponse<Message.TextMessage>> {
+    const res = await this.core.sendMessage(args);
+    if (!res.ok) {
+      return res;
+    }
+    const chat_id = args.chat_id as number;
+    let cancellation: () => void | undefined;
+    const rt = setTimeout(() => {
+      this.core.deleteMessageForce({ chat_id, message_id: res.result.message_id });
+      cancellation && cancellation();
+    }, deleteTimeoutSec * 1000); // wait for N ms and delete message
+
+    try {
+      await this.onGotUpdate(chat_id, (e) => (cancellation = e));
+      this.core.deleteMessageForce({ chat_id, message_id: res.result.message_id });
+    } catch (err) {
+      if (!err.isCancelled) {
+        console.error(err);
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        res.ok = false;
+        return res;
+      }
+    }
+    clearTimeout(rt);
+    return res;
+  }
+
   async notify(args: Opts<"sendMessage">, minNotifyMs = 3000): Promise<Tg.ApiError | NotifyMessage> {
     const res = await this.core.sendMessage(args);
     if (!res.ok) {
@@ -224,6 +255,7 @@ export default class TelegramService implements ITelegramService {
         return new Promise((resolve) => {
           setTimeout(() => {
             delMsg().then((v) => resolve(v));
+            //cancellation here
           }, waitMs);
         });
       } else {
