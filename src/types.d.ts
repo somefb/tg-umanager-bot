@@ -67,7 +67,7 @@ export interface NewTextMessage extends Update.MessageUpdate, Update.AbstractMes
 export type EventCancellation = (callback: () => void) => void;
 export type EventPredicate<T extends Update> = (e: T, chatId?: number) => boolean;
 export type OnGotEvent<T extends Update> = (
-  predicateOrChatId: number | EventPredicate<T>,
+  predicateOrChatId: number | string | EventPredicate<T>,
   cancellation?: EventCancellation
 ) => Promise<ServiceEvent<T>>;
 

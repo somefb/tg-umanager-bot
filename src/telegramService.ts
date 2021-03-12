@@ -268,7 +268,7 @@ export default class TelegramService implements ITelegramService {
   eventListeners: IEventListenerObj<Update>[] = [];
   private addEventListener<T extends Update>(
     type: ServiceEvents,
-    predicateOrChatId: number | EventPredicate<T>,
+    predicateOrChatId: number | string | EventPredicate<T>,
     cancellation: EventCancellation | undefined
   ): Promise<ServiceEvent<T>> {
     const predicate =
@@ -299,14 +299,14 @@ export default class TelegramService implements ITelegramService {
   }
 
   onGotCallbackQuery(
-    predicateOrChatId: number | EventPredicate<Update.CallbackQueryUpdate>,
+    predicateOrChatId: number | string | EventPredicate<Update.CallbackQueryUpdate>,
     cancellation?: EventCancellation
   ): Promise<ServiceEvent<Update.CallbackQueryUpdate>> {
     return this.addEventListener(ServiceEvents.gotCallbackQuery, predicateOrChatId, cancellation);
   }
 
   onGotUpdate(
-    predicateOrChatId: number | EventPredicate<Update>,
+    predicateOrChatId: number | string | EventPredicate<Update>,
     cancellation?: EventCancellation
   ): Promise<ServiceEvent<Update>> {
     return this.addEventListener(ServiceEvents.gotUpdate, predicateOrChatId, cancellation);
