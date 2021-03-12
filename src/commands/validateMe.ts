@@ -39,7 +39,7 @@ function getInstructionsMarkup() {
     })
   );
 
-  arr.push([{ text: "Всё понятно. Начнём проверку", callback_data: "go" }]);
+  arr.push([{ text: "Всё понятно", callback_data: "go" }]);
   return arr;
 }
 
@@ -56,6 +56,7 @@ const ValidateMe: MyBotCommand = {
 
     const uid = msg.from?.id;
     let user = Repo.getUser(uid);
+    const isNewUser = !user;
     if (!user) {
       if (!Repo.users?.length && uid === cfg.ownerUserId) {
         const key = CheckBot.generateUserKey();
@@ -72,9 +73,7 @@ const ValidateMe: MyBotCommand = {
         );
         if (r.ok) {
           user = new UserItem(cfg.ownerUserId, key);
-          //todo uncomment
-          //Repo.users.push(user);
-          console.log("registered user");
+          console.log(`Start registration with new user ${user.id}`);
 
           const botName = await CheckBot.getMyUserName();
           await service.sendSelfDestroyed(
@@ -86,7 +85,7 @@ const ValidateMe: MyBotCommand = {
             },
             destroyInstructionsTimeoutSec
           );
-          await service.sendSelfDestroyed(
+          await service.notify(
             {
               chat_id,
               text: `Инструктаж окончен. Давайте сыграем: @${botName}`,
@@ -94,15 +93,15 @@ const ValidateMe: MyBotCommand = {
             destroyInstructionsTimeoutSec
           );
         }
-      } else {
-        // todo remove this because access to bot will be restricted
-        console.warn(`User ${msg.from?.username} ${uid} is not registered`);
       }
     }
 
     if (user) {
       const isValid = await CheckBot.validateUser(user);
-      console.warn("got Invalid", isValid);
+      if (isNewUser && isValid) {
+        // todo uncomment after tests
+        // Repo.users.push(user);
+      }
       service.core.sendMessage({
         chat_id,
         text: isValid ? "Проверка пройдена" : "Провалено",

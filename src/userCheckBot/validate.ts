@@ -5,7 +5,7 @@ import { ITelegramService } from "../types";
 import UserItem from "../userItem";
 import { generateWordPairs, generateWordPairsNext } from "./dictionary";
 
-// warning: rows*columns > max ukey.num (defined in dictionary.ts)
+// WARN: rows*columns > max ukey.num (defined in dictionary.ts)
 const rows = 4;
 const collumns = 3;
 
@@ -21,10 +21,16 @@ const answersFalse = ["Увы", "Неверно", "Неправильно"];
 const answersExpected_1 = ["Невероятно", "Хм", "Интересно", "Забавно", "Необычно"];
 const answersExpected_2 = ["Ладно-ладно", "А вы настойчивы", "Вы сделали невозможное"];
 
-export default async function validate(user: UserItem, service: ITelegramService): Promise<boolean | undefined> {
+export default async function validate(user: UserItem, service: ITelegramService): Promise<boolean | null> {
   try {
     let message_id = 0;
 
+    if (!user.checkBotChatId) {
+      console.error(`Error in validate(). checkBotChatId is not defined for user ${user.id}`);
+      return null;
+    }
+
+    //todo detect if chat is blocked and somehow notify users
     const sendMessage = async (text: string, words: string[] | null) => {
       let res;
       const args: Opts<"sendMessage"> = {
@@ -74,7 +80,7 @@ export default async function validate(user: UserItem, service: ITelegramService
       message_id = r.message_id;
 
       // wait for response
-      const e = await service.onGotCallbackQuery((e) => e.callback_query.message?.chat.id === user.checkBotChatId);
+      const e = await service.onGotCallbackQuery(user.checkBotChatId);
       //todo start timer here and wait for 1 minutes
       const gotWord = (e.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
       const trueWordPair = gotWord && pairs.find((v) => v.one === gotWord);
@@ -84,14 +90,13 @@ export default async function validate(user: UserItem, service: ITelegramService
       }
 
       // second part
-      // todo: Critical - wrong pairs - have duplicates
       const nextObj = generateWordPairsNext(user.validationKey, trueWordPair, pairs, true);
       await sendMessage(
         `Выберите ассоциацию`,
         nextObj.pairs.map((v) => v.two)
       );
 
-      const e2 = await service.onGotCallbackQuery((e) => e.callback_query.message?.chat.id === user.checkBotChatId);
+      const e2 = await service.onGotCallbackQuery(user.checkBotChatId);
       const gotWord2 = (e2.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
       if (gotWord2 === nextObj.expected) {
         ++validTimes;
@@ -125,11 +130,11 @@ export default async function validate(user: UserItem, service: ITelegramService
         }
       }
       ++repeatCnt;
-      console.warn("got result", JSON.stringify(r), r);
     }
   } catch (err) {
     if (err.name !== "repeat") {
-      console.error("CheckBot error. " + err);
+      console.error("CheckBot error. " + err.message || err);
     }
   }
+  return null;
 }
