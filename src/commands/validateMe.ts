@@ -102,6 +102,7 @@ const ValidateMe: MyBotCommand = {
 
     if (user) {
       const isValid = await CheckBot.validateUser(user);
+      console.warn("got Invalid", isValid);
       service.core.sendMessage({
         chat_id,
         text: isValid ? "Проверка пройдена" : "Провалено",

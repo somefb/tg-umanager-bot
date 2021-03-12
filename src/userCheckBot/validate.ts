@@ -62,12 +62,12 @@ export default async function validate(user: UserItem, service: ITelegramService
     let validTimes = 0;
     let invalidTimes = 0;
     let msgPrefix = "";
-
+    let repeatCnt = 0;
     while (1) {
       // first part
       const pairs = generateWordPairs(user.validationKey, rows * collumns);
       const r = (await sendMessage(
-        msgPrefix + "Выберите слово",
+        msgPrefix + (repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
         pairs.map((v) => v.one)
       )) as Message.TextMessage;
 
@@ -84,6 +84,7 @@ export default async function validate(user: UserItem, service: ITelegramService
       }
 
       // second part
+      // todo: Critical - wrong pairs - have duplicates
       const nextObj = generateWordPairsNext(user.validationKey, trueWordPair, pairs, true);
       await sendMessage(
         `Выберите ассоциацию`,
@@ -107,19 +108,23 @@ export default async function validate(user: UserItem, service: ITelegramService
         validTimes = 0;
         ++invalidTimes;
         if (gotWord2 === nextObj.truthy) {
-          await sendMessage(arrayGetRandomItem(answersTrue), null);
+          msgPrefix = arrayGetRandomItem(answersTrue);
         } else {
-          await sendMessage(arrayGetRandomItem(answersFalse), null);
+          msgPrefix = arrayGetRandomItem(answersFalse);
         }
         if (invalidTimes >= expectedInvalidTimes) {
           user.isInvalid = true;
           user.validationDate = Date.now();
           user.isLocked = true;
           // todo timeout 10 sec and remove private chat
+          await sendMessage(msgPrefix, null);
+          console.log(`User ${user.id} failed validation and locked: invalidTimes = ${invalidTimes}`);
           return false;
+        } else {
+          msgPrefix += ". ";
         }
       }
-
+      ++repeatCnt;
       console.warn("got result", JSON.stringify(r), r);
     }
   } catch (err) {
