@@ -29,7 +29,7 @@ function getInstructionsText(botName: string) {
 }
 
 function getInstructionsMarkup() {
-  return arrayMapToTableByColumn(
+  const arr = arrayMapToTableByColumn(
     ["1) вера", "2) Тиран (точка отсчёта)", "3) анис", "4) маслина (ваш ответ)", "5) дерево", "6) куст"],
     3,
     2,
@@ -38,6 +38,9 @@ function getInstructionsMarkup() {
       callback_data: v,
     })
   );
+
+  arr.push([{ text: "Всё понятно. Начнём проверку", callback_data: "go" }]);
+  return arr;
 }
 
 // todo this is test command - remove after tests
@@ -74,7 +77,7 @@ const ValidateMe: MyBotCommand = {
           console.log("registered user");
 
           const botName = await CheckBot.getMyUserName();
-          const promiseR2 = service.sendSelfDestroyed(
+          await service.sendSelfDestroyed(
             {
               chat_id,
               text: getInstructionsText(botName),
@@ -83,15 +86,13 @@ const ValidateMe: MyBotCommand = {
             },
             destroyInstructionsTimeoutSec
           );
-          // todo we need to detect if userStartedValidation for destroying elements
-          service.sendSelfDestroyed(
+          await service.sendSelfDestroyed(
             {
               chat_id,
-              text: `Если всё понятно, пройдите проверку: ${getInstructionsText(botName)}`,
+              text: `Инструктаж окончен. Давайте сыграем: @${botName}`,
             },
             destroyInstructionsTimeoutSec
           );
-          await promiseR2;
         }
       } else {
         // todo remove this because access to bot will be restricted
