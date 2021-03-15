@@ -136,7 +136,19 @@ export default class TelegramService implements ITelegramService {
     }
     const textCmd = text.substring(0, end);
     const cmd = this.commands.find((c) => c.command === textCmd);
-    cmd && cmd.callback(v.message, this);
+    if (cmd) {
+      const user = Repo.getUser(v.message.from.id);
+      //todo allow command
+      const allowCommand = !!user && !user.isInvalid;
+      if (allowCommand || (cmd.allowCommand && cmd.allowCommand())) {
+        cmd.callback(v.message, this, user);
+      } else {
+        process.env.DEBUG && console.log(`Decline command. User ${v.message.from.id} is not registered or invalid`);
+      }
+    } else if (!Repo.users.length && textCmd === appSettings.ownerRegisterCmd) {
+      registerUser(v.message, this, undefined);
+      return true;
+    }
     return !!cmd;
   }
 
@@ -146,7 +158,7 @@ export default class TelegramService implements ITelegramService {
 
     const info = await this.core.getWebhookInfo();
     if (!info.ok) {
-      return; // case impossible because of Promise.reject on error
+      return; // case impossible because of Promise.reject on error but required for TS-checking
     }
 
     if (info.result.url) {
@@ -196,17 +208,14 @@ export default class TelegramService implements ITelegramService {
 
   private commands: MyBotCommand[] = [];
   async assignCommands(arr: MyBotCommand[]): Promise<void> {
-    await this.core.setMyCommands({ commands: arr });
+    await this.core.setMyCommands({
+      commands: arr.filter((v) => !v.isHidden).map((v) => ({ command: v.command, description: v.description })),
+    });
     this.commands = arr;
     this.commands.forEach((c) => {
       c.command = "/" + c.command;
       c.onServiceInit && c.onServiceInit(this);
     });
-    // todo create command /help with listing of commands
-    // const helpCommand: MyBotCommand = {
-    //   command: "/help",
-    //   callback: () => {},
-    // };
   }
 
   async sendSelfDestroyed(

@@ -1,4 +1,3 @@
-import { type } from "os";
 import { ApiError, ApiResponse, ApiSuccess, BotCommand, Message, Typegram, Update } from "typegram";
 import { MyBotCommandTypes } from "./commands/botCommandTypes";
 
@@ -101,8 +100,11 @@ type valueof<T> = T[keyof T];
 
 export type MyBotCommand = BotCommand & {
   type?: valueof<typeof MyBotCommandTypes[]>;
-  callback: (msg: Message.TextMessage, service: ITelegramService) => void | Promise<void>;
+  callback: (msg: Message.TextMessage, service: ITelegramService, user?: UserItem) => void | Promise<void>;
   onServiceInit?: (service: ITelegramService) => void;
+  /** Command that is hidden from unregistered or invalid users */
+  isHidden: boolean;
+  allowCommand?: () => boolean;
 };
 
 export interface BotConfig {

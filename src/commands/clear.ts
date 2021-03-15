@@ -5,6 +5,7 @@ import { MyBotCommandTypes } from "./botCommandTypes";
 const CommandClear: MyBotCommand = {
   command: "clear",
   type: MyBotCommandTypes.group,
+  isHidden: false,
   description: "удалить все возможные сообщения", // Possible restrictions: https://core.telegram.org/bots/api#deletemessage",
   callback: async (msg, service) => {
     const resMsg = await service.notify({
@@ -16,6 +17,7 @@ const CommandClear: MyBotCommand = {
     const chat = Repo.getOrPushChat(msg.chat.id);
 
     try {
+      //todo wrong if some message is excluded from deleting
       await service.core.unpinAllChatMessages({ chat_id: msg.chat.id });
       for (let i = msg.message_id; i >= chat.lastDeleteIndex; --i) {
         await service.core.deleteMessageForce({ chat_id: msg.chat.id, message_id: i });

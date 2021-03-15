@@ -4,6 +4,7 @@ import { MyBotCommandTypes, MyBotCommandTypesDescription } from "./botCommandTyp
 const CommandHelp: MyBotCommand = {
   command: "help",
   type: MyBotCommandTypes.common,
+  isHidden: true,
   description: "справка",
   callback: async (msg, service) => {
     const lines: string[] = ["Добро пожаловать. Доступны следующие команды\n"];
@@ -19,7 +20,7 @@ const CommandHelp: MyBotCommand = {
       lines.push("");
     });
 
-    const resMsg = await service.core.sendMessage({
+    await service.core.sendMessage({
       chat_id: msg.chat.id,
       disable_notification: true,
       text: lines.join("\n"),
