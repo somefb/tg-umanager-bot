@@ -20,6 +20,17 @@ const answersFalse = ["Увы", "Неверно", "Неправильно"];
 
 const answersExpected_1 = ["Невероятно", "Хм", "Интересно", "Забавно", "Необычно"];
 const answersExpected_2 = ["Ладно-ладно", "А вы настойчивы", "Вы сделали невозможное"];
+const askFile = "Понравилась игра?";
+
+const uploadFileInstructions = [
+  "И напоследок передайте мне любой ваш уникальный файл (картинка/фото, аудио/голосовое, текстовый).",
+  "* файл должен быть уникальным для вас, но абсолютно бесполезным для остальных",
+  "* сохраните его где-нибудь в доступном для вас месте и не теряйте его никогда!",
+  "\nВсякий раз как вы проходите игру с ошибкой, а также с некоторой периодичностью бот будет выдавать сообщение:",
+  `<b>${askFile}</b>`,
+  "на это сообщение вам нужно будет передать боту (мне) тот самый уникальный файл, что будет являться подтверждением, что вы не мошенник",
+  "\nЯ жду ваш файл...",
+].join("\n");
 
 export default async function validate(user: UserItem, service: ITelegramService): Promise<boolean | null> {
   try {
@@ -30,7 +41,7 @@ export default async function validate(user: UserItem, service: ITelegramService
       return null;
     }
 
-    //todo detect if chat is blocked and somehow notify users
+    //todo detect if chat is blocked and somehow notify user
     const sendMessage = async (text: string, words: string[] | null) => {
       let res;
       const args: Opts<"sendMessage"> = {
@@ -71,6 +82,7 @@ export default async function validate(user: UserItem, service: ITelegramService
     let repeatCnt = 0;
     while (1) {
       // first part
+      // todo ask for 'let's play' before we start ???
       const pairs = generateWordPairs(user.validationKey, rows * collumns);
       const r = (await sendMessage(
         msgPrefix + (repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
@@ -78,10 +90,8 @@ export default async function validate(user: UserItem, service: ITelegramService
       )) as Message.TextMessage;
 
       message_id = r.message_id;
-
-      // wait for response
-      const e = await service.onGotCallbackQuery(user.checkBotChatId);
       //todo start timer here and wait for 1 minutes
+      const e = await service.onGotCallbackQuery(user.checkBotChatId);
       const gotWord = (e.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
       const trueWordPair = gotWord && pairs.find((v) => v.one === gotWord);
       if (!trueWordPair) {
@@ -101,7 +111,26 @@ export default async function validate(user: UserItem, service: ITelegramService
       if (gotWord2 === nextObj.expected) {
         ++validTimes;
         if (validTimes >= expectedValidTimes) {
-          await sendMessage(arrayGetRandomItem(answersExpected_2), null);
+          msgPrefix = arrayGetRandomItem(answersExpected_2);
+          if (!user.validationFile) {
+            await sendMessage(msgPrefix + uploadFileInstructions, null);
+            //todo check if this is works
+            const res = await service.onGotFile(user.checkBotChatId);
+            user.validationFile = res.result.file;
+          } else if (invalidTimes) {
+            // todo also special command to force validation via file
+            await sendMessage(msgPrefix, null);
+            const res = await service.onGotFile(user.checkBotChatId);
+            if (UserItem.isFilesEqual(user.validationFile, res.result.file)) {
+              await sendMessage(arrayGetRandomItem(answersExpected_2), null);
+            } else {
+              console.log(`User ${user.id} failed validataion via file`);
+              user.validationDate = Date.now();
+              return false;
+            }
+          } else {
+            await sendMessage(msgPrefix, null);
+          }
           user.isInvalid = false;
           user.validationDate = Date.now();
           //todo timeout 10 sec and remove private chat

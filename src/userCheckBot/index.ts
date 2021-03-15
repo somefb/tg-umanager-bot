@@ -1,4 +1,3 @@
-import Repo from "../repo";
 import { ITelegramService, MyBotCommand } from "../types";
 import UserItem from "../userItem";
 import { generateUserKey } from "./dictionary";
@@ -67,11 +66,11 @@ const CheckBotCommands: MyBotCommand[] = [
   {
     command: "start",
     description: "Начать заново",
-    callback: async (msg, service) => {
+    isHidden: false,
+    allowCommand: () => true,
+    callback: async (msg, service, user) => {
       // todo remove previous if restart
       // todo don't allow to add bot to chat: use event onBotAddedToChat
-      const user = Repo.getUser(msg.from?.id);
-
       if (!user) {
         if (msg.from?.id) {
           const resolve = waitableUsers[msg.from?.id];
@@ -82,7 +81,7 @@ const CheckBotCommands: MyBotCommand[] = [
         }
         await service.core.sendMessage({
           chat_id: msg.chat.id,
-          text: "Упс, похоже я поломался",
+          text: "Превышено допустимое кол-во участников",
         });
       } else {
         await CheckBot.validateUser(user);

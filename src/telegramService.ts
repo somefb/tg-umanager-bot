@@ -1,14 +1,19 @@
 import * as Tg from "typegram";
 import { ApiResponse, Message, Update } from "typegram";
+import appSettings from "./appSettingsGet";
+import registerUser from "./commands/registerUser";
 import objectRecursiveSearch from "./helpers/objectRecursiveSearch";
 import processNow from "./helpers/processNow";
+import Repo from "./repo";
 import TelegramCore from "./telegramCore";
 import {
   BotConfig,
   EventCancellation,
   EventPredicate,
+  FileInfo,
   ITelegramService,
   MyBotCommand,
+  NewFileMessage,
   NewTextMessage,
   NotifyMessage,
   Opts,
@@ -62,6 +67,7 @@ export default class TelegramService implements ITelegramService {
     try {
       let defFn;
       let chatId: number | undefined;
+      let file: FileInfo | undefined;
       const type: ServiceEvents | null = (() => {
         if ((v as Update.CallbackQueryUpdate).callback_query) {
           chatId = (v as Update.CallbackQueryUpdate).callback_query?.message?.chat.id;
@@ -73,6 +79,24 @@ export default class TelegramService implements ITelegramService {
           if ((msg as Message.TextMessage).text?.startsWith("/")) {
             defFn = () => this.gotBotCommand(v as NewTextMessage);
             return ServiceEvents.gotBotCommand;
+          } else if ((msg as Message.DocumentMessage).document) {
+            file = (msg as Message.DocumentMessage).document;
+            return ServiceEvents.gotFile;
+          } else if ((msg as Message.AudioMessage).audio) {
+            file = (msg as Message.AudioMessage).audio;
+            return ServiceEvents.gotFile;
+          } else if ((msg as Message.VoiceMessage).voice) {
+            file = (msg as Message.VoiceMessage).voice;
+            return ServiceEvents.gotFile;
+          } else if ((msg as Message.VideoMessage).video) {
+            file = (msg as Message.VideoMessage).video;
+            return ServiceEvents.gotFile;
+          } else if ((msg as Message.PhotoMessage).photo) {
+            file = (msg as Message.PhotoMessage).photo;
+            return ServiceEvents.gotFile;
+          } else if ((msg as Message.AnimationMessage).animation) {
+            file = (msg as Message.AnimationMessage).animation;
+            return ServiceEvents.gotFile;
           }
           return ServiceEvents.gotNewMessage;
         }
@@ -103,7 +127,10 @@ export default class TelegramService implements ITelegramService {
           if (e.predicate) {
             if (e.predicate(v, chatId)) {
               isPrevented = true;
-              await e.resolve({ preventDefault, result: v });
+              await e.resolve({
+                preventDefault,
+                result: Object.assign({}, v, { file }) as NewFileMessage | Update,
+              });
             }
           } else {
             await e.resolve({ preventDefault, result: v });
@@ -320,6 +347,13 @@ export default class TelegramService implements ITelegramService {
   ): Promise<ServiceEvent<Update>> {
     return this.addEventListener(ServiceEvents.gotUpdate, predicateOrChatId, cancellation);
   }
+
+  onGotFile(
+    predicateOrChatId: number | string | EventPredicate<NewFileMessage>,
+    cancellation?: EventCancellation
+  ): Promise<ServiceEvent<NewFileMessage>> {
+    return this.addEventListener(ServiceEvents.gotFile, predicateOrChatId, cancellation);
+  }
 }
 
 interface IEventListenerObj<T extends Update> {
@@ -334,4 +368,5 @@ const enum ServiceEvents {
   gotNewMessage,
   gotEditedMessage,
   gotBotCommand,
+  gotFile,
 }

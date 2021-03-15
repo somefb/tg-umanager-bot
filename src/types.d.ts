@@ -1,5 +1,7 @@
 import { ApiError, ApiResponse, ApiSuccess, BotCommand, Message, Typegram, Update } from "typegram";
+import { Document, Audio, PhotoSize, Video, Voice, Animation } from "typegram/message";
 import { MyBotCommandTypes } from "./commands/botCommandTypes";
+import UserItem from "./userItem";
 
 /** This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data in the usual way that files are uploaded via the browser. */
 export type InputFile = { path: string };
@@ -70,6 +72,20 @@ export type OnGotEvent<T extends Update> = (
   cancellation?: EventCancellation
 ) => Promise<ServiceEvent<T>>;
 
+type MessageFile =
+  | Message.DocumentMessage
+  | Message.AudioMessage
+  | Message.VoiceMessage
+  | Message.VideoMessage
+  | Message.PhotoMessage
+  | Message.AnimationMessage;
+export type FileInfo = Document | Audio | Voice | Video | PhotoSize[] | Animation;
+
+export interface NewFileMessage extends Update.MessageUpdate, Update.AbstractMessageUpdate {
+  message: Update.New & Update.NonChannel & MessageFile;
+  file: FileInfo;
+}
+
 export interface ITelegramService {
   core: ITelegramCore;
   cfg: BotConfig;
@@ -80,6 +96,7 @@ export interface ITelegramService {
 
   onGotUpdate: OnGotEvent<Update>;
   onGotCallbackQuery: OnGotEvent<Update.CallbackQueryUpdate>;
+  onGotFile: OnGotEvent<NewFileMessage>;
 }
 
 export interface TelegramListenOptions {
