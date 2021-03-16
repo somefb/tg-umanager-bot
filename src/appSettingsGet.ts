@@ -1,6 +1,24 @@
 import cfg from "./appSettings.json";
 import cfgPrivate from "./appSettings.private.json";
 
-const appSettings = Object.assign(cfg, cfgPrivate);
+/* expected appSettings.private.json
+{
+  "all": {
+    "ownerRegisterCmd": ""
+  },
+  "prod": {
+    "botToken": "...",
+    "botCheckToken": "...",
+    "botSettingsPath": "yourBot.prod.cfg"
+  },
+  "dev": {
+    "botToken": "...",
+    "botCheckToken": "...",
+    "botSettingsPath": "yourBot.dev.cfg"
+  }
+}
+*/
+
+const appSettings = Object.assign(cfg, cfgPrivate.all, process.env.DEBUG ? cfgPrivate.dev : cfgPrivate.prod);
 
 export default appSettings;
