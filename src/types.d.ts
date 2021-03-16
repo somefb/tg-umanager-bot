@@ -79,7 +79,7 @@ type MessageFile =
   | Message.VideoMessage
   | Message.PhotoMessage
   | Message.AnimationMessage;
-export type FileInfo = Document | Audio | Voice | Video | PhotoSize[] | Animation;
+export type FileInfo = Document | Audio | Voice | Video | PhotoSize | Animation;
 
 export interface NewFileMessage extends Update.MessageUpdate, Update.AbstractMessageUpdate {
   message: Update.New & Update.NonChannel & MessageFile;

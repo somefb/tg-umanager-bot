@@ -92,7 +92,8 @@ export default class TelegramService implements ITelegramService {
             file = (msg as Message.VideoMessage).video;
             return ServiceEvents.gotFile;
           } else if ((msg as Message.PhotoMessage).photo) {
-            file = (msg as Message.PhotoMessage).photo;
+            // we skip the other photos
+            file = (msg as Message.PhotoMessage).photo[0];
             return ServiceEvents.gotFile;
           } else if ((msg as Message.AnimationMessage).animation) {
             file = (msg as Message.AnimationMessage).animation;

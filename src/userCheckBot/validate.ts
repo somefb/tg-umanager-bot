@@ -14,21 +14,23 @@ const expectedValidTimes = 2; // twice in the row
 const expectedInvalidTimes = 3; // total possible == twice
 //todo implement waitTimeout
 const waitTimeout = 60 * 1000; //1 minute
+const notifyTimeout = 5000;
+const notifyDeleteLastTimeout = 60000;
 
-const answersTrue = ["Неплохо", "Правильно", "Хорошо"];
+const answersTrue = ["Верно", "Правильно", "Хорошо"];
 const answersFalse = ["Увы", "Неверно", "Неправильно"];
 
 const answersExpected_1 = ["Невероятно", "Хм", "Интересно", "Забавно", "Необычно"];
-const answersExpected_2 = ["Ладно-ладно", "А вы настойчивы", "Вы сделали невозможное"];
+const answersExpected_2 = ["Ладно-ладно!", "А вы настойчивы!", "Вы сделали невозможное!"];
 const askFile = "Понравилась игра?";
 
 const uploadFileInstructions = [
-  "И напоследок передайте мне любой ваш уникальный файл (картинка/фото, аудио/голосовое, текстовый).",
+  ".\nИ напоследок передайте мне любой ваш уникальный файл (картинка/фото, аудио/голосовое, текстовый).",
   "* файл должен быть уникальным для вас, но абсолютно бесполезным для остальных",
   "* сохраните его где-нибудь в доступном для вас месте и не теряйте его никогда!",
   "\nВсякий раз как вы проходите игру с ошибкой, а также с некоторой периодичностью бот будет выдавать сообщение:",
   `<b>${askFile}</b>`,
-  "на это сообщение вам нужно будет передать боту (мне) тот самый уникальный файл, что будет являться подтверждением, что вы не мошенник",
+  "на это сообщение вам нужно будет передать боту (мне) тот самый уникальный файл.",
   "\nЯ жду ваш файл...",
 ].join("\n");
 
@@ -47,6 +49,7 @@ export default async function validate(user: UserItem, service: ITelegramService
       const args: Opts<"sendMessage"> = {
         chat_id: user.checkBotChatId,
         text,
+        parse_mode: "HTML",
       };
 
       if (words) {
@@ -80,9 +83,25 @@ export default async function validate(user: UserItem, service: ITelegramService
     let invalidTimes = 0;
     let msgPrefix = "";
     let repeatCnt = 0;
+
+    const cancelSession = (isValid: boolean) => {
+      user.validationDate = Date.now();
+      user.isInvalid = !isValid;
+      // todo do we need to save reason?
+      if (!isValid) {
+        // todo implement unlock behavior
+        user.isLocked = true;
+      }
+      setTimeout(() => {
+        sendMessage("Рекомендуется удалить этот чат (бот не может это сделать)!", null);
+        setTimeout(() => {
+          service.core.deleteMessageForce({ chat_id: user.checkBotChatId, message_id });
+        }, notifyDeleteLastTimeout);
+      }, notifyTimeout);
+    };
+
     while (1) {
       // first part
-      // todo ask for 'let's play' before we start ???
       const pairs = generateWordPairs(user.validationKey, rows * collumns);
       const r = (await sendMessage(
         msgPrefix + (repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
@@ -113,27 +132,37 @@ export default async function validate(user: UserItem, service: ITelegramService
         if (validTimes >= expectedValidTimes) {
           msgPrefix = arrayGetRandomItem(answersExpected_2);
           if (!user.validationFile) {
+            // init 2step validation
             await sendMessage(msgPrefix + uploadFileInstructions, null);
-            //todo check if this is works
+            // todo resetWaitTimeoutHere (because of loading file takes a time)
+            // todo wait for any update and lock user ???
             const res = await service.onGotFile(user.checkBotChatId);
+            await service.core.deleteMessageForce({
+              chat_id: res.result.message.chat.id,
+              message_id: res.result.message.message_id,
+            });
             user.validationFile = res.result.file;
           } else if (invalidTimes) {
+            // 2step validation
             // todo also special command to force validation via file
-            await sendMessage(msgPrefix, null);
+            await sendMessage(msgPrefix + ". " + askFile, null);
             const res = await service.onGotFile(user.checkBotChatId);
+            await service.core.deleteMessageForce({
+              chat_id: res.result.message.chat.id,
+              message_id: res.result.message.message_id,
+            });
             if (UserItem.isFilesEqual(user.validationFile, res.result.file)) {
               await sendMessage(arrayGetRandomItem(answersExpected_2), null);
             } else {
-              console.log(`User ${user.id} failed validataion via file`);
-              user.validationDate = Date.now();
+              await sendMessage(arrayGetRandomItem(answersFalse), null);
+              console.log(`User ${user.id} failed validation via file and locked`);
+              cancelSession(false);
               return false;
             }
           } else {
             await sendMessage(msgPrefix, null);
           }
-          user.isInvalid = false;
-          user.validationDate = Date.now();
-          //todo timeout 10 sec and remove private chat
+          cancelSession(true);
           return true;
         } else {
           msgPrefix = arrayGetRandomItem(answersExpected_1) + ". Давайте повторим. ";
@@ -147,12 +176,9 @@ export default async function validate(user: UserItem, service: ITelegramService
           msgPrefix = arrayGetRandomItem(answersFalse);
         }
         if (invalidTimes >= expectedInvalidTimes) {
-          user.isInvalid = true;
-          user.validationDate = Date.now();
-          user.isLocked = true;
-          // todo timeout 10 sec and remove private chat
           await sendMessage(msgPrefix, null);
           console.log(`User ${user.id} failed validation and locked: invalidTimes = ${invalidTimes}`);
+          cancelSession(false);
           return false;
         } else {
           msgPrefix += ". ";

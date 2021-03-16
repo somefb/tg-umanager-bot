@@ -16,8 +16,6 @@ import { UserValidationKey } from "./userCheckBot/dictionary";
 
 export default class UserItem {
   static isFilesEqual(a: FileInfo, b: FileInfo): boolean {
-    //todo we can't work with PhotoSize[] !!!
-    // @ts-ignore
     const someDifferent = Object.keys(a).some((key: string | keyof typeof a) => {
       if (key === "file_id" || key === "file_name" || key === "thumb") {
         //we can't compare by file_id and lets skip fileName

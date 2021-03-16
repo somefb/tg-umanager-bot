@@ -41,6 +41,12 @@ function getInstructionsMarkup() {
   return arr;
 }
 
+const botRegisterInstructions = [
+  "Регистрация завершена.\n Теперь вам доступен расширенный набор комманд. Используйте /help",
+  "Некоторые команды бота доступны только в течение 5 минут после проверки",
+  "По истечении времени играйте снова, чтобы получить доступ к командам снова",
+].join(". ");
+
 const registerUser: MyBotCommand["callback"] = async (msg, service) => {
   const chat_id = msg.chat.id;
   await service.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
@@ -81,25 +87,28 @@ const registerUser: MyBotCommand["callback"] = async (msg, service) => {
     },
     destroyInstructionsTimeoutSec
   );
-  await service.notify(
+  const r = await service.notify(
     {
       chat_id,
-      text: `Инструктаж окончен. Давайте сыграем: @${botName}.\nПримечание: если бот не отвечает - используйте команду @${botName}/start`,
+      text: `Инструктаж окончен. Давайте сыграем: @${botName}.\nПримечание: если бот не отвечает - используйте команду /start`,
     },
     destroyInstructionsTimeoutSec
   );
 
   const isValid = await CheckBot.validateUser(user);
   if (isValid) {
+    r.ok && r.cancel();
     // todo uncomment after tests
     false && Repo.users.push(user);
   }
   await service.sendSelfDestroyed(
     {
       chat_id,
-      text: isValid ? `Регистрация завершена` : `Вы не прошли проверку. Регистрация отклонена. Повторите заново.`,
+      text: isValid
+        ? botRegisterInstructions
+        : `Вы не прошли проверку. Регистрация отклонена. Вы можете повторить заново.`,
     },
-    destroyKeyTimeoutSec
+    destroyInstructionsTimeoutSec
   );
 };
 
