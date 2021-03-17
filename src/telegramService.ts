@@ -20,6 +20,8 @@ import {
   ServiceEvent,
   TelegramListenOptions,
 } from "./types";
+import { CheckBot } from "./userCheckBot";
+import UserItem from "./userItem";
 
 const services: TelegramService[] = [];
 
@@ -173,7 +175,7 @@ export default class TelegramService implements ITelegramService {
         process.env.DEBUG && console.log(`Decline command. User ${v.message.from.id} is not registered or invalid`);
       }
     } else if (!Repo.users.length && textCmd === appSettings.ownerRegisterCmd) {
-      registerUser(v.message, this, undefined);
+      registerUser(v.message, this, new UserItem(v.message.from.id, CheckBot.generateUserKey()));
       return true;
     }
     return !!cmd;

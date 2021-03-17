@@ -42,22 +42,24 @@ function getInstructionsMarkup() {
 }
 
 const botRegisterInstructions = [
-  "Регистрация завершена.\n Теперь вам доступен расширенный набор комманд. Используйте /help",
-  "Некоторые команды бота доступны только в течение 5 минут после проверки",
-  "По истечении времени играйте снова, чтобы получить доступ к командам снова",
+  "Регистрация завершена.\nТеперь вам доступен расширенный набор команд. Используйте /help",
+  "\nНекоторые команды бота доступны только в течение 5 минут после проверки",
+  "По истечении времени играйте снова, чтобы получить доступ к командам",
 ].join(". ");
 
-const registerUser: MyBotCommand["callback"] = async (msg, service) => {
+async function registerUser(
+  msg: Parameters<MyBotCommand["callback"]>["0"],
+  service: Parameters<MyBotCommand["callback"]>["1"],
+  user: UserItem
+): Promise<boolean> {
   const chat_id = msg.chat.id;
   await service.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
 
   const uid = msg.from?.id;
   if (!msg.from || !uid) {
-    console.warn("Impossbile to register. User id is not defined");
-    return;
+    console.warn("Impossible to register. UserId is not defined");
+    return false;
   }
-  const key = CheckBot.generateUserKey();
-  const user = new UserItem(uid, key);
   user.nickName = msg.from.username as string;
   user.firstName = msg.from.first_name as string;
   user.lastName = msg.from.last_name as string;
@@ -66,7 +68,7 @@ const registerUser: MyBotCommand["callback"] = async (msg, service) => {
   await service.sendSelfDestroyed(
     {
       chat_id,
-      text: `Ваш ключ:\n\n"${key.num} ${key.word}"\n\nЗапомните его.`,
+      text: `Ваш ключ:\n\n<b>"${user.validationKey.num} ${user.validationKey.word}"</b>\n\nЗапомните его.`,
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
@@ -98,10 +100,10 @@ const registerUser: MyBotCommand["callback"] = async (msg, service) => {
   const isValid = await CheckBot.validateUser(user);
   if (isValid) {
     r.ok && r.cancel();
-    // todo uncomment after tests
-    false && Repo.users.push(user);
+    Repo.users.push(user);
   }
-  await service.sendSelfDestroyed(
+
+  service.sendSelfDestroyed(
     {
       chat_id,
       text: isValid
@@ -110,6 +112,8 @@ const registerUser: MyBotCommand["callback"] = async (msg, service) => {
     },
     destroyInstructionsTimeoutSec
   );
-};
+
+  return !!isValid;
+}
 
 export default registerUser;
