@@ -10,7 +10,6 @@ const ValidateMe: MyBotCommand = {
   description: "проверь меня",
   callback: async (msg, service, user) => {
     const chat_id = msg.chat.id;
-    //todo try catch ?
     //todo remove all commands automatically
     await service.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
 

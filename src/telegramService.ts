@@ -166,7 +166,6 @@ export default class TelegramService implements ITelegramService {
     const cmd = this.commands.find((c) => c.command === textCmd);
     if (cmd) {
       const user = Repo.getUser(v.message.from.id);
-      //todo allow command
       const allowCommand = !!user && !user.isInvalid;
       if (allowCommand || (cmd.allowCommand && cmd.allowCommand())) {
         cmd.callback(v.message, this, user);
@@ -255,25 +254,16 @@ export default class TelegramService implements ITelegramService {
       return res;
     }
     const chat_id = args.chat_id as number;
-    let cancellation: () => void | undefined;
-    const rt = setTimeout(() => {
-      this.core.deleteMessageForce({ chat_id, message_id: res.result.message_id });
-      cancellation && cancellation();
-    }, deleteTimeoutSec * 1000); // wait for N ms and delete message
 
     try {
-      await this.onGotUpdate(chat_id, (e) => (cancellation = e));
-      this.core.deleteMessageForce({ chat_id, message_id: res.result.message_id });
+      await this.onGotUpdate(chat_id, deleteTimeoutSec * 1000);
     } catch (err) {
       if (!err.isCancelled) {
         console.error(err);
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        res.ok = false;
-        return res;
+        res.ok = false as true;
       }
     }
-    clearTimeout(rt);
+    this.core.deleteMessageForce({ chat_id, message_id: res.result.message_id });
     return res;
   }
 
@@ -306,7 +296,7 @@ export default class TelegramService implements ITelegramService {
   private addEventListener<T extends Update>(
     type: ServiceEvents,
     predicateOrChatId: number | string | EventPredicate<T>,
-    cancellation: EventCancellation | undefined
+    cancellationOrTimeout: EventCancellation | undefined | number
   ): Promise<ServiceEvent<T>> {
     const predicate =
       typeof predicateOrChatId === "function"
@@ -314,17 +304,29 @@ export default class TelegramService implements ITelegramService {
         : (_e: Update, chatId?: number) => chatId === (predicateOrChatId as number);
 
     return new Promise((resolve, reject) => {
+      let timer: NodeJS.Timeout;
       const listener = {
         type,
         predicate,
-        resolve,
+        resolve: (v) => {
+          timer && clearTimeout(timer);
+          return resolve(v as ServiceEvent<T>);
+        },
       } as IEventListenerObj<Update>;
       this.eventListeners.push(listener);
-      cancellation &&
-        cancellation(() => {
-          reject(Object.assign(new Error("Waiting is cancelled via cancellation()"), { isCancelled: true }));
-          this.removeEventListener(listener);
-        });
+      if (cancellationOrTimeout) {
+        if (typeof cancellationOrTimeout === "function") {
+          cancellationOrTimeout(() => {
+            reject(Object.assign(new Error("Waiting is cancelled via cancellation()"), { isCancelled: true }));
+            this.removeEventListener(listener);
+          });
+        } else {
+          timer = setTimeout(() => {
+            reject(Object.assign(new Error("Waiting is cancelled via timeout()"), { isCancelled: true }));
+            this.removeEventListener(listener);
+          }, cancellationOrTimeout);
+        }
+      }
     });
   }
 
@@ -337,30 +339,30 @@ export default class TelegramService implements ITelegramService {
 
   onGotCallbackQuery(
     predicateOrChatId: number | string | EventPredicate<Update.CallbackQueryUpdate>,
-    cancellation?: EventCancellation
+    cancellationOrTimeout?: EventCancellation | number
   ): Promise<ServiceEvent<Update.CallbackQueryUpdate>> {
-    return this.addEventListener(ServiceEvents.gotCallbackQuery, predicateOrChatId, cancellation);
+    return this.addEventListener(ServiceEvents.gotCallbackQuery, predicateOrChatId, cancellationOrTimeout);
   }
 
   onGotUpdate(
     predicateOrChatId: number | string | EventPredicate<Update>,
-    cancellation?: EventCancellation
+    cancellationOrTimeout?: EventCancellation | number
   ): Promise<ServiceEvent<Update>> {
-    return this.addEventListener(ServiceEvents.gotUpdate, predicateOrChatId, cancellation);
+    return this.addEventListener(ServiceEvents.gotUpdate, predicateOrChatId, cancellationOrTimeout);
   }
 
   onGotFile(
     predicateOrChatId: number | string | EventPredicate<NewFileMessage>,
-    cancellation?: EventCancellation
+    cancellationOrTimeout?: EventCancellation | number
   ): Promise<ServiceEvent<NewFileMessage>> {
-    return this.addEventListener(ServiceEvents.gotFile, predicateOrChatId, cancellation);
+    return this.addEventListener(ServiceEvents.gotFile, predicateOrChatId, cancellationOrTimeout);
   }
 }
 
 interface IEventListenerObj<T extends Update> {
   type: ServiceEvents;
   predicate?: (e: T, chatId: number | undefined) => boolean;
-  resolve: (v: ServiceEvent<T>) => Promise<void>;
+  resolve: (v: ServiceEvent<T> | PromiseLike<ServiceEvent<T>>) => Promise<void>;
 }
 
 const enum ServiceEvents {

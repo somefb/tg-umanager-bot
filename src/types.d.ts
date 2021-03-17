@@ -69,7 +69,7 @@ export type EventCancellation = (callback: () => void) => void;
 export type EventPredicate<T extends Update> = (e: T, chatId?: number) => boolean;
 export type OnGotEvent<T extends Update> = (
   predicateOrChatId: number | string | EventPredicate<T>,
-  cancellation?: EventCancellation
+  cancellationOrTimeout?: EventCancellation | number
 ) => Promise<ServiceEvent<T>>;
 
 type MessageFile =

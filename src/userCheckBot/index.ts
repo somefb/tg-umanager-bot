@@ -4,7 +4,7 @@ import { generateUserKey } from "./dictionary";
 import validate from "./validate";
 
 const waitUserMs = 60000; // 1 minute
-const validationExpiry = 5 * 60 * 1000; // 5 minutes - time user isValid after validation
+const validationExpiry = 5 * 60 * 1000; // 5 minutes - period of time that user isValid after validation
 //users who wait for registration
 const waitableUsers: Record<string | number, (v: false | number | string) => void> = {};
 
@@ -43,8 +43,6 @@ export const CheckBot = {
         user.checkBotChatId = chatId;
       }
     }
-    // todo we can't remove private chat and should notify users about this
-    // await service.core.leaveChat({ chat_id: msg.chat.id });
     return validate(user, this.service as ITelegramService);
   },
   generateUserKey,

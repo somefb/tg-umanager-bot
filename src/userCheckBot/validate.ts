@@ -14,6 +14,7 @@ const expectedValidTimes = 2; // twice in the row
 const expectedInvalidTimes = 3; // total possible == twice
 //todo implement waitTimeout
 const waitTimeout = 60 * 1000; //1 minute
+const timeoutFile = 5 * 60 * 1000; // 5 minute
 const notifyTimeout = 5000;
 const notifyDeleteLastTimeout = 60000;
 
@@ -100,91 +101,102 @@ export default async function validate(user: UserItem, service: ITelegramService
       }, notifyTimeout);
     };
 
-    while (1) {
-      // first part
-      const pairs = generateWordPairs(user.validationKey, rows * collumns);
-      const r = (await sendMessage(
-        msgPrefix + (repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
-        pairs.map((v) => v.one)
-      )) as Message.TextMessage;
+    try {
+      while (1) {
+        // first part
+        const pairs = generateWordPairs(user.validationKey, rows * collumns);
+        const r = (await sendMessage(
+          msgPrefix + (repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
+          pairs.map((v) => v.one)
+        )) as Message.TextMessage;
 
-      message_id = r.message_id;
-      //todo start timer here and wait for 1 minutes
-      const e = await service.onGotCallbackQuery(user.checkBotChatId);
-      const gotWord = (e.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
-      const trueWordPair = gotWord && pairs.find((v) => v.one === gotWord);
-      if (!trueWordPair) {
-        await service.core.sendMessage({ chat_id: user.checkBotChatId, text: "Упс, я поломался. Давайте ещё раз" });
-        return false;
-      }
-
-      // second part
-      const nextObj = generateWordPairsNext(user.validationKey, trueWordPair, pairs, true);
-      await sendMessage(
-        `Выберите ассоциацию`,
-        nextObj.pairs.map((v) => v.two)
-      );
-
-      const e2 = await service.onGotCallbackQuery(user.checkBotChatId);
-      const gotWord2 = (e2.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
-      if (gotWord2 === nextObj.expected) {
-        ++validTimes;
-        if (validTimes >= expectedValidTimes) {
-          msgPrefix = arrayGetRandomItem(answersExpected_2);
-          if (!user.validationFile) {
-            // init 2step validation
-            await sendMessage(msgPrefix + uploadFileInstructions, null);
-            // todo resetWaitTimeoutHere (because of loading file takes a time)
-            // todo wait for any update and lock user ???
-            const res = await service.onGotFile(user.checkBotChatId);
-            await service.core.deleteMessageForce({
-              chat_id: res.result.message.chat.id,
-              message_id: res.result.message.message_id,
-            });
-            user.validationFile = res.result.file;
-          } else if (invalidTimes) {
-            // 2step validation
-            // todo also special command to force validation via file
-            await sendMessage(msgPrefix + ". " + askFile, null);
-            const res = await service.onGotFile(user.checkBotChatId);
-            await service.core.deleteMessageForce({
-              chat_id: res.result.message.chat.id,
-              message_id: res.result.message.message_id,
-            });
-            if (UserItem.isFilesEqual(user.validationFile, res.result.file)) {
-              await sendMessage(arrayGetRandomItem(answersExpected_2), null);
-            } else {
-              await sendMessage(arrayGetRandomItem(answersFalse), null);
-              console.log(`User ${user.id} failed validation via file and locked`);
-              cancelSession(false);
-              return false;
-            }
-          } else {
-            await sendMessage(msgPrefix, null);
-          }
-          cancelSession(true);
-          return true;
-        } else {
-          msgPrefix = arrayGetRandomItem(answersExpected_1) + ". Давайте повторим. ";
-        }
-      } else {
-        validTimes = 0;
-        ++invalidTimes;
-        if (gotWord2 === nextObj.truthy) {
-          msgPrefix = arrayGetRandomItem(answersTrue);
-        } else {
-          msgPrefix = arrayGetRandomItem(answersFalse);
-        }
-        if (invalidTimes >= expectedInvalidTimes) {
-          await sendMessage(msgPrefix, null);
-          console.log(`User ${user.id} failed validation and locked: invalidTimes = ${invalidTimes}`);
-          cancelSession(false);
+        message_id = r.message_id;
+        //todo start timer here and wait for 1 minutes
+        const e = await service.onGotCallbackQuery(user.checkBotChatId);
+        const gotWord = (e.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
+        const trueWordPair = gotWord && pairs.find((v) => v.one === gotWord);
+        if (!trueWordPair) {
+          await service.core.sendMessage({ chat_id: user.checkBotChatId, text: "Упс, я поломался. Давайте ещё раз" });
           return false;
-        } else {
-          msgPrefix += ". ";
         }
+
+        // second part
+        const nextObj = generateWordPairsNext(user.validationKey, trueWordPair, pairs, true);
+        await sendMessage(
+          `Выберите ассоциацию`,
+          nextObj.pairs.map((v) => v.two)
+        );
+
+        const e2 = await service.onGotCallbackQuery(user.checkBotChatId);
+        const gotWord2 = (e2.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
+        if (gotWord2 === nextObj.expected) {
+          ++validTimes;
+          if (validTimes >= expectedValidTimes) {
+            msgPrefix = arrayGetRandomItem(answersExpected_2);
+            if (!user.validationFile) {
+              // init 2step validation
+              await sendMessage(msgPrefix + uploadFileInstructions, null);
+              // todo resetWaitTimeoutHere (because of loading file takes a time)
+              // todo wait for any update and lock user ???
+              const res = await service.onGotFile(user.checkBotChatId, timeoutFile);
+              await service.core.deleteMessageForce({
+                chat_id: res.result.message.chat.id,
+                message_id: res.result.message.message_id,
+              });
+              user.validationFile = res.result.file;
+            } else if (invalidTimes) {
+              // 2step validation
+              // todo also special command to force validation via file
+              await sendMessage(msgPrefix + ". " + askFile, null);
+              const res = await service.onGotFile(user.checkBotChatId, timeoutFile);
+              await service.core.deleteMessageForce({
+                chat_id: res.result.message.chat.id,
+                message_id: res.result.message.message_id,
+              });
+              if (UserItem.isFilesEqual(user.validationFile, res.result.file)) {
+                await sendMessage(arrayGetRandomItem(answersExpected_2), null);
+              } else {
+                await sendMessage(arrayGetRandomItem(answersFalse), null);
+                console.log(`User ${user.id} failed validation via file and locked`);
+                cancelSession(false);
+                return false;
+              }
+            } else {
+              await sendMessage(msgPrefix, null);
+            }
+            cancelSession(true);
+            return true;
+          } else {
+            msgPrefix = arrayGetRandomItem(answersExpected_1) + ". Давайте повторим. ";
+          }
+        } else {
+          validTimes = 0;
+          ++invalidTimes;
+          if (gotWord2 === nextObj.truthy) {
+            msgPrefix = arrayGetRandomItem(answersTrue);
+          } else {
+            msgPrefix = arrayGetRandomItem(answersFalse);
+          }
+          if (invalidTimes >= expectedInvalidTimes) {
+            await sendMessage(msgPrefix, null);
+            console.log(`User ${user.id} failed validation and locked: invalidTimes = ${invalidTimes}`);
+            cancelSession(false);
+            return false;
+          } else {
+            msgPrefix += ". ";
+          }
+        }
+        ++repeatCnt;
+      } // while(1)
+    } catch (err) {
+      if (err.isCancelled) {
+        console.log(`User ${user.id} failed validation and locked: timeout is over`);
+        cancelSession(false);
+        return null;
       }
-      ++repeatCnt;
+      if (err.name !== "repeat") {
+        console.error("CheckBot error. " + err.message || err);
+      }
     }
   } catch (err) {
     if (err.name !== "repeat") {
