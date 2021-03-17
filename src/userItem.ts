@@ -15,6 +15,12 @@ import { UserValidationKey } from "./userCheckBot/dictionary";
 // };
 
 export default class UserItem {
+  static userToLink(user: UserItem): string {
+    if (user.nickName) {
+      return "@" + user.nickName;
+    }
+    return `<a href="tg://user?id=${user.id}">${[user.firstName, user.lastName].filter((v) => v).join(" ")}</a>`;
+  }
   static isFilesEqual(a: FileInfo, b: FileInfo): boolean {
     const someDifferent = Object.keys(a).some((key: string | keyof typeof a) => {
       if (key === "file_id" || key === "file_name" || key === "thumb") {
@@ -35,7 +41,9 @@ export default class UserItem {
   nickName = "";
   firstName = "";
   lastName = "";
+  sharedUserId = 0;
 
+  validationVoiceFile?: FileInfo;
   validationFile?: FileInfo;
   validationKey: UserValidationKey;
   /** Date in ms when the last validation is done */
@@ -47,6 +55,10 @@ export default class UserItem {
   checkBotChatId: string | number = 0;
   /** Personal chat id with termyKickBot */
   termyBotChatId: string | number = 0;
+
+  toLinkName(): string {
+    return UserItem.userToLink(this);
+  }
 
   constructor(id: number, validationKey: UserValidationKey) {
     this.id = id;
