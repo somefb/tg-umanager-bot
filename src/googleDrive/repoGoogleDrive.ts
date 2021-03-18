@@ -1,12 +1,11 @@
 import fs from "fs";
-import path from "path";
 import { OAuth2Client } from "google-auth-library";
 //todo optimize import to drive only
 import { drive_v3, google } from "googleapis";
+import path from "path";
 import readline from "readline";
 import { IRepository } from "../types";
 import myGoogleCredentials from "./googleCredentials.json";
-import onExit from "../onExit";
 
 //example here https://developers.google.com/drive/api/v3/quickstart/nodejs
 
@@ -31,14 +30,14 @@ export default class RepoGoogleDrive implements IRepository {
         console.error(`GoogleDrive. Error. Can't parse cache-file ${CACHE_PATH} /n`, err);
       }
     }
-    onExit(() => {
-      //saving cache
-      const obj: Record<string, string | null> = {};
-      this.cache.forEach((v, key) => {
-        obj[key] = v;
-      });
-      fs.writeFileSync(CACHE_PATH, JSON.stringify(obj), { encoding: "utf-8" });
+  }
+
+  saveCache(): void {
+    const obj: Record<string, string | null> = {};
+    this.cache.forEach((v, key) => {
+      obj[key] = v;
     });
+    fs.writeFileSync(CACHE_PATH, JSON.stringify(obj), { encoding: "utf-8" });
   }
 
   async get<T>(pathName: string): Promise<T | null> {
@@ -51,6 +50,9 @@ export default class RepoGoogleDrive implements IRepository {
         return null;
       }
       this.cache.set(fname, fileId);
+    }
+    if (!fileId) {
+      return null;
     }
     const f = await this.getFile(fileId as string);
     return (f as unknown) as T;
@@ -66,6 +68,7 @@ export default class RepoGoogleDrive implements IRepository {
     if (!fileId) {
       fileId = await this.createFile(fname, item);
       this.cache.set(fname, fileId);
+      this.saveCache();
     } else {
       await this.updateFile(fileId, item);
     }
