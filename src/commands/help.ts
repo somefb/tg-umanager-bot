@@ -1,10 +1,12 @@
 import { MyBotCommand } from "../types";
 import { MyBotCommandTypes, MyBotCommandTypesDescription } from "./botCommandTypes";
 
+const destroyHelpTimeout = 5 * 60000;
+
 const CommandHelp: MyBotCommand = {
   command: "help",
   type: MyBotCommandTypes.common,
-  isHidden: true,
+  isHidden: false,
   description: "справка",
   callback: async (msg, service) => {
     const lines: string[] = ["Добро пожаловать. Доступны следующие команды\n"];
@@ -20,13 +22,16 @@ const CommandHelp: MyBotCommand = {
       lines.push("");
     });
 
-    await service.core.sendMessage({
-      chat_id: msg.chat.id,
-      disable_notification: true,
-      text: lines.join("\n"),
-      parse_mode: "HTML",
-      //reply_markup: ""
-    });
+    await service.sendSelfDestroyed(
+      {
+        chat_id: msg.chat.id,
+        disable_notification: true,
+        text: lines.join("\n"),
+        parse_mode: "HTML",
+        //reply_markup: ""
+      },
+      destroyHelpTimeout
+    );
   },
 };
 
