@@ -3,6 +3,7 @@ import { CheckBot } from "../userCheckBot";
 import { MyBotCommandTypes } from "./botCommandTypes";
 
 // todo this is test command - remove after tests
+// todo this is command doesn't work when user isInvalid
 const ValidateMe: MyBotCommand = {
   command: "validate_me",
   type: MyBotCommandTypes.personal,

@@ -192,11 +192,9 @@ export default async function validate(user: UserItem, service: ITelegramService
       if (err.isCancelled) {
         console.log(`User ${user.id} failed validation and locked: timeout is over`);
         cancelSession(false);
-        return null;
+        return false;
       }
-      if (err.name !== "repeat") {
-        console.error("CheckBot error. " + err.message || err);
-      }
+      console.error("CheckBot error. " + err.message || err);
     }
   } catch (err) {
     if (err.name !== "repeat") {

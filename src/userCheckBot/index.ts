@@ -8,6 +8,14 @@ const validationExpiry = 5 * 60 * 1000; // 5 minutes - period of time that user 
 //users who wait for registration
 const waitableUsers: Record<string | number, (v: false | number | string) => void> = {};
 
+export function isValidationExpired(user: UserItem, validationExpiryMs = validationExpiry): boolean {
+  const dT = Date.now() - user.validationDate;
+  if (dT < validationExpiryMs) {
+    return false;
+  }
+  return true;
+}
+
 let myBotUserName = "";
 export const CheckBot = {
   service: {} as ITelegramService,
@@ -16,11 +24,8 @@ export const CheckBot = {
     if (user.isLocked) {
       return Promise.resolve(false);
     }
-    if (!user.isInvalid) {
-      const dT = Date.now() - user.validationDate;
-      if (dT < validationExpiryMs) {
-        return Promise.resolve(true);
-      }
+    if (!user.isInvalid && !isValidationExpired(user, validationExpiryMs)) {
+      return Promise.resolve(true);
     }
 
     // wait when user makes chat with CheckBot

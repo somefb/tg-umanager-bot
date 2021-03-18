@@ -21,7 +21,7 @@ import {
   ServiceEvent,
   TelegramListenOptions,
 } from "./types";
-import { CheckBot } from "./userCheckBot";
+import { CheckBot, isValidationExpired } from "./userCheckBot";
 import UserItem from "./userItem";
 
 const services: TelegramService[] = [];
@@ -126,6 +126,7 @@ export default class TelegramService implements ITelegramService {
       };
 
       const leftListeners: IEventListenerObj<Update>[] = [];
+      //todo: bug => something handled after sendSelfDestroyed ???
       const isHandled = this.eventListeners.some(async (e) => {
         if (e.type === type || e.type === ServiceEvents.gotUpdate) {
           if (e.predicate) {
@@ -169,7 +170,9 @@ export default class TelegramService implements ITelegramService {
     const cmd = this.commands.find((c) => c.command === textCmd);
     if (cmd) {
       const user = Repo.getUser(v.message.from.id);
-      const allowCommand = !!user && !user.isInvalid;
+      const allowCommand = !!user && !user.isInvalid && !isValidationExpired(user) && !process.env.DEBUG;
+      // todo don't allow private commands in groupChat
+      // todo allow group commands in groupChat for any user
       if (allowCommand || (cmd.allowCommand && cmd.allowCommand())) {
         chat_id && this.core.deleteMessageForce({ chat_id, message_id: v.message.message_id });
         cmd.callback(v.message, this, user);
