@@ -80,7 +80,7 @@ export default class TelegramService implements ITelegramService {
           chatId = (v as Update.MessageUpdate).message.chat.id;
           const msg = (v as Update.MessageUpdate).message;
           if ((msg as Message.TextMessage).text?.startsWith("/")) {
-            defFn = () => this.gotBotCommand(v as NewTextMessage);
+            defFn = () => this.gotBotCommand(v as NewTextMessage, chatId);
             return ServiceEvents.gotBotCommand;
           } else if ((msg as Message.DocumentMessage).document) {
             file = (msg as Message.DocumentMessage).document;
@@ -159,7 +159,7 @@ export default class TelegramService implements ITelegramService {
     }
   }
 
-  gotBotCommand(v: NewTextMessage): boolean {
+  gotBotCommand(v: NewTextMessage, chat_id: number | string | undefined): boolean {
     const text = v.message.text;
     let end: number | undefined = text.indexOf(" ", 1);
     if (end === -1) {
@@ -171,6 +171,7 @@ export default class TelegramService implements ITelegramService {
       const user = Repo.getUser(v.message.from.id);
       const allowCommand = !!user && !user.isInvalid;
       if (allowCommand || (cmd.allowCommand && cmd.allowCommand())) {
+        chat_id && this.core.deleteMessageForce({ chat_id, message_id: v.message.message_id });
         cmd.callback(v.message, this, user);
       } else {
         process.env.DEBUG && console.log(`Decline command. User ${v.message.from.id} is not registered or invalid`);

@@ -8,7 +8,6 @@
     "test": "jest",
     "serve": "cross-env DEBUG=true ./node_modules/.bin/ts-node src/index.ts",
     "test-google": "./node_modules/.bin/ts-node src/googleDrive/check.ts",
-    "file-read": "./node_modules/.bin/ts-node src/read.ts",
     "lint": "./node_modules/.bin/eslint --fix --cache ./**/*.{js,jsx,ts,tsx,json}",
     "build-old": "tsc --listEmittedFiles --incremental",
     "build-dev": "./node_modules/.bin/webpack --mode development",

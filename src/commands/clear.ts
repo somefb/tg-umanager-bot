@@ -19,7 +19,7 @@ const CommandClear: MyBotCommand = {
     try {
       //todo wrong if some message is excluded from deleting
       await service.core.unpinAllChatMessages({ chat_id: msg.chat.id });
-      for (let i = msg.message_id; i >= chat.lastDeleteIndex; --i) {
+      for (let i = msg.message_id - 1; i >= chat.lastDeleteIndex; --i) {
         await service.core.deleteMessageForce({ chat_id: msg.chat.id, message_id: i });
       }
     } catch (err) {

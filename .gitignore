@@ -50,3 +50,5 @@ umanagerBot.cfg
 src/googleDrive/googleToken.json
 
 src/googleDrive/googleCredentials.json
+
+*.cfg
