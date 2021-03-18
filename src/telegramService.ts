@@ -11,6 +11,7 @@ import {
   BotConfig,
   EventCancellation,
   EventPredicate,
+  EventPredicateOrChatId,
   FileInfo,
   ITelegramService,
   MyBotCommand,
@@ -66,7 +67,7 @@ export default class TelegramService implements ITelegramService {
   }
 
   gotUpdate(v: Update): void {
-    process.env.DEBUG && console.log("got update", v);
+    //process.env.DEBUG && console.log("got update", v);
     try {
       let defFn;
       let chatId: number | undefined;
@@ -125,35 +126,39 @@ export default class TelegramService implements ITelegramService {
         isPrevented = true;
       };
 
-      const leftListeners: IEventListenerObj<Update>[] = [];
-      //todo: bug => something handled after sendSelfDestroyed ???
-      const isHandled = this.eventListeners.some(async (e) => {
+      //todo botCommand must have highest priority
+      let isHandled = false;
+      const isPreventedIndex = this.eventListeners.findIndex(async (e) => {
         if (e.type === type || e.type === ServiceEvents.gotUpdate) {
+          const rVal: ServiceEvent<NewFileMessage | Update> = {
+            preventDefault,
+            result: { ...v, file },
+            chat_id: chatId,
+          };
           if (e.predicate) {
             if (e.predicate(v, chatId)) {
               isPrevented = true;
-              await e.resolve({
-                preventDefault,
-                result: Object.assign({}, v, { file }) as NewFileMessage | Update,
-              });
+              isHandled = true;
+              await e.resolve(rVal);
             }
           } else {
-            await e.resolve({ preventDefault, result: v });
+            isHandled = true;
+            await e.resolve(rVal);
           }
 
           if (isPrevented) {
+            // means skip other listeners
             return true;
           }
-        } else {
-          leftListeners.push(e);
         }
+        return false;
       });
-      this.eventListeners = leftListeners;
 
-      if (isHandled) {
+      if (isPreventedIndex !== -1) {
+        this.eventListeners.splice(isPreventedIndex, 1);
         return;
       } else if (!defFn || !defFn()) {
-        console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, v);
+        !isHandled && console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, v);
       }
     } catch (err) {
       console.error(`TelegramService '${this.cfg.name}'. Error in gotUpdate\n`, err);
@@ -170,20 +175,33 @@ export default class TelegramService implements ITelegramService {
     const cmd = this.commands.find((c) => c.command === textCmd);
     if (cmd) {
       const user = Repo.getUser(v.message.from.id);
-      const allowCommand = !!user && !user.isInvalid && !isValidationExpired(user) && !process.env.DEBUG;
+      const allowCommand = !!user && !user.isInvalid && (!isValidationExpired(user) || process.env.DEBUG);
       // todo don't allow private commands in groupChat
       // todo allow group commands in groupChat for any user
       if (allowCommand || (cmd.allowCommand && cmd.allowCommand())) {
         chat_id && this.core.deleteMessageForce({ chat_id, message_id: v.message.message_id });
-        cmd.callback(v.message, this, user);
+        const r = cmd.callback(v.message, this, user);
+        (r as Promise<unknown>).catch &&
+          (r as Promise<unknown>).catch((err) => {
+            if (!err.isCancelled) {
+              console.error(err);
+            }
+          });
       } else {
         process.env.DEBUG && console.log(`Decline command. User ${v.message.from.id} is not registered or invalid`);
       }
+      return true;
     } else if (!Repo.users.length && textCmd === appSettings.ownerRegisterCmd) {
-      registerUser(v.message, this, new UserItem(v.message.from.id, CheckBot.generateUserKey()));
+      chat_id && this.core.deleteMessageForce({ chat_id, message_id: v.message.message_id });
+      const r = registerUser(v.message, this, new UserItem(v.message.from.id, CheckBot.generateUserKey()));
+      (r as Promise<unknown>).catch((err) => {
+        if (!err.isCancelled) {
+          console.error(err);
+        }
+      });
       return true;
     }
-    return !!cmd;
+    return false;
   }
 
   /** listen for updates */
@@ -256,20 +274,26 @@ export default class TelegramService implements ITelegramService {
     deleteTimeoutSec: number
   ): Promise<Tg.ApiResponse<Message.TextMessage>> {
     const res = await this.core.sendMessage(args);
+    // todo remove useless checking
     if (!res.ok) {
       return res;
     }
     const chat_id = args.chat_id as number;
 
     try {
-      await this.onGotUpdate(chat_id, deleteTimeoutSec * 1000);
+      while (1) {
+        const r = await this.onGotUpdate(null, deleteTimeoutSec * 1000);
+        if (r.chat_id === chat_id) {
+          break;
+        }
+      }
     } catch (err) {
+      this.core.deleteMessageForce({ chat_id, message_id: res.result.message_id });
       if (!err.isCancelled) {
         console.error(err);
-        res.ok = false as true;
       }
+      throw err;
     }
-    this.core.deleteMessageForce({ chat_id, message_id: res.result.message_id });
     return res;
   }
 
@@ -301,13 +325,14 @@ export default class TelegramService implements ITelegramService {
   eventListeners: IEventListenerObj<Update>[] = [];
   private addEventListener<T extends Update>(
     type: ServiceEvents,
-    predicateOrChatId: number | string | EventPredicate<T>,
+    predicateOrChatId: number | string | EventPredicate<T> | null | undefined,
     cancellationOrTimeout: EventCancellation | undefined | number
   ): Promise<ServiceEvent<T>> {
-    const predicate =
-      typeof predicateOrChatId === "function"
+    const predicate = predicateOrChatId
+      ? typeof predicateOrChatId === "function"
         ? (predicateOrChatId as (e: Update) => boolean)
-        : (_e: Update, chatId?: number) => chatId === (predicateOrChatId as number);
+        : (_e: Update, chatId?: number) => chatId === (predicateOrChatId as number)
+      : undefined;
 
     return new Promise((resolve, reject) => {
       let timer: NodeJS.Timeout;
@@ -344,21 +369,21 @@ export default class TelegramService implements ITelegramService {
   }
 
   onGotCallbackQuery(
-    predicateOrChatId: number | string | EventPredicate<Update.CallbackQueryUpdate>,
+    predicateOrChatId: EventPredicateOrChatId<Update.CallbackQueryUpdate>,
     cancellationOrTimeout?: EventCancellation | number
   ): Promise<ServiceEvent<Update.CallbackQueryUpdate>> {
     return this.addEventListener(ServiceEvents.gotCallbackQuery, predicateOrChatId, cancellationOrTimeout);
   }
 
   onGotUpdate(
-    predicateOrChatId: number | string | EventPredicate<Update>,
+    predicateOrChatId: EventPredicateOrChatId<Update>,
     cancellationOrTimeout?: EventCancellation | number
   ): Promise<ServiceEvent<Update>> {
     return this.addEventListener(ServiceEvents.gotUpdate, predicateOrChatId, cancellationOrTimeout);
   }
 
   onGotFile(
-    predicateOrChatId: number | string | EventPredicate<NewFileMessage>,
+    predicateOrChatId: EventPredicateOrChatId<NewFileMessage>,
     cancellationOrTimeout?: EventCancellation | number
   ): Promise<ServiceEvent<NewFileMessage>> {
     return this.addEventListener(ServiceEvents.gotFile, predicateOrChatId, cancellationOrTimeout);

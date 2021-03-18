@@ -53,7 +53,6 @@ async function registerUser(
   user: UserItem
 ): Promise<boolean> {
   const chat_id = msg.chat.id;
-  await service.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
 
   const uid = msg.from?.id;
   if (!msg.from || !uid) {

@@ -59,6 +59,7 @@ export type ServiceEventCallback<T> = (event: ServiceEvent<T>) => void;
 export interface ServiceEvent<T> {
   preventDefault: () => void;
   result: T;
+  chat_id: number | undefined;
 }
 
 export interface NewTextMessage extends Update.MessageUpdate, Update.AbstractMessageUpdate {
@@ -67,8 +68,9 @@ export interface NewTextMessage extends Update.MessageUpdate, Update.AbstractMes
 
 export type EventCancellation = (callback: () => void) => void;
 export type EventPredicate<T extends Update> = (e: T, chatId?: number) => boolean;
+export type EventPredicateOrChatId<T extends Update> = number | string | EventPredicate<T> | null | undefined;
 export type OnGotEvent<T extends Update> = (
-  predicateOrChatId: number | string | EventPredicate<T>,
+  predicateOrChatId: EventPredicateOrChatId<T>,
   cancellationOrTimeout?: EventCancellation | number
 ) => Promise<ServiceEvent<T>>;
 

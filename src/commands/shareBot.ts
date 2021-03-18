@@ -28,7 +28,7 @@ const ShareBot: MyBotCommand = {
   callback: async (msg, service) => {
     const chat_id = msg.chat.id;
 
-    const c = await service.sendSelfDestroyed(
+    await service.sendSelfDestroyed(
       {
         chat_id,
         text: getInstructionsText(),
@@ -37,9 +37,6 @@ const ShareBot: MyBotCommand = {
       },
       waitMinutes * 60
     );
-    if (!c.ok) {
-      return;
-    }
 
     while (1) {
       const r = await service.onGotFile(chat_id, waitTimeout);

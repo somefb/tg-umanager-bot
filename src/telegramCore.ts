@@ -173,6 +173,7 @@ export default class TelegramCore implements ITelegramCore {
   async setWebhook(args: Opts<"setWebhook">): P<ApiResponse<true>> {
     args.url += this.botToken;
     const v = await this.httpPost("setWebhook", args, { filePathKey: "certificate" });
+    // todo remove such checking from anywhere and implement by default
     if (!v.ok) {
       throw new Error(v.description);
     } else {
