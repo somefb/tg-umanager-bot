@@ -3,6 +3,7 @@ import { createReadStream } from "fs";
 import http from "http";
 import https, { RequestOptions } from "https";
 import { ApiError, ApiResponse, Message, P, R, TelegramPR, Update, UserFromGetMe, WebhookInfo } from "typegram";
+import onExit from "./onExit";
 import { ITelegramCore, Opts } from "./types";
 
 type MyHttpOptions<O> = Partial<{
@@ -220,9 +221,7 @@ export default class TelegramCore implements ITelegramCore {
 
     TelegramCore.webHookServer.listen(port);
 
-    process.on("beforeExit", () => {
-      TelegramCore.webHookServer && TelegramCore.webHookServer.close();
-    });
+    onExit(() => TelegramCore.webHookServer && TelegramCore.webHookServer.close());
   }
 
   tryDeleteWebhook(args?: Opts<"deleteWebhook">): P<ApiResponse<true>> | P<void> {

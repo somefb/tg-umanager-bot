@@ -1,6 +1,7 @@
 import fs from "fs";
 import ChatItem from "./chatItem";
 import RepoGoogleDrive from "./googleDrive/repoGoogleDrive";
+import onExit from "./onExit";
 import UserItem from "./userItem";
 
 /** This is basic singleton storage class for saving configuration etc. */
@@ -81,7 +82,4 @@ export class RepoClass {
 const Repo = new RepoClass();
 export default Repo;
 
-process.on("beforeExit", () => {
-  console.log("Exit detected: Repo saving storage...");
-  Repo.commit();
-});
+onExit(() => Repo.commit());

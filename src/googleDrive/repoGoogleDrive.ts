@@ -6,6 +6,7 @@ import { drive_v3, google } from "googleapis";
 import readline from "readline";
 import { IRepository } from "../types";
 import myGoogleCredentials from "./googleCredentials.json";
+import onExit from "../onExit";
 
 //example here https://developers.google.com/drive/api/v3/quickstart/nodejs
 
@@ -30,16 +31,13 @@ export default class RepoGoogleDrive implements IRepository {
         console.error(`GoogleDrive. Error. Can't parse cache-file ${CACHE_PATH} /n`, err);
       }
     }
-    const saveCache = () => {
+    onExit(() => {
+      //saving cache
       const obj: Record<string, string | null> = {};
       this.cache.forEach((v, key) => {
         obj[key] = v;
       });
       fs.writeFileSync(CACHE_PATH, JSON.stringify(obj), { encoding: "utf-8" });
-    };
-    process.on("beforeExit", () => {
-      console.log("Exit detected: GoogleDrive. Saving cache by exit");
-      saveCache();
     });
   }
 

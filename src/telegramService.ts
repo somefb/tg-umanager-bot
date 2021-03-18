@@ -4,6 +4,7 @@ import appSettings from "./appSettingsGet";
 import registerUser from "./commands/registerUser";
 import objectRecursiveSearch from "./helpers/objectRecursiveSearch";
 import processNow from "./helpers/processNow";
+import onExit from "./onExit";
 import Repo from "./repo";
 import TelegramCore from "./telegramCore";
 import {
@@ -228,10 +229,9 @@ export default class TelegramService implements ITelegramService {
     console.log(`TelegramService '${this.cfg.name}'. Listening...`);
 
     // listening for termination app
-    process.on("beforeExit", () => {
-      console.log(`Exit detected: TelegramService closing...`);
+    onExit(() => {
       clearInterval(si);
-      this.core.tryDeleteWebhook();
+      return this.core.tryDeleteWebhook();
     });
   }
 
