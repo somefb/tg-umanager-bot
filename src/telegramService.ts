@@ -66,7 +66,7 @@ export default class TelegramService implements ITelegramService {
     this.isPending = false;
   }
 
-  gotUpdate(v: Update): void {
+  async gotUpdate(v: Update): Promise<void> {
     //process.env.DEBUG && console.log("got update", v);
     try {
       let defFn;
@@ -129,7 +129,8 @@ export default class TelegramService implements ITelegramService {
       //todo botCommand must have highest priority and reset previous
       let isHandled = false;
       const tmpArr: IEventListenerObj<Update>[] = [];
-      this.eventListeners.some(async (e, i, arr) => {
+      for (let i = 0; i < this.eventListeners.length; ++i) {
+        const e = this.eventListeners[i];
         if (e.type === type || e.type === ServiceEvents.gotUpdate) {
           const rVal: ServiceEvent<NewFileMessage | Update> = {
             preventDefault,
@@ -149,16 +150,18 @@ export default class TelegramService implements ITelegramService {
 
           // means skip other listeners
           if (isPrevented) {
-            for (let k = i + 1; k < arr.length; ++k) {
-              tmpArr.push(arr[k]);
+            for (i += 1; i < this.eventListeners.length; ++i) {
+              tmpArr.push(this.eventListeners[i]);
             }
-            return true;
+            break;
+          }
+          if (!isHandled) {
+            tmpArr.push(e);
           }
         } else {
           tmpArr.push(e);
         }
-        return false;
-      });
+      }
       this.eventListeners = tmpArr;
 
       if (!isPrevented && (!defFn || !defFn())) {
@@ -277,8 +280,14 @@ export default class TelegramService implements ITelegramService {
     args: Opts<"sendMessage">,
     deleteTimeoutSec: number
   ): Promise<Tg.ApiResponse<Message.TextMessage>> {
+    let waitFor = deleteTimeoutSec * 1000;
+    const t0 = processNow();
+    //register listener first
+    let promiseUpdate = this.onGotUpdate(null, waitFor);
+
+    //todo if we got exception remove listener
     const res = await this.core.sendMessage(args);
-    // todo remove useless checking
+    // todo remove useless checking and throw exception instead
     if (!res.ok) {
       return res;
     }
@@ -286,10 +295,12 @@ export default class TelegramService implements ITelegramService {
 
     try {
       while (1) {
-        const r = await this.onGotUpdate(null, deleteTimeoutSec * 1000);
-        if (r.chat_id === chat_id) {
+        const r = await promiseUpdate;
+        if (r.chat_id === chat_id || (waitFor -= processNow() - t0) <= 0) {
           this.core.deleteMessageForce({ chat_id, message_id: res.result.message_id });
           break;
+        } else {
+          promiseUpdate = this.onGotUpdate(null, waitFor);
         }
       }
     } catch (err) {
@@ -349,6 +360,7 @@ export default class TelegramService implements ITelegramService {
           return resolve(v as ServiceEvent<T>);
         },
       } as IEventListenerObj<Update>;
+
       this.eventListeners.push(listener);
       if (cancellationOrTimeout) {
         if (typeof cancellationOrTimeout === "function") {
