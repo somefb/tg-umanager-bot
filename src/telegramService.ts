@@ -126,9 +126,10 @@ export default class TelegramService implements ITelegramService {
         isPrevented = true;
       };
 
-      //todo botCommand must have highest priority
+      //todo botCommand must have highest priority and reset previous
       let isHandled = false;
-      const isPreventedIndex = this.eventListeners.findIndex(async (e) => {
+      const tmpArr: IEventListenerObj<Update>[] = [];
+      this.eventListeners.some(async (e, i, arr) => {
         if (e.type === type || e.type === ServiceEvents.gotUpdate) {
           const rVal: ServiceEvent<NewFileMessage | Update> = {
             preventDefault,
@@ -146,18 +147,21 @@ export default class TelegramService implements ITelegramService {
             await e.resolve(rVal);
           }
 
+          // means skip other listeners
           if (isPrevented) {
-            // means skip other listeners
+            for (let k = i + 1; k < arr.length; ++k) {
+              tmpArr.push(arr[k]);
+            }
             return true;
           }
+        } else {
+          tmpArr.push(e);
         }
         return false;
       });
+      this.eventListeners = tmpArr;
 
-      if (isPreventedIndex !== -1) {
-        this.eventListeners.splice(isPreventedIndex, 1);
-        return;
-      } else if (!defFn || !defFn()) {
+      if (!isPrevented && (!defFn || !defFn())) {
         !isHandled && console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, v);
       }
     } catch (err) {
@@ -284,6 +288,7 @@ export default class TelegramService implements ITelegramService {
       while (1) {
         const r = await this.onGotUpdate(null, deleteTimeoutSec * 1000);
         if (r.chat_id === chat_id) {
+          this.core.deleteMessageForce({ chat_id, message_id: res.result.message_id });
           break;
         }
       }
