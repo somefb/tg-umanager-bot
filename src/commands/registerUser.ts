@@ -76,7 +76,7 @@ async function registerUser(
     destroyKeyTimeoutSec
   );
 
-  console.log(`Start registration with new user ${user.id}`);
+  console.log(`\nStart registration with new user ${user.id}`);
 
   const botName = await CheckBot.getMyUserName();
   await service.sendSelfDestroyed(
@@ -99,7 +99,8 @@ async function registerUser(
   const isValid = await CheckBot.validateUser(user);
   if (isValid) {
     r.ok && r.cancel();
-    Repo.users.push(user);
+    Repo.addOrUpdateUser(user);
+    console.log(`\nRegistration of user ${user.id} ${user.toLinkName()} is finished`);
   }
 
   service.sendSelfDestroyed(

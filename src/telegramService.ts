@@ -191,7 +191,7 @@ export default class TelegramService implements ITelegramService {
         process.env.DEBUG && console.log(`Decline command. User ${v.message.from.id} is not registered or invalid`);
       }
       return true;
-    } else if (!Repo.users.length && textCmd === appSettings.ownerRegisterCmd) {
+    } else if (textCmd === appSettings.ownerRegisterCmd && !Repo.hasAnyUser) {
       chat_id && this.core.deleteMessageForce({ chat_id, message_id: v.message.message_id });
       const r = registerUser(v.message, this, new UserItem(v.message.from.id, CheckBot.generateUserKey()));
       (r as Promise<unknown>).catch((err) => {
