@@ -36,10 +36,14 @@ export class RepoClass {
       return;
     }
     this.chats = Object.assign(this.chats, v.chats);
-    const savedUsers =
-      v.users &&
-      Object.keys(v.users).map((k) => Object.assign(new UserItem(v.users[k].id, v.users[k].validationKey), v.users[k]));
-    this.users = Object.assign(this.users, savedUsers);
+    Object.keys(v.users).forEach(
+      (k) =>
+        (this.users[k] = Object.assign(
+          new UserItem(v.users[k].id, v.users[k].validationKey),
+          v.users[k],
+          this.users[k]
+        ))
+    );
   }
 
   async init(filePath: string): Promise<void> {
