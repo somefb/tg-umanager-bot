@@ -1,5 +1,5 @@
-import { Message, Update } from "typegram";
-import { MyBotCommand, NewTextMessage } from "../types";
+import { CallbackQuery, Message, Update } from "typegram";
+import { EventCancellation, MyBotCommand, NewTextMessage } from "../types";
 import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
@@ -7,7 +7,8 @@ import registerUser from "./registerUser";
 
 let myBotUserName = "";
 const waitMinutes = 5;
-const waitTimeout = waitMinutes * 60000;
+const waitTimeout = waitMinutes * 600; //000;
+const deleteTimeoutSec = waitMinutes * 60;
 
 function getInstructionsText() {
   return [
@@ -28,18 +29,42 @@ const ShareBot: MyBotCommand = {
   callback: async (msg, service) => {
     const chat_id = msg.chat.id;
 
-    await service.sendSelfDestroyed(
+    let cancel: (() => void) | null = null;
+    service.sendSelfDestroyed(
       {
         chat_id,
         text: getInstructionsText(),
         parse_mode: "HTML",
         reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
       },
-      waitMinutes * 60
+      deleteTimeoutSec
     );
 
+    let timer: NodeJS.Timeout | null = null;
+
+    const assignCancel: EventCancellation = (v) => {
+      timer && clearTimeout(timer);
+      timer = setTimeout(() => {
+        cancel && cancel();
+      }, waitTimeout);
+
+      cancel = () => {
+        timer && clearTimeout(timer);
+        cancel = null;
+        v();
+      };
+    };
+
+    // todo timeout doesn't dispose this method because assignCancel is rewritten by await service.onGotFile(chat_id, assignCancel);
+    service.onGotCallbackQuery(chat_id, assignCancel).then((e) => {
+      const gotWord = (e.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
+      if (gotWord === "cancel") {
+        cancel && cancel();
+      }
+    });
+
     while (1) {
-      const r = await service.onGotFile(chat_id, waitTimeout);
+      const r = await service.onGotFile(chat_id, assignCancel);
       if ((r.result.message as Message.VoiceMessage).voice) {
         const file = r.result.file;
         const regUserId = r.result.message.forward_from?.id;
@@ -58,7 +83,7 @@ const ShareBot: MyBotCommand = {
               chat_id,
               text: `В течение ${waitMinutes} минут пользователь может написать боту @${myBotUserName}`,
             },
-            waitMinutes * 60
+            deleteTimeoutSec
           );
 
           // wait for new user connection to this bot
@@ -71,16 +96,14 @@ const ShareBot: MyBotCommand = {
             ).result as NewTextMessage;
           } catch {}
 
-          if (!msgFromRegUser) {
-            const success = msgFromRegUser && (await registerUser(msgFromRegUser, service, regUser));
-            service.sendSelfDestroyed(
-              {
-                chat_id,
-                text: `Пользователь ${regUser.toLinkName()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`,
-              },
-              waitMinutes * 60
-            );
-          }
+          const success = msgFromRegUser && (await registerUser(msgFromRegUser.message, service, regUser));
+          service.sendSelfDestroyed(
+            {
+              chat_id,
+              text: `Пользователь ${regUser.toLinkName()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`,
+            },
+            deleteTimeoutSec
+          );
           break;
         }
       }
@@ -92,8 +115,15 @@ const ShareBot: MyBotCommand = {
           text: "Я ожидаю только голосовое сообщение...",
           reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
         },
-        waitMinutes * 60
+        deleteTimeoutSec
       );
+
+      service.onGotCallbackQuery(chat_id, assignCancel).then((e) => {
+        const gotWord = (e.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
+        if (gotWord === "cancel") {
+          cancel && cancel();
+        }
+      });
     } //while
   },
 };
