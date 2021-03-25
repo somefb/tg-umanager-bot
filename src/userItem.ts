@@ -52,9 +52,9 @@ export default class UserItem {
   /** True when number of unsuccessful attempts of validation is over  */
   isLocked = false;
   /** Personal chat id with checkbot */
-  checkBotChatId: string | number = 0;
+  checkBotChatId = 0;
   /** Personal chat id with termyKickBot */
-  termyBotChatId: string | number = 0;
+  termyBotChatId = 0;
 
   toLinkName(): string {
     return UserItem.userToLink(this);

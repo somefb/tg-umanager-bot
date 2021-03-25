@@ -1,15 +1,17 @@
 import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
 import Repo from "../repo";
-import { MyBotCommand } from "../types";
+import { EventTypeEnum, MyBotCommand } from "../types";
 import { CheckBot } from "../userCheckBot";
-import UserItem from "../userItem";
+import { expectedInvalidTimes, validationTimeout, validationTimeoutMinutes } from "../userCheckBot/playValidation";
 
-const destroyKeyTimeoutSec = 15;
-const destroyInstructionsTimeoutSec = 120;
+const regTimeoutMinutes = 10;
+const regTimeout = regTimeoutMinutes * 60000;
+const destroyKeyTimeout = 15 * 1000;
+const destroyInstructionsTimeoutSec = 120 * 1000;
 
 function getInstructionsText(botName: string) {
   return [
-    "Проверка проходит следующим образом:\n",
+    "Проверка проходит следующим образом (это легко запомнить, сохранять текст запрещено):\n",
     `1) пишите боту @${botName} и начинаете играть`,
     "2) из предложенного списка слов выбирайте любое",
     "3) из последующего списка ассоциаций важно выбрать слово согласно вашему ключу",
@@ -18,11 +20,10 @@ function getInstructionsText(botName: string) {
     "\nПримечания:",
     "* если при счёте нужно выбрать слово на 8-м месте, а всего их 6, - то ответ = слово на 2-м месте (счёт продолжается с начала списка - по кругу)",
     "* каждый раз проверку нужно пройти дважды",
-    "* на проверку выделена 1 минута (с того момента как выберите 1-е слово) и 3 попытки",
+    `* на проверку выделено ${validationTimeoutMinutes}мин (с того момента как выберите 1-е слово) и ${expectedInvalidTimes} попытки`,
     "* если проверка провалена - вы это узнаете по тому, что бот перестанет отвечать (типа поломался). Также узнают те, кто прошёл проверку и имеет с вами связь (через бота или чат)",
-    "*** бот не может удалить персональный чат (ограничение телеграмма). Потому удаляйте такой чат с ботом каждый раз самостоятельно",
-    "* если вы прошли проверку и решили продолжить играть не по правилам описанным выше - вы будете заблокированы автоматически",
-    "* если вы заблокированы - Пока нет возможности разблокировать (скоро реализуем)",
+    "* если вы прошли проверку и решили продолжить играть не по правилам описанным выше - будете заблокированы автоматически",
+    "* если вы заблокированы - нет возможности разблокировать (скоро реализуем)",
   ].join("\n");
 }
 
@@ -43,74 +44,76 @@ function getInstructionsMarkup() {
 
 const botRegisterInstructions = [
   "Регистрация завершена.\nТеперь вам доступен расширенный набор команд. Используйте /help",
-  "\nНекоторые команды бота доступны только в течение 5 минут после проверки",
+  "\nНекоторые команды бота доступны/видимы в течение 5 минут после проверки",
   "По истечении времени играйте снова, чтобы получить доступ к командам",
+  "Бот не может удалить персональный чат (ограничение телеграмма). Потому удаляйте такой чат с ботом каждый раз самостоятельно",
 ].join(". ");
 
-async function registerUser(
-  msg: Parameters<MyBotCommand["callback"]>["0"],
-  service: Parameters<MyBotCommand["callback"]>["1"],
-  user: UserItem
-): Promise<boolean> {
-  const chat_id = msg.chat.id;
+async function registerUser(ctx: Parameters<MyBotCommand["callback"]>["0"]): Promise<boolean> {
+  ctx.removeAnyByUpdate = true;
+  ctx.setTimeout(regTimeout);
 
-  const uid = msg.from?.id;
-  if (!msg.from || !uid) {
-    console.warn("Impossible to register. UserId is not defined");
-    return false;
-  }
-  user.nickName = msg.from.username as string;
-  user.firstName = msg.from.first_name as string;
-  user.lastName = msg.from.last_name as string;
-  user.termyBotChatId = chat_id;
+  const user = ctx.user;
+  user.nickName = ctx.initMessage.from.username as string;
+  user.firstName = ctx.initMessage.from.first_name as string;
+  user.lastName = ctx.initMessage.from.last_name as string;
+  user.termyBotChatId = ctx.chatId;
 
-  await service.sendSelfDestroyed(
+  await ctx.sendMessage(
     {
-      chat_id,
+      text: `На регистрацию отведено ${regTimeout}мин. На некоторые инструкции время ещё меньше. Время уже пошло...`,
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [[{ text: "Начнём регистрацию", callback_data: "OK" }]],
+      },
+    },
+    { removeTimeout: destroyKeyTimeout }
+  );
+
+  await ctx.sendMessage(
+    {
       text: `Ваш ключ:\n\n<b>"${user.validationKey.num} ${user.validationKey.word}"</b>\n\nЗапомните его.`,
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
       },
     },
-    destroyKeyTimeoutSec
+    { removeTimeout: destroyKeyTimeout }
   );
+  await ctx.onGotEvent(EventTypeEnum.gotUpdate);
 
-  console.log(`\nStart registration with new user ${user.id}`);
+  console.log(`\n Start registration with new user ${user.id}`);
 
   const botName = await CheckBot.getMyUserName();
-  await service.sendSelfDestroyed(
+  await ctx.sendMessage(
     {
-      chat_id,
       text: getInstructionsText(botName),
       parse_mode: "HTML",
       reply_markup: { inline_keyboard: getInstructionsMarkup() },
     },
-    destroyInstructionsTimeoutSec
+    { removeTimeout: destroyInstructionsTimeoutSec }
   );
-  const r = await service.notify(
-    {
-      chat_id,
-      text: `Инструктаж окончен. Давайте сыграем: @${botName}.\nПримечание: если бот не отвечает - используйте команду /start`,
-    },
-    destroyInstructionsTimeoutSec
-  );
+  await ctx.onGotEvent(EventTypeEnum.gotUpdate);
+  await ctx.sendMessage({
+    text: `Инструктаж окончен. Давайте сыграем: @${botName}.\nПримечание: если бот не отвечает - используйте команду /start`,
+  });
 
+  //todo: bug. We need wait more for file
+  ctx.setTimeout(Math.max(regTimeout, validationTimeout));
   const isValid = await CheckBot.validateUser(user);
   if (isValid) {
-    r.ok && r.cancel();
     Repo.addOrUpdateUser(user);
     console.log(`\nRegistration of user ${user.id} ${user.toLinkName()} is finished`);
   }
 
-  service.sendSelfDestroyed(
+  await ctx.sendMessage(
     {
-      chat_id,
-      text: isValid
-        ? botRegisterInstructions
-        : `Вы не прошли проверку. Регистрация отклонена. Вы можете повторить заново.`,
+      text: isValid ? botRegisterInstructions : `Вы не прошли проверку. Регистрация отклонена`,
+      reply_markup: {
+        inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
+      },
     },
-    destroyInstructionsTimeoutSec
+    { removeMinTimeout: 3000 }
   );
 
   return !!isValid;

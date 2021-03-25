@@ -1,14 +1,12 @@
-import { CallbackQuery, Message, Update } from "typegram";
-import { EventCancellation, MyBotCommand, NewTextMessage } from "../types";
+import { Message } from "typegram";
+import BotContext from "../botContext";
+import { EventTypeEnum, ITelegramService, MyBotCommand, NewTextMessage } from "../types";
 import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
 import registerUser from "./registerUser";
 
-let myBotUserName = "";
-const waitMinutes = 5;
-const waitTimeout = waitMinutes * 600; //000;
-const deleteTimeoutSec = waitMinutes * 60;
+const notifyTimeout = 15000;
 
 function getInstructionsText() {
   return [
@@ -17,7 +15,7 @@ function getInstructionsText() {
     '2) запросите у него новое голосовое сообщение, которое невозможно подготовить заранее (к примеру "Сегодня хороший день, а завтра в 2022 будет лучше")',
     "3) убедитесь, что голос соответствует ожидаемому. Очень важно, чтобы бы бот не попал в руки мошенников! А уникальное голосовое сообщение на сегодня самый безопасный и относительно надёжный способ верификации пользователя",
     "4) передайте голосовое сообщение боту (мне). Бот не сохраняет сообщение, а лишь анализирует и сохраняет некоторые уникальные данные. Это нужно на крайний случай, если мошенник сможет пройти проверку в последующем",
-    `\nСкоро продолжим. А пока ожидаю голосовое сообщение от пользователя (в течение ${waitMinutes} минут)...`,
+    `\nСкоро продолжим. А пока ожидаю голосовое сообщение от пользователя (в течение ${BotContext.defSessionTimeoutStr})...`,
   ].join("\n");
 }
 
@@ -26,106 +24,89 @@ const ShareBot: MyBotCommand = {
   type: MyBotCommandTypes.personal,
   description: "поделиться ботом",
   isHidden: true,
-  callback: async (msg, service) => {
-    const chat_id = msg.chat.id;
+  callback: async (ctx) => {
+    //todo in this case we can update via editMessage
+    //todo what about several messages sent at once
+    ctx.removeAnyByUpdate = true;
 
-    let cancel: (() => void) | null = null;
-    service.sendSelfDestroyed(
-      {
-        chat_id,
-        text: getInstructionsText(),
-        parse_mode: "HTML",
-        reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
-      },
-      deleteTimeoutSec
-    );
-
-    let timer: NodeJS.Timeout | null = null;
-
-    const assignCancel: EventCancellation = (v) => {
-      timer && clearTimeout(timer);
-      timer = setTimeout(() => {
-        cancel && cancel();
-      }, waitTimeout);
-
-      cancel = () => {
-        timer && clearTimeout(timer);
-        cancel = null;
-        v();
-      };
-    };
-
-    // todo timeout doesn't dispose this method because assignCancel is rewritten by await service.onGotFile(chat_id, assignCancel);
-    service.onGotCallbackQuery(chat_id, assignCancel).then((e) => {
-      const gotWord = (e.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
-      if (gotWord === "cancel") {
-        cancel && cancel();
-      }
+    await ctx.sendMessage({
+      text: getInstructionsText(),
+      parse_mode: "HTML",
+      reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
     });
+    let ev = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
+    ev.then((e) => e.data === "cancel" && ctx.cancel());
 
+    let regUser: UserItem | undefined;
     while (1) {
-      const r = await service.onGotFile(chat_id, assignCancel);
-      if ((r.result.message as Message.VoiceMessage).voice) {
-        const file = r.result.file;
-        const regUserId = r.result.message.forward_from?.id;
+      const r = await ctx.onGotEvent(EventTypeEnum.gotFile);
+      ctx.removeEvent(ev);
+      await ctx.deleteMessage(r.message_id);
+      if ((r as Message.VoiceMessage).voice) {
+        const file = r.file;
+        const regUserId = r.forward_from?.id;
         if (regUserId) {
-          const regUser = new UserItem(regUserId, CheckBot.generateUserKey());
+          regUser = new UserItem(regUserId, CheckBot.generateUserKey());
           regUser.validationVoiceFile = file;
-          regUser.sharedUserId = regUser.id;
+          regUser.sharedUserId = ctx.user.id;
 
-          if (!myBotUserName) {
-            const r = await service.core.getMe();
-            myBotUserName = (r.ok && r.result.username) || myBotUserName;
-          }
-
-          await service.sendSelfDestroyed(
-            {
-              chat_id,
-              text: `В течение ${waitMinutes} минут пользователь может написать боту @${myBotUserName}`,
-            },
-            deleteTimeoutSec
-          );
-
-          // wait for new user connection to this bot
-          let msgFromRegUser: NewTextMessage | null = null;
-          try {
-            msgFromRegUser = (
-              await service.onGotUpdate((v) => {
-                return ((v as Update.MessageUpdate)?.message as Message.TextMessage)?.from?.id === regUser.id;
-              }, waitTimeout)
-            ).result as NewTextMessage;
-          } catch {}
-
-          const success = msgFromRegUser && (await registerUser(msgFromRegUser.message, service, regUser));
-          service.sendSelfDestroyed(
-            {
-              chat_id,
-              text: `Пользователь ${regUser.toLinkName()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`,
-            },
-            deleteTimeoutSec
-          );
           break;
         }
       }
 
-      service.core.deleteMessageForce({ chat_id, message_id: r.result.message.message_id });
-      await service.sendSelfDestroyed(
-        {
-          chat_id,
-          text: "Я ожидаю только голосовое сообщение...",
-          reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
-        },
-        deleteTimeoutSec
-      );
-
-      service.onGotCallbackQuery(chat_id, assignCancel).then((e) => {
-        const gotWord = (e.result.callback_query as CallbackQuery.DataCallbackQuery)?.data;
-        if (gotWord === "cancel") {
-          cancel && cancel();
-        }
+      await ctx.sendMessage({
+        text: "Я ожидаю только голосовое сообщение...",
+        reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
       });
+      //restartTimeout
+      ctx.setTimeout();
+
+      ev = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
+      ev.then((e) => e.data === "cancel" && ctx.cancel());
     } //while
+
+    // this case impossible but required for TS
+    if (!regUser) {
+      return;
+    }
+
+    await ctx.sendMessage({
+      text: `В течение ${BotContext.defSessionTimeoutStr} пользователь может написать боту @${ctx.botUserName}`,
+    });
+
+    //WARN: it's important not to wait for task
+    registrationTask(ctx.service, regUser, ctx.chatId, ctx.user);
   },
 };
+
+async function registrationTask(
+  service: ITelegramService,
+  regUser: UserItem,
+  reportChatId: number,
+  reportUser: UserItem
+) {
+  let msgRegUser: NewTextMessage | null = null;
+  let success = false;
+  try {
+    // wait for new user connection to this bot
+    msgRegUser = await service.onGotEvent(
+      EventTypeEnum.gotNewMessage,
+      (v) => v.from.id === regUser?.id,
+      BotContext.defSessionTimeout
+    );
+
+    const ctxRegUser = service.getContext(msgRegUser.chat.id, msgRegUser, regUser);
+    success = !!(await ctxRegUser.callCommand(registerUser));
+  } catch {}
+
+  const ctx = service.getContext(reportChatId, null, reportUser);
+  ctx.removeAnyByUpdate = true;
+  await ctx.sendMessage(
+    {
+      text: `Пользователь ${regUser.toLinkName()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`,
+    },
+    { removeTimeout: notifyTimeout }
+  );
+}
 
 export default ShareBot;

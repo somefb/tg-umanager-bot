@@ -1,25 +1,20 @@
-import * as Tg from "typegram";
-import { ApiResponse, Message, Update } from "typegram";
+import { ApiResponse, CallbackQuery, Message, Update } from "typegram";
 import appSettings from "./appSettingsGet";
+import BotContext from "./botContext";
 import registerUser from "./commands/registerUser";
 import objectRecursiveSearch from "./helpers/objectRecursiveSearch";
-import processNow from "./helpers/processNow";
 import onExit from "./onExit";
 import Repo from "./repo";
 import TelegramCore from "./telegramCore";
 import {
   BotConfig,
-  EventCancellation,
   EventPredicate,
-  EventPredicateOrChatId,
-  FileInfo,
+  EventTypeEnum,
+  EventTypeReturnType,
+  IBotContext,
   ITelegramService,
   MyBotCommand,
-  NewFileMessage,
   NewTextMessage,
-  NotifyMessage,
-  Opts,
-  ServiceEvent,
   TelegramListenOptions,
 } from "./types";
 import { CheckBot, isValidationExpired } from "./userCheckBot";
@@ -30,6 +25,8 @@ const services: TelegramService[] = [];
 export default class TelegramService implements ITelegramService {
   core: TelegramCore;
   cfg: BotConfig;
+  botUserName = "";
+
   get services(): TelegramService[] {
     return services;
   }
@@ -40,6 +37,12 @@ export default class TelegramService implements ITelegramService {
     this.core = new TelegramCore(botConfig.token);
 
     this.assignCommands(botConfig.commands);
+
+    this.core.getMe().then((v) => {
+      if (v.ok) {
+        this.botUserName = v.result.username;
+      }
+    });
   }
 
   isPending = false;
@@ -66,51 +69,94 @@ export default class TelegramService implements ITelegramService {
     this.isPending = false;
   }
 
-  async gotUpdate(v: Update): Promise<void> {
+  async gotUpdate(upd: Update): Promise<void> {
     //process.env.DEBUG && console.log("got update", v);
     try {
-      let defFn;
+      let defFn: null | (() => boolean) = null;
       let chatId: number | undefined;
-      let file: FileInfo | undefined;
-      const type: ServiceEvents | null = (() => {
-        if ((v as Update.CallbackQueryUpdate).callback_query) {
-          chatId = (v as Update.CallbackQueryUpdate).callback_query?.message?.chat.id;
-          return ServiceEvents.gotCallbackQuery;
+
+      const r = ((): { value: EventTypeReturnType[EventTypeEnum]; type: EventTypeEnum } => {
+        if ((upd as Update.CallbackQueryUpdate).callback_query) {
+          const q = (upd as Update.CallbackQueryUpdate).callback_query as CallbackQuery.DataCallbackQuery;
+          chatId = q.message?.chat.id;
+          return {
+            type: EventTypeEnum.gotCallbackQuery,
+            value: q as EventTypeReturnType[EventTypeEnum.gotCallbackQuery],
+          };
         }
-        if ((v as Update.MessageUpdate).message) {
-          chatId = (v as Update.MessageUpdate).message.chat.id;
-          const msg = (v as Update.MessageUpdate).message;
-          if ((msg as Message.TextMessage).text?.startsWith("/")) {
-            defFn = () => this.gotBotCommand(v as NewTextMessage, chatId);
-            return ServiceEvents.gotBotCommand;
-          } else if ((msg as Message.DocumentMessage).document) {
-            file = (msg as Message.DocumentMessage).document;
-            return ServiceEvents.gotFile;
-          } else if ((msg as Message.AudioMessage).audio) {
-            file = (msg as Message.AudioMessage).audio;
-            return ServiceEvents.gotFile;
-          } else if ((msg as Message.VoiceMessage).voice) {
-            file = (msg as Message.VoiceMessage).voice;
-            return ServiceEvents.gotFile;
-          } else if ((msg as Message.VideoMessage).video) {
-            file = (msg as Message.VideoMessage).video;
-            return ServiceEvents.gotFile;
-          } else if ((msg as Message.PhotoMessage).photo) {
+        if ((upd as Update.MessageUpdate).message) {
+          const m = (upd as Update.MessageUpdate).message;
+          chatId = m.chat.id;
+          if ((m as Message.TextMessage).text?.startsWith("/")) {
+            if (chatId) {
+              const cid = chatId;
+              defFn = () => this.gotBotCommand(m as NewTextMessage, cid);
+            }
+            return {
+              type: EventTypeEnum.gotBotCommand,
+              value: m as EventTypeReturnType[EventTypeEnum.gotBotCommand],
+            };
+          } else if ((m as Message.DocumentMessage).document) {
+            const file = (m as Message.DocumentMessage).document;
+            (m as EventTypeReturnType[EventTypeEnum.gotFile]).file = file;
+            return {
+              type: EventTypeEnum.gotFile,
+              value: m as EventTypeReturnType[EventTypeEnum.gotFile],
+            };
+          } else if ((m as Message.AudioMessage).audio) {
+            const file = (m as Message.AudioMessage).audio;
+            (m as EventTypeReturnType[EventTypeEnum.gotFile]).file = file;
+            return {
+              type: EventTypeEnum.gotFile,
+              value: m as EventTypeReturnType[EventTypeEnum.gotFile],
+            };
+          } else if ((m as Message.VoiceMessage).voice) {
+            const file = (m as Message.VoiceMessage).voice;
+            (m as EventTypeReturnType[EventTypeEnum.gotFile]).file = file;
+            return {
+              type: EventTypeEnum.gotFile,
+              value: m as EventTypeReturnType[EventTypeEnum.gotFile],
+            };
+          } else if ((m as Message.VideoMessage).video) {
+            const file = (m as Message.VideoMessage).video;
+            (m as EventTypeReturnType[EventTypeEnum.gotFile]).file = file;
+            return {
+              type: EventTypeEnum.gotFile,
+              value: m as EventTypeReturnType[EventTypeEnum.gotFile],
+            };
+          } else if ((m as Message.PhotoMessage).photo) {
             // we skip the other photos
-            file = (msg as Message.PhotoMessage).photo[0];
-            return ServiceEvents.gotFile;
-          } else if ((msg as Message.AnimationMessage).animation) {
-            file = (msg as Message.AnimationMessage).animation;
-            return ServiceEvents.gotFile;
+            const file = (m as Message.PhotoMessage).photo[0];
+            (m as EventTypeReturnType[EventTypeEnum.gotFile]).file = file;
+            return {
+              type: EventTypeEnum.gotFile,
+              value: m as EventTypeReturnType[EventTypeEnum.gotFile],
+            };
+          } else if ((m as Message.AnimationMessage).animation) {
+            const file = (m as Message.AnimationMessage).animation;
+            (m as EventTypeReturnType[EventTypeEnum.gotFile]).file = file;
+            return {
+              type: EventTypeEnum.gotFile,
+              value: m as EventTypeReturnType[EventTypeEnum.gotFile],
+            };
+          } else if ((m as Message.TextMessage).text) {
+            return {
+              type: EventTypeEnum.gotNewMessage,
+              value: m as EventTypeReturnType[EventTypeEnum.gotNewMessage],
+            };
           }
-          return ServiceEvents.gotNewMessage;
-        }
-        if ((v as Update.EditedMessageUpdate).edited_message) {
-          chatId = (v as Update.EditedMessageUpdate).edited_message.chat.id;
-          return ServiceEvents.gotEditedMessage;
+        } else if ((upd as Update.EditedMessageUpdate).edited_message) {
+          const m = (upd as Update.EditedMessageUpdate).edited_message;
+          if ((m as Message.TextMessage).text) {
+            chatId = m.chat.id;
+            return {
+              type: EventTypeEnum.gotEditedMessage,
+              value: m as EventTypeReturnType[EventTypeEnum.gotEditedMessage],
+            };
+          }
         }
 
-        objectRecursiveSearch(v, (key, obj) => {
+        objectRecursiveSearch(upd, (key, obj) => {
           if (key === "chat") {
             chatId = obj[key].id;
             return true;
@@ -118,62 +164,44 @@ export default class TelegramService implements ITelegramService {
           return false;
         });
 
-        return null;
+        return {
+          type: EventTypeEnum.gotUpdate,
+          value: upd as EventTypeReturnType[EventTypeEnum.gotUpdate],
+        };
       })();
 
-      let isPrevented = false;
-      const preventDefault = () => {
-        isPrevented = true;
-      };
-
-      //todo botCommand must have highest priority and reset previous
       let isHandled = false;
-      const tmpArr: IEventListenerObj<Update>[] = [];
-      for (let i = 0; i < this.eventListeners.length; ++i) {
-        const e = this.eventListeners[i];
-        if (e.type === type || e.type === ServiceEvents.gotUpdate) {
-          const rVal: ServiceEvent<NewFileMessage | Update> = {
-            preventDefault,
-            result: { ...v, file },
-            chat_id: chatId,
-          };
-          if (e.predicate) {
-            if (e.predicate(v, chatId)) {
-              isPrevented = true;
-              isHandled = true;
-              await e.resolve(rVal);
-            }
-          } else {
-            isHandled = true;
-            await e.resolve(rVal);
+      this.eventListeners.forEach((e) => {
+        if (e.type === r.type || e.type === EventTypeEnum.gotUpdate) {
+          const val = e.type === EventTypeEnum.gotUpdate ? upd : r.value;
+          if (e.predicate(val, chatId)) {
+            this.removeEvent(e.ref);
+            e.resolve(val);
           }
+        }
+      });
 
-          // means skip other listeners
-          if (isPrevented) {
-            for (i += 1; i < this.eventListeners.length; ++i) {
-              tmpArr.push(this.eventListeners[i]);
-            }
-            break;
-          }
-          if (!isHandled) {
-            tmpArr.push(e);
-          }
+      const ctx = r && chatId && this.tryGetContext(chatId);
+      if (ctx) {
+        if (r.type === EventTypeEnum.gotBotCommand) {
+          ctx.cancel();
         } else {
-          tmpArr.push(e);
+          isHandled = ctx.fireEvent(r.type, r.value, upd) || isHandled;
         }
       }
-      this.eventListeners = tmpArr;
 
-      if (!isPrevented && (!defFn || !defFn())) {
-        !isHandled && console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, v);
+      isHandled = (defFn && defFn()) || isHandled;
+
+      if (!isHandled) {
+        console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, upd);
       }
     } catch (err) {
       console.error(`TelegramService '${this.cfg.name}'. Error in gotUpdate\n`, err);
     }
   }
 
-  gotBotCommand(v: NewTextMessage, chat_id: number | string | undefined): boolean {
-    const text = v.message.text;
+  gotBotCommand(msg: NewTextMessage, chat_id: number): boolean {
+    const text = msg.text;
     let end: number | undefined = text.indexOf(" ", 1);
     if (end === -1) {
       end = undefined;
@@ -181,31 +209,26 @@ export default class TelegramService implements ITelegramService {
     const textCmd = text.substring(0, end);
     const cmd = this.commands.find((c) => c.command === textCmd);
     if (cmd) {
-      const user = Repo.getUser(v.message.from.id);
+      const user = Repo.getUser(msg.from.id);
       const allowCommand = !!user && !user.isInvalid && (!isValidationExpired(user) || process.env.DEBUG);
-      // todo don't allow private commands in groupChat
-      // todo allow group commands in groupChat for any user
-      if (allowCommand || (cmd.allowCommand && cmd.allowCommand())) {
-        chat_id && this.core.deleteMessageForce({ chat_id, message_id: v.message.message_id });
-        const r = cmd.callback(v.message, this, user);
-        (r as Promise<unknown>).catch &&
-          (r as Promise<unknown>).catch((err) => {
-            if (!err.isCancelled) {
-              console.error(err);
-            }
-          });
+      // todo: bug don't allow private commands in groupChat
+      // todo: bug allow group commands in groupChat for any user
+      if (user && (allowCommand || (cmd.allowCommand && cmd.allowCommand()))) {
+        this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
+
+        const ctx = this.getContext(chat_id, msg, user);
+        ctx.callCommand(cmd.callback);
       } else {
-        process.env.DEBUG && console.log(`Decline command. User ${v.message.from.id} is not registered or invalid`);
+        process.env.DEBUG && console.log(`Decline command. User ${msg.from.id} is not registered or invalid`);
       }
       return true;
     } else if (textCmd === appSettings.ownerRegisterCmd && !Repo.hasAnyUser) {
-      chat_id && this.core.deleteMessageForce({ chat_id, message_id: v.message.message_id });
-      const r = registerUser(v.message, this, new UserItem(v.message.from.id, CheckBot.generateUserKey()));
-      (r as Promise<unknown>).catch((err) => {
-        if (!err.isCancelled) {
-          console.error(err);
-        }
-      });
+      this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
+      const newUser = new UserItem(msg.from.id, CheckBot.generateUserKey());
+
+      const ctx = this.getContext(chat_id, msg, newUser);
+      ctx.callCommand(registerUser);
+
       return true;
     }
     return false;
@@ -276,148 +299,72 @@ export default class TelegramService implements ITelegramService {
     });
   }
 
-  async sendSelfDestroyed(
-    args: Opts<"sendMessage">,
-    deleteTimeoutSec: number
-  ): Promise<Tg.ApiResponse<Message.TextMessage>> {
-    let waitFor = deleteTimeoutSec * 1000;
-    const t0 = processNow();
-    //register listener first
-    let promiseUpdate = this.onGotUpdate(null, waitFor);
+  eventListeners = new Map<Promise<EventTypeReturnType[EventTypeEnum]>, IEventListenerRoot<EventTypeEnum>>();
 
-    //todo if we got exception remove listener
-    const res = await this.core.sendMessage(args);
-    // todo remove useless checking and throw exception instead
-    if (!res.ok) {
-      return res;
-    }
-    const chat_id = args.chat_id as number;
-
-    try {
-      while (1) {
-        const r = await promiseUpdate;
-        if (r.chat_id === chat_id || (waitFor -= processNow() - t0) <= 0) {
-          this.core.deleteMessageForce({ chat_id, message_id: res.result.message_id });
-          break;
-        } else {
-          promiseUpdate = this.onGotUpdate(null, waitFor);
-        }
+  onGotEvent<E extends EventTypeEnum>(
+    type: E,
+    predicate: EventPredicate<E>,
+    timeout?: number
+  ): Promise<EventTypeReturnType[E]> {
+    const ref = new Promise<EventTypeReturnType[E]>((resolve, reject) => {
+      let fn = predicate;
+      if (timeout) {
+        const timer = setTimeout(() => {
+          reject(
+            Object.assign(new CancelledError(`Waiting is cancelled via timeout(${timeout})`), { isCancelled: true })
+          );
+          this.removeEvent(ref);
+        }, timeout);
+        fn = (e, chatId) => {
+          const ok = predicate(e, chatId);
+          if (ok) {
+            clearTimeout(timer);
+          }
+          return ok;
+        };
       }
-    } catch (err) {
-      this.core.deleteMessageForce({ chat_id, message_id: res.result.message_id });
-      if (!err.isCancelled) {
-        console.error(err);
-      }
-      throw err;
-    }
-    return res;
-  }
 
-  async notify(args: Opts<"sendMessage">, minNotifyMs = 3000): Promise<Tg.ApiError | NotifyMessage> {
-    const res = await this.core.sendMessage(args);
-    if (!res.ok) {
-      return res;
-    }
-    const t0 = processNow();
-    const msg = res as NotifyMessage;
-    const delMsg = () => this.core.deleteMessageForce({ chat_id: args.chat_id, message_id: msg.result.message_id });
-    msg.cancel = () => {
-      const t1 = processNow();
-      const waitMs = minNotifyMs - (t1 - t0);
-      if (waitMs > 0) {
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            delMsg().then((v) => resolve(v));
-            //cancellation here
-          }, waitMs);
-        });
-      } else {
-        return delMsg();
-      }
-    };
-    return msg;
-  }
-
-  eventListeners: IEventListenerObj<Update>[] = [];
-  private addEventListener<T extends Update>(
-    type: ServiceEvents,
-    predicateOrChatId: number | string | EventPredicate<T> | null | undefined,
-    cancellationOrTimeout: EventCancellation | undefined | number
-  ): Promise<ServiceEvent<T>> {
-    const predicate = predicateOrChatId
-      ? typeof predicateOrChatId === "function"
-        ? (predicateOrChatId as (e: Update) => boolean)
-        : (_e: Update, chatId?: number) => chatId === (predicateOrChatId as number)
-      : undefined;
-
-    return new Promise((resolve, reject) => {
-      let timer: NodeJS.Timeout;
-      const listener = {
-        type,
-        predicate,
-        resolve: (v) => {
-          timer && clearTimeout(timer);
-          return resolve(v as ServiceEvent<T>);
-        },
-      } as IEventListenerObj<Update>;
-
-      this.eventListeners.push(listener);
-      if (cancellationOrTimeout) {
-        if (typeof cancellationOrTimeout === "function") {
-          cancellationOrTimeout(() => {
-            reject(Object.assign(new Error("Waiting is cancelled via cancellation()"), { isCancelled: true }));
-            this.removeEventListener(listener);
-          });
-        } else {
-          timer = setTimeout(() => {
-            reject(Object.assign(new Error("Waiting is cancelled via timeout()"), { isCancelled: true }));
-            this.removeEventListener(listener);
-          }, cancellationOrTimeout);
-        }
-      }
+      this.eventListeners.set(ref, { ref, type, predicate: fn, resolve, reject } as IEventListenerRoot<E>);
     });
+    return ref;
   }
 
-  private removeEventListener(listener: IEventListenerObj<Update>) {
-    const i = this.eventListeners.indexOf(listener);
-    if (i !== -1) {
-      this.eventListeners.splice(i, 1);
+  private removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): void {
+    this.eventListeners.delete(ref);
+  }
+
+  contexts: Record<number, IBotContext> = {};
+  getContext(chatId: number, initMsg: NewTextMessage, user: UserItem): IBotContext {
+    let ctx = this.contexts[chatId];
+    if (!ctx) {
+      ctx = new BotContext(chatId, initMsg, user, this);
+      this.contexts[chatId] = ctx;
     }
+    return ctx;
   }
 
-  onGotCallbackQuery(
-    predicateOrChatId: EventPredicateOrChatId<Update.CallbackQueryUpdate>,
-    cancellationOrTimeout?: EventCancellation | number
-  ): Promise<ServiceEvent<Update.CallbackQueryUpdate>> {
-    return this.addEventListener(ServiceEvents.gotCallbackQuery, predicateOrChatId, cancellationOrTimeout);
+  tryGetContext(chat_id: number): IBotContext | undefined {
+    return this.contexts[chat_id];
   }
 
-  onGotUpdate(
-    predicateOrChatId: EventPredicateOrChatId<Update>,
-    cancellationOrTimeout?: EventCancellation | number
-  ): Promise<ServiceEvent<Update>> {
-    return this.addEventListener(ServiceEvents.gotUpdate, predicateOrChatId, cancellationOrTimeout);
-  }
-
-  onGotFile(
-    predicateOrChatId: EventPredicateOrChatId<NewFileMessage>,
-    cancellationOrTimeout?: EventCancellation | number
-  ): Promise<ServiceEvent<NewFileMessage>> {
-    return this.addEventListener(ServiceEvents.gotFile, predicateOrChatId, cancellationOrTimeout);
+  removeContext(chat_id: number): void {
+    delete this.contexts[chat_id];
   }
 }
 
-interface IEventListenerObj<T extends Update> {
-  type: ServiceEvents;
-  predicate?: (e: T, chatId: number | undefined) => boolean;
-  resolve: (v: ServiceEvent<T> | PromiseLike<ServiceEvent<T>>) => Promise<void>;
+interface IEventListenerRoot<E extends EventTypeEnum> extends IEventListener<E> {
+  // such typing is required otherwise TS can't match types properly
+  predicate: <T extends EventTypeEnum>(e: EventTypeReturnType[T], chatId?: number) => boolean;
+  ref: Promise<EventTypeReturnType[E]>;
 }
 
-const enum ServiceEvents {
-  gotUpdate,
-  gotCallbackQuery,
-  gotNewMessage,
-  gotEditedMessage,
-  gotBotCommand,
-  gotFile,
+export interface IEventListener<E extends EventTypeEnum> {
+  type: E;
+  // such typing is required otherwise TS can't match types properly
+  resolve: <T extends EventTypeEnum>(value: EventTypeReturnType[T]) => void;
+  reject: (reason: CancelledError) => void;
+}
+
+export class CancelledError extends Error {
+  isCancelled = true;
 }

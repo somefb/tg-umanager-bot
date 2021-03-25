@@ -1,5 +1,6 @@
-import { ApiError, ApiResponse, ApiSuccess, BotCommand, Message, Typegram, Update } from "typegram";
-import { Document, Audio, PhotoSize, Video, Voice, Animation } from "typegram/message";
+import { BotCommand, CallbackQuery, Message, Typegram, Update } from "typegram";
+import { Animation, Audio, Document, PhotoSize, Video, Voice } from "typegram/message";
+import ChatItem from "./chatItem";
 import { MyBotCommandTypes } from "./commands/botCommandTypes";
 import UserItem from "./userItem";
 
@@ -50,29 +51,11 @@ export type ITelegramCore = Pick<
   deleteMessageForce(args: Opts<"deleteMessage">): Promise<void>;
 };
 
-export interface NotifyMessage extends ApiSuccess<Message.TextMessage> {
-  cancel: () => Promise<void>;
-}
-
-export type ServiceEventCallback<T> = (event: ServiceEvent<T>) => void;
-
-export interface ServiceEvent<T> {
-  preventDefault: () => void;
-  result: T;
-  chat_id: number | undefined;
-}
-
-export interface NewTextMessage extends Update.MessageUpdate, Update.AbstractMessageUpdate {
-  message: Update.New & Update.NonChannel & Message.TextMessage;
-}
-
-export type EventCancellation = (callback: () => void) => void;
-export type EventPredicate<T extends Update> = (e: T, chatId?: number) => boolean;
-export type EventPredicateOrChatId<T extends Update> = number | string | EventPredicate<T> | null | undefined;
-export type OnGotEvent<T extends Update> = (
-  predicateOrChatId: EventPredicateOrChatId<T>,
-  cancellationOrTimeout?: EventCancellation | number
-) => Promise<ServiceEvent<T>>;
+export type NewTextMessage = Update.New & Update.NonChannel & Message.TextMessage;
+export type EditedTextMessage = Update.Edited & Update.NonChannel & Message.TextMessage;
+export type NewCallbackQuery = (CallbackQuery.DataCallbackQuery | CallbackQuery.GameShortGameCallbackQuery) & {
+  data?: string;
+};
 
 type MessageFile =
   | Message.DocumentMessage
@@ -83,28 +66,35 @@ type MessageFile =
   | Message.AnimationMessage;
 export type FileInfo = Document | Audio | Voice | Video | PhotoSize | Animation;
 
-export interface NewFileMessage extends Update.MessageUpdate, Update.AbstractMessageUpdate {
-  message: Update.New & Update.NonChannel & MessageFile;
-  file: FileInfo;
-}
+export type NewFileMessage = Update.New &
+  Update.NonChannel &
+  MessageFile & {
+    file: FileInfo;
+  };
+
+export type EventPredicate<E extends EventTypeEnum> = (e: EventTypeReturnType[E], chatId?: number) => boolean;
 
 export interface ITelegramService {
+  botUserName: string;
+
   core: ITelegramCore;
   cfg: BotConfig;
-  /** sendMessage for at least 3 seconds and remove message by cancel() trigger */
-  notify(args: Opts<"sendMessage">, minNotifyMs?: number): Promise<ApiError | NotifyMessage>;
-  /** sendMessage that will be deleted by timeout or by userResponse (whatever happens faster) */
-  sendSelfDestroyed(args: Opts<"sendMessage">, deleteTimeoutSec: number): Promise<ApiResponse<Message.TextMessage>>;
 
-  onGotUpdate: OnGotEvent<Update>;
-  onGotCallbackQuery: OnGotEvent<Update.CallbackQueryUpdate>;
-  onGotFile: OnGotEvent<NewFileMessage>;
+  onGotEvent<E extends EventTypeEnum>(
+    type: E,
+    predicate: EventPredicate<E>,
+    timeout?: number
+  ): Promise<EventTypeReturnType[E]>;
+
+  /** Create or get existed */
+  getContext(chatId: number, initMsg: NewTextMessage | null, user: UserItem): IBotContext;
+  removeContext(chat_id: number): void;
 }
 
 export interface TelegramListenOptions {
   /** How often request updates (in ms) */
   interval: number;
-  //    * @param {number} interval - How often request updates (in ms)
+  //  * @param {number} interval - How often request updates (in ms)
   //  * @param {string} certificateKeyPath - Point certificateKey for using setWebhook logic: https://core.telegram.org/bots/api#setwebhook
   //  * @param {string} callbackURL - DomainURL that recevies webHook messages
 
@@ -119,7 +109,7 @@ type valueof<T> = T[keyof T];
 
 export type MyBotCommand = BotCommand & {
   type?: valueof<typeof MyBotCommandTypes[]>;
-  callback: (msg: Message.TextMessage, service: ITelegramService, user?: UserItem) => void | Promise<void>;
+  callback: (context: IBotContext) => Promise<unknown>;
   onServiceInit?: (service: ITelegramService) => void;
   /** Command that is hidden from unregistered or invalid users */
   isHidden: boolean;
@@ -136,3 +126,58 @@ export interface IRepository {
   get<T>(pathName: string): Promise<T | null>;
   save<T>(pathNam: string, item: T): Promise<void>;
 }
+
+/** Session context that exists per chat and fired from any command */
+export interface IBotContext {
+  /** Chat that session assigned to */
+  readonly chatId: number;
+  readonly chat: ChatItem;
+  /** Message that initilaized context */
+  readonly initMessageId: number;
+  readonly initMessage: NewTextMessage;
+  readonly botUserName: string;
+  readonly user: UserItem;
+  readonly service: ITelegramService;
+
+  removeAnyByUpdate: boolean;
+  /** set timeout; after expiring session will be cancelled automatically */
+  setTimeout(ms?: number): void;
+  /** method cancelled session and removes any listeners inside */
+  cancel(): void;
+  /** use this method to call context-dependant function properly */
+  // call<T extends MyBotCommand["callback"], R>(fn: T): ReturnType<T> | Promise<null>;
+  callCommand<T extends IBotContext, U>(fn: (ctx: T) => Promise<U>): Promise<U | null>;
+
+  sendMessage(args: Omit<Opts<"sendMessage">, "chat_id">, opts?: IBotContextMsgOptions): Promise<Message.TextMessage>;
+  deleteMessage(id: number): Promise<void>;
+  onGotEvent<E extends EventTypeEnum>(type: E): Promise<EventTypeReturnType[E]>;
+  removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): void;
+  fireEvent<E extends EventTypeEnum>(type: E | null, v: EventTypeReturnType[E], u: Update): boolean;
+}
+
+export type IBotContextMsgOptions = Partial<{
+  removeByUpdate: boolean;
+  removeTimeout: number;
+  /** Min time that's must expired for able to remove message */
+  removeMinTimeout: number;
+}>;
+
+export const enum EventTypeEnum {
+  gotUpdate = 0,
+  /** such binary possible to combine but need to implement in the IBotSession */
+  gotBotCommand = 0b10, // 1 << 1,
+  gotCallbackQuery = 0b100, // 1<< 2,
+  gotNewMessage = 0b1000, // 1 << 3,
+  gotEditedMessage = 0b10000, // 1 << 4,
+  gotFile = 0b100000, //1 << 5,
+}
+
+interface EventTypeReturnType {
+  [EventTypeEnum.gotUpdate]: Update;
+  [EventTypeEnum.gotCallbackQuery]: NewCallbackQuery;
+  [EventTypeEnum.gotNewMessage]: NewTextMessage;
+  [EventTypeEnum.gotEditedMessage]: EditedTextMessage;
+  [EventTypeEnum.gotBotCommand]: NewTextMessage;
+  [EventTypeEnum.gotFile]: NewFileMessage;
+}
+//type KeyForTypeEnum<T extends EventTypeEnum> = EventTypeReturnType[T];

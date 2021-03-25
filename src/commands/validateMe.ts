@@ -9,18 +9,11 @@ const ValidateMe: MyBotCommand = {
   type: MyBotCommandTypes.personal,
   isHidden: true,
   description: "проверь меня",
-  callback: async (msg, service, user) => {
-    const chat_id = msg.chat.id;
-    //todo remove all commands automatically
-    await service.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
-
-    if (user) {
-      const isValid = await CheckBot.validateUser(user);
-      service.core.sendMessage({
-        chat_id,
-        text: isValid ? "Проверка пройдена" : "Провалено",
-      });
-    }
+  callback: async (ctx) => {
+    const isValid = await CheckBot.validateUser(ctx.user);
+    ctx.sendMessage({
+      text: isValid ? "Проверка пройдена" : "Провалено",
+    });
   },
 };
 

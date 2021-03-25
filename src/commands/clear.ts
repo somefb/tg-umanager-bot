@@ -1,4 +1,3 @@
-import Repo from "../repo";
 import { MyBotCommand } from "../types";
 import { MyBotCommandTypes } from "./botCommandTypes";
 
@@ -7,31 +6,22 @@ const CommandClear: MyBotCommand = {
   type: MyBotCommandTypes.group,
   isHidden: false,
   description: "удалить все возможные сообщения", // Possible restrictions: https://core.telegram.org/bots/api#deletemessage",
-  callback: async (msg, service) => {
-    const resMsg = await service.notify({
-      chat_id: msg.chat.id,
-      disable_notification: true,
-      text: "Удаляю...",
-    });
+  callback: async (ctx) => {
+    const resMsg = await ctx.sendMessage(
+      {
+        disable_notification: true,
+        text: "Удаляю...",
+      },
+      { removeMinTimeout: 3000 }
+    );
 
-    const chat = Repo.getOrPushChat(msg.chat.id);
-
-    try {
-      //todo wrong if some message is excluded from deleting
-      await service.core.unpinAllChatMessages({ chat_id: msg.chat.id });
-      for (let i = msg.message_id - 1; i >= chat.lastDeleteIndex; --i) {
-        await service.core.deleteMessageForce({ chat_id: msg.chat.id, message_id: i });
-      }
-    } catch (err) {
-      console.error("BotCommand. Clear. Error during deleting messages\n", err);
+    //await service.core.unpinAllChatMessages({ chat_id: msg.chat.id });
+    for (let i = ctx.initMessageId - 1; i >= ctx.chat.lastDeleteIndex; --i) {
+      await ctx.deleteMessage(i);
     }
+    ctx.deleteMessage(resMsg.message_id);
 
-    if (resMsg.ok) {
-      resMsg.cancel();
-      chat.lastDeleteIndex = resMsg.result.message_id + 1;
-    } else {
-      chat.lastDeleteIndex = msg.message_id + 1;
-    }
+    ctx.chat.lastDeleteIndex = resMsg.message_id + 1;
   },
 };
 
