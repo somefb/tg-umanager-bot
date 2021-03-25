@@ -139,13 +139,18 @@ export interface IBotContext {
   readonly user: UserItem;
   readonly service: ITelegramService;
 
+  /** removing previous messages by any user activity */
   removeAnyByUpdate: boolean;
-  /** set timeout; after expiring session will be cancelled automatically */
+  /** every next sendMessage will update existed */
+  singleMessageMode: boolean;
+  /**
+   * set timeout; after expiring session will be cancelled automatically
+   * set 0 if you need to disable timeout
+   */
   setTimeout(ms?: number): void;
   /** method cancelled session and removes any listeners inside */
   cancel(): void;
   /** use this method to call context-dependant function properly */
-  // call<T extends MyBotCommand["callback"], R>(fn: T): ReturnType<T> | Promise<null>;
   callCommand<T extends IBotContext, U>(fn: (ctx: T) => Promise<U>): Promise<U | null>;
 
   sendMessage(args: Omit<Opts<"sendMessage">, "chat_id">, opts?: IBotContextMsgOptions): Promise<Message.TextMessage>;

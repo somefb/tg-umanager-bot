@@ -46,7 +46,7 @@ export default class UserItem {
   validationVoiceFile?: FileInfo;
   validationFile?: FileInfo;
   validationKey: UserValidationKey;
-  /** Date in ms when the last validation is done */
+  /** Date in ms when the last validation is done/failed */
   validationDate = 0;
   isInvalid = true;
   /** True when number of unsuccessful attempts of validation is over  */

@@ -98,8 +98,12 @@ async function registerUser(ctx: Parameters<MyBotCommand["callback"]>["0"]): Pro
     text: `Инструктаж окончен. Давайте сыграем: @${botName}.\nПримечание: если бот не отвечает - используйте команду /start`,
   });
 
-  //todo: bug. We need wait more for file
-  ctx.setTimeout(Math.max(regTimeout, validationTimeout));
+  CheckBot.service
+    .onGotEvent(EventTypeEnum.gotNewMessage, (v) => v.from.id == ctx.user.id)
+    .then(() => {
+      // disable timeout
+      ctx.setTimeout(0);
+    });
   const isValid = await CheckBot.validateUser(user);
   if (isValid) {
     Repo.addOrUpdateUser(user);

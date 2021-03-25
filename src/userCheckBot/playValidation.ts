@@ -15,6 +15,7 @@ export const expectedInvalidTimes = 3; // total possible == twice
 export const validationTimeoutMinutes = 1;
 export const validationTimeout = validationTimeoutMinutes * 60000; //1 minute
 const timeoutFile = 5 * 60000; // 5 minute
+const timeoutFirstFile = 15 * 60000;
 const notifyDeleteLastTimeout = 60000; //1 minute
 
 const answersTrue = ["Верно", "Правильно", "Хорошо"];
@@ -31,12 +32,12 @@ const uploadFileInstructions = [
   "\nВсякий раз как вы проходите игру с ошибкой, а также с некоторой периодичностью бот будет выдавать сообщение:",
   `<b>${askFile}</b>`,
   "на это сообщение вам нужно будет передать боту (мне) тот самый уникальный файл.",
-  "\nЯ жду ваш файл...",
+  `\nЯ жду ваш файл в течение ${timeoutFirstFile / 60000} минут...`,
 ].join("\n");
 
 export default async function playValidation(ctx: IBotContext): Promise<boolean | null> {
   ctx.removeAnyByUpdate = false;
-  // todo: bug ctx.oneMessageMode = true;
+  ctx.singleMessageMode = true;
   ctx.setTimeout(validationTimeout);
 
   const sendMessage = async (text: string, words: string[] | null) => {
@@ -54,7 +55,6 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
       };
     }
 
-    //todo option: replace existed message
     await ctx.sendMessage(args);
 
     //todo detect if chat is blocked and somehow notify user
@@ -112,8 +112,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
           if (!ctx.user.validationFile) {
             // init 2step validation
             await sendMessage(msgPrefix + uploadFileInstructions, null);
-            //todo: bug. For this case we need to wait a lot because user must prepare file properly
-            ctx.setTimeout(timeoutFile);
+            ctx.setTimeout(timeoutFirstFile);
             const res = await ctx.onGotEvent(EventTypeEnum.gotFile);
             await ctx.deleteMessage(res.message_id);
             ctx.user.validationFile = res.file;

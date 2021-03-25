@@ -29,6 +29,7 @@ export default class BotContext implements IBotContext {
   readonly service: ITelegramService;
 
   removeAnyByUpdate = false;
+  singleMessageMode = false;
 
   constructor(chatId: number, initMessage: NewTextMessage, user: UserItem, service: ITelegramService) {
     this.chatId = chatId;
@@ -50,15 +51,17 @@ export default class BotContext implements IBotContext {
   _timer?: NodeJS.Timeout;
   setTimeout(ms = BotContext.defSessionTimeout): void {
     this._timer && clearTimeout(this._timer);
-    this._timer = setTimeout(() => {
-      this.cancel();
-    }, ms);
+    if (ms) {
+      this._timer = setTimeout(() => {
+        this.cancel();
+      }, ms);
+    }
   }
 
   cancel(): void {
+    this._updateMessageId = 0;
     this.service.removeContext(this.chatId);
     this._timer && clearTimeout(this._timer);
-    //todo everything inside context must be in try catch
     const err = new CancelledError("Context is cancelled");
     this.eventListeners.forEach((e) => e.reject(err));
 
@@ -76,6 +79,11 @@ export default class BotContext implements IBotContext {
 
   deleteSet = new Map<number, number>();
   deleteMessage(id: number): Promise<void> {
+    if (this._updateMessageId === id) {
+      this._updateMessageId = 0;
+      console.warn("Removed message that shoud be updated");
+    }
+
     const expiryTime = this.deleteSet.get(id);
     if (expiryTime) {
       this.deleteSet.delete(id);
@@ -91,13 +99,29 @@ export default class BotContext implements IBotContext {
     return this.service.core.deleteMessageForce({ chat_id: this.chatId, message_id: id });
   }
 
+  private _updateMessageId = 0;
+  private _updateMessageData: Message.TextMessage | undefined;
   async sendMessage(
     args: Omit<Opts<"sendMessage">, "chat_id">,
     opts?: IBotContextMsgOptions
   ): Promise<Message.TextMessage> {
     (args as Opts<"sendMessage">).chat_id = this.chatId;
-    const res = (await this.service.core.sendMessage(args as Opts<"sendMessage">)) as ApiSuccess<Message.TextMessage>;
-    const data = res.result;
+
+    let data: Message.TextMessage;
+
+    if (this._updateMessageId) {
+      (args as Opts<"editMessageText">).message_id = this._updateMessageId;
+      //WARN: editMessage returns text-result but we don't need one
+      await this.service.core.editMessageText(args as Opts<"editMessageText">);
+      data = this._updateMessageData as Message.TextMessage;
+    } else {
+      const res = await this.service.core.sendMessage(args as Opts<"sendMessage">);
+      data = (res as ApiSuccess<Message.TextMessage>).result;
+      if (this.singleMessageMode) {
+        this._updateMessageId = data.message_id;
+        this._updateMessageData = data;
+      }
+    }
 
     //this.needRemoveMessages.add(res.result.message_id);
 
@@ -120,7 +144,7 @@ export default class BotContext implements IBotContext {
 
       if (opts.removeMinTimeout) {
         const deleteTime = processNow() + opts.removeMinTimeout;
-        this.deleteSet.set(res.result.message_id, deleteTime);
+        this.deleteSet.set(data.message_id, deleteTime);
       }
     }
     return data as Message.TextMessage;

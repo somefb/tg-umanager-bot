@@ -25,7 +25,6 @@ const ShareBot: MyBotCommand = {
   description: "поделиться ботом",
   isHidden: true,
   callback: async (ctx) => {
-    //todo in this case we can update via editMessage
     //todo what about several messages sent at once
     ctx.removeAnyByUpdate = true;
 

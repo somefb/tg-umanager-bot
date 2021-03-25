@@ -103,7 +103,6 @@ export default class RepoGoogleDrive implements IRepository {
       });
     }
 
-    // todo check refreshToken logic
     oAuth2Client.setCredentials(token);
     this._client = oAuth2Client;
     return oAuth2Client;
