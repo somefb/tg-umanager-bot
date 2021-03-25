@@ -8,13 +8,13 @@ const CommandHelp: MyBotCommand = {
   type: MyBotCommandTypes.common,
   isHidden: false,
   description: "справка",
-  callback: async (msg, service) => {
+  callback: async (ctx) => {
     const lines: string[] = ["Добро пожаловать. Доступны следующие команды\n"];
 
     Object.keys(MyBotCommandTypes).forEach((key) => {
       const cType = MyBotCommandTypes[key];
       lines.push(`<b>${MyBotCommandTypesDescription[key]}</b>`);
-      service.cfg.commands.forEach((c) => {
+      ctx.service.cfg.commands.forEach((c) => {
         if (cType === c.type) {
           lines.push(`${c.command} - ${c.description}`);
         }
@@ -22,15 +22,14 @@ const CommandHelp: MyBotCommand = {
       lines.push("");
     });
 
-    await service.sendSelfDestroyed(
+    await ctx.sendMessage(
       {
-        chat_id: msg.chat.id,
         disable_notification: true,
         text: lines.join("\n"),
         parse_mode: "HTML",
         //reply_markup: ""
       },
-      destroyHelpTimeout
+      { removeTimeout: destroyHelpTimeout, removeByUpdate: true }
     );
   },
 };
