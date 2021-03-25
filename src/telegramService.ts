@@ -306,6 +306,8 @@ export default class TelegramService implements ITelegramService {
     predicate: EventPredicate<E>,
     timeout?: number
   ): Promise<EventTypeReturnType[E]> {
+    let e: IEventListenerRoot<E> | undefined;
+
     const ref = new Promise<EventTypeReturnType[E]>((resolve, reject) => {
       let fn = predicate;
       if (timeout) {
@@ -323,9 +325,11 @@ export default class TelegramService implements ITelegramService {
           return ok;
         };
       }
-
-      this.eventListeners.set(ref, { ref, type, predicate: fn, resolve, reject } as IEventListenerRoot<E>);
+      e = { ref, type, predicate: fn, resolve, reject } as IEventListenerRoot<E>;
     });
+
+    e && this.eventListeners.set(ref, e);
+
     return ref;
   }
 

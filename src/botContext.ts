@@ -133,13 +133,14 @@ export default class BotContext implements IBotContext {
       };
 
       if (opts.removeTimeout) {
-        // todo check bind this
         timer = setTimeout(delMsg, opts.removeTimeout);
       }
 
       if (this.removeAnyByUpdate || opts.removeByUpdate) {
-        // todo check bind this
-        this.onGotEvent(EventTypeEnum.gotUpdate).finally(delMsg);
+        // todo bug: eventListener is removed when session is cancelled
+        this.onGotEvent(EventTypeEnum.gotUpdate)
+          .then(delMsg)
+          .catch((v) => v);
       }
 
       if (opts.removeMinTimeout) {
@@ -153,9 +154,12 @@ export default class BotContext implements IBotContext {
   eventListeners = new Map<Promise<EventTypeReturnType[EventTypeEnum]>, IEventListener<EventTypeEnum>>();
 
   onGotEvent<E extends EventTypeEnum>(type: E): Promise<EventTypeReturnType[E]> {
+    let e: IEventListener<E> | undefined;
     const ref = new Promise<EventTypeReturnType[E]>((resolve, reject) => {
-      this.eventListeners.set(ref, { type, resolve, reject } as IEventListener<E>);
+      e = { type, resolve, reject } as IEventListener<E>;
     });
+    // undefined required for avoiding TS-bug
+    e && this.eventListeners.set(ref, e);
 
     return ref;
   }
