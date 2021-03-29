@@ -50,7 +50,6 @@ export const CheckBot = {
   generateUserKey,
 };
 
-// todo don't allow to add bot to chat: use event onBotAddedToChat
 // todo use answerCallbackQuery: https://core.telegram.org/bots/api#answercallbackquery
 const CheckBotCommands: MyBotCommand[] = [
   {

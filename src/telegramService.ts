@@ -1,6 +1,7 @@
 import { ApiResponse, CallbackQuery, Message, Update } from "typegram";
 import BotContext from "./botContext";
 import gotBotCommand from "./events/gotBotCommand";
+import onMeAdded from "./events/onMeAdded";
 import objectRecursiveSearch from "./helpers/objectRecursiveSearch";
 import onExit from "./onExit";
 import TelegramCore from "./telegramCore";
@@ -23,6 +24,7 @@ export default class TelegramService implements ITelegramService {
   core: TelegramCore;
   cfg: BotConfig;
   botUserName = "";
+  botUserId = 0;
 
   get services(): TelegramService[] {
     return services;
@@ -35,9 +37,11 @@ export default class TelegramService implements ITelegramService {
 
     this.assignCommands(botConfig.commands);
 
+    // todo: bug if not successfull we should destroy such service!
     this.core.getMe().then((v) => {
       if (v.ok) {
         this.botUserName = v.result.username;
+        this.botUserId = v.result.id;
       }
     });
   }
@@ -141,6 +145,18 @@ export default class TelegramService implements ITelegramService {
               type: EventTypeEnum.gotNewMessage,
               value: m as EventTypeReturnType[EventTypeEnum.gotNewMessage],
             };
+          } else if ((m as Message.NewChatMembersMessage).new_chat_members) {
+            const members = (m as Message.NewChatMembersMessage).new_chat_members;
+            const isMeAdded = members.some((v) => v.id === this.botUserId);
+            if (isMeAdded) {
+              const cid = chatId;
+              defFn = () => {
+                onMeAdded.call(this, m as Message.NewChatMembersMessage, cid);
+                return true;
+              };
+            }
+            // todo on added user
+            //const newUsers = members.filter((v) => !v.is_bot);
           }
         } else if ((upd as Update.EditedMessageUpdate).edited_message) {
           const m = (upd as Update.EditedMessageUpdate).edited_message;
@@ -153,13 +169,14 @@ export default class TelegramService implements ITelegramService {
           }
         }
 
-        objectRecursiveSearch(upd, (key, obj) => {
-          if (key === "chat") {
-            chatId = obj[key].id;
-            return true;
-          }
-          return false;
-        });
+        !chatId &&
+          objectRecursiveSearch(upd, (key, obj) => {
+            if (key === "chat") {
+              chatId = obj[key].id;
+              return true;
+            }
+            return false;
+          });
 
         return {
           type: EventTypeEnum.gotUpdate,
