@@ -167,32 +167,32 @@ export default class TelegramCore implements ITelegramCore {
   static webHooks: {
     ref: TelegramCore;
     callback: (v: Update) => unknown;
+    port: number;
   }[] = [];
   static webHookServer?: http.Server;
 
   async setWebhook(args: Opts<"setWebhook">): P<ApiResponse<true>> {
     args.url += this.botToken;
     const v = await this.httpPost("setWebhook", args, { filePathKey: "certificate" });
-    // todo remove such checking from anywhere and implement by default
-    if (!v.ok) {
-      throw new Error(v.description);
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      TelegramCore.webHooks.push({ ref: this, callback: () => {} });
-      return v as ApiResponse<true>;
-    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    TelegramCore.webHooks.push({ ref: this, callback: () => {}, port: 0 });
+    return v as ApiResponse<true>;
   }
 
-  listenWebhook(port: string | number, callback: (v: Update) => unknown): void {
+  listenWebhook(port: number, callback: (v: Update) => unknown): void {
     const el = TelegramCore.webHooks.find((v) => v.ref === this);
     if (el) {
       el.callback = callback;
+      el.port = port;
     } else {
-      TelegramCore.webHooks.push({ ref: this, callback });
+      throw new Error("You should fire setWebhook before listenWebhook");
+      // TelegramCore.webHooks.push({ ref: this, callback, port });
     }
 
     if (TelegramCore.webHookServer) {
-      // todo it can be wrong if different ports
+      if (!TelegramCore.webHooks.every((v) => v.port !== port)) {
+        throw new Error(`Impossible to listen webhook on port:${port}. Multiport isn't implemeneted`);
+      }
       return;
     }
 

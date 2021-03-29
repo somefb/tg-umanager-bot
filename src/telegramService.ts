@@ -266,7 +266,7 @@ export default class TelegramService implements ITelegramService {
 
       try {
         await this.core.setWebhook({ url: options.ownDomainURL, certificate: options.certPath });
-        const port = process.env.PORT_HTTPS || 3000;
+        const port = (process.env.PORT_HTTPS && Number.parseInt(process.env.PORT_HTTPS, 10)) || 3000;
         this.core.listenWebhook(port, (v) => this.gotUpdate(v));
       } catch {
         console.error(
