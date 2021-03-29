@@ -99,13 +99,13 @@ async function registrationTask(
   } catch {}
 
   const ctx = service.getContext(reportChatId, null, reportUser);
-  ctx.removeAnyByUpdate = true;
   await ctx.sendMessage(
     {
       text: `Пользователь ${regUser.toLinkName()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`,
     },
-    { removeTimeout: notifyTimeout }
+    { removeTimeout: notifyTimeout, removeByUpdate: true, keepAfterSession: true }
   );
+  ctx.cancel();
 }
 
 export default ShareBot;

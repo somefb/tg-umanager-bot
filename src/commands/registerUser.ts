@@ -117,7 +117,7 @@ async function registerUser(ctx: Parameters<MyBotCommand["callback"]>["0"]): Pro
         inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
       },
     },
-    { removeMinTimeout: 3000 }
+    { removeMinTimeout: 5000 }
   );
 
   return !!isValid;
