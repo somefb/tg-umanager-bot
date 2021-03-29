@@ -84,7 +84,7 @@ async function registerUser(ctx: Parameters<MyBotCommand["callback"]>["0"]): Pro
 
   console.log(`\n Start registration with new user ${user.id}`);
 
-  const botName = await CheckBot.getMyUserName();
+  const botName = CheckBot.service.botUserName;
   await ctx.sendMessage(
     {
       text: getInstructionsText(botName),

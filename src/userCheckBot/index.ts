@@ -15,7 +15,7 @@ export function isValidationExpired(user: UserItem, validationExpiryMs = validat
   return true;
 }
 
-let myBotUserName = "";
+const myBotUserName = "";
 export const CheckBot = {
   service: {} as ITelegramService,
 
@@ -48,16 +48,6 @@ export const CheckBot = {
     return false;
   },
   generateUserKey,
-
-  async getMyUserName(): Promise<string> {
-    if (myBotUserName) {
-      return Promise.resolve(myBotUserName);
-    } else {
-      const r = await this.service.core.getMe();
-      myBotUserName = (r.ok && r.result.username) || myBotUserName;
-      return myBotUserName;
-    }
-  },
 };
 
 // todo don't allow to add bot to chat: use event onBotAddedToChat

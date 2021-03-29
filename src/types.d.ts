@@ -76,7 +76,6 @@ export type EventPredicate<E extends EventTypeEnum> = (e: EventTypeReturnType[E]
 
 export interface ITelegramService {
   botUserName: string;
-
   core: ITelegramCore;
   cfg: BotConfig;
 
