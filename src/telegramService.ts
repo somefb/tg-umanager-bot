@@ -312,10 +312,10 @@ export default class TelegramService implements ITelegramService {
       let fn = predicate;
       if (timeout) {
         const timer = setTimeout(() => {
+          this.removeEvent(ref);
           reject(
             Object.assign(new CancelledError(`Waiting is cancelled via timeout(${timeout})`), { isCancelled: true })
           );
-          this.removeEvent(ref);
         }, timeout);
         fn = (e, chatId) => {
           const ok = predicate(e, chatId);
@@ -325,15 +325,16 @@ export default class TelegramService implements ITelegramService {
           return ok;
         };
       }
-      e = { ref, type, predicate: fn, resolve, reject } as IEventListenerRoot<E>;
+      e = { type, predicate: fn, resolve, reject } as IEventListenerRoot<E>;
     });
-
-    e && this.eventListeners.set(ref, e);
-
+    if (e) {
+      e.ref = ref;
+      this.eventListeners.set(ref, e);
+    }
     return ref;
   }
 
-  private removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): void {
+  removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): void {
     this.eventListeners.delete(ref);
   }
 

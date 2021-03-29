@@ -86,6 +86,8 @@ export interface ITelegramService {
     timeout?: number
   ): Promise<EventTypeReturnType[E]>;
 
+  removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): void;
+
   /** Create or get existed */
   getContext(chatId: number, initMsg: NewTextMessage | null, user: UserItem): IBotContext;
   removeContext(chat_id: number): void;
