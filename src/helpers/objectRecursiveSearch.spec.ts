@@ -27,4 +27,38 @@ describe("objectRecursiveSearch()", () => {
       objectRecursiveSearch({ v: 1, o: { v: 0, o2: { a: 1, v: 2 } } }, (key, obj) => key === "v" && obj[key] === 2)
     ).toBe(true);
   });
+
+  const upd = {
+    update_id: 123,
+    message: {
+      message_id: 10,
+      from: {
+        id: 233,
+        is_bot: false,
+        first_name: "S",
+        last_name: "B",
+        username: "testUser",
+        language_code: "en",
+      },
+      chat: { id: -3232, title: "TestBotGroup", type: "supergroup" },
+      date: 111701231,
+      new_chat_participant: { id: 123, is_bot: true, first_name: "Играем", username: "s" },
+      new_chat_member: { id: 123, is_bot: true, first_name: "Играем", username: "s" },
+      new_chat_members: [{ id: 123, is_bot: true, first_name: "Играем", username: "s" }],
+    },
+  };
+
+  test("big object", () => {
+    let chatId;
+    expect(
+      objectRecursiveSearch(upd, (key, obj) => {
+        if (key === "chat") {
+          chatId = obj[key].id;
+          return true;
+        }
+        return false;
+      })
+    ).toBe(true);
+    expect(chatId).toBe(-3232);
+  });
 });
