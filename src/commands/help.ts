@@ -29,7 +29,7 @@ const CommandHelp: MyBotCommand = {
         parse_mode: "HTML",
         //reply_markup: ""
       },
-      { removeTimeout: destroyHelpTimeout, removeByUpdate: true }
+      { removeTimeout: destroyHelpTimeout, removeByUpdate: true, keepAfterSession: true }
     );
   },
 };

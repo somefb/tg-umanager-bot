@@ -126,9 +126,11 @@ export default class BotContext implements IBotContext {
     //this.needRemoveMessages.add(res.result.message_id);
 
     if (opts) {
-      let timer: NodeJS.Timeout | undefined = undefined;
+      let timer: NodeJS.Timeout | undefined;
+      let delEvent: undefined | (() => void);
       const delMsg = () => {
         timer && clearTimeout(timer);
+        delEvent && delEvent();
         this.deleteMessage(data.message_id);
       };
 
@@ -137,10 +139,18 @@ export default class BotContext implements IBotContext {
       }
 
       if (this.removeAnyByUpdate || opts.removeByUpdate) {
-        // todo bug: eventListener is removed when session is cancelled
-        this.onGotEvent(EventTypeEnum.gotUpdate)
-          .then(delMsg)
-          .catch((v) => v);
+        let eventRef: Promise<Update> | undefined;
+        if (opts.keepAfterSession) {
+          const cid = this.chatId;
+          eventRef = this.service.onGotEvent(EventTypeEnum.gotUpdate, (_u, chatId) => chatId === cid);
+          const ref = eventRef;
+          delEvent = () => this.service.removeEvent(ref);
+        } else {
+          eventRef = this.onGotEvent(EventTypeEnum.gotUpdate);
+          const ref = eventRef;
+          delEvent = () => this.removeEvent(ref);
+        }
+        eventRef.then(delMsg).catch((v) => v);
       }
 
       if (opts.removeMinTimeout) {

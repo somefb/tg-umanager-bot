@@ -163,7 +163,11 @@ export interface IBotContext {
 }
 
 export type IBotContextMsgOptions = Partial<{
+  /** Don't remove message after botSession is cancelled */
+  keepAfterSession: boolean;
+  /** Removing message by any user-activity */
   removeByUpdate: boolean;
+  /** After pointed time message will be removed */
   removeTimeout: number;
   /** Min time that's must expired for able to remove message */
   removeMinTimeout: number;
