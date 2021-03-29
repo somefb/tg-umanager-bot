@@ -1,10 +1,8 @@
 import { ApiResponse, CallbackQuery, Message, Update } from "typegram";
-import appSettings from "./appSettingsGet";
 import BotContext from "./botContext";
-import registerUser from "./commands/registerUser";
+import gotBotCommand from "./events/gotBotCommand";
 import objectRecursiveSearch from "./helpers/objectRecursiveSearch";
 import onExit from "./onExit";
-import Repo from "./repo";
 import TelegramCore from "./telegramCore";
 import {
   BotConfig,
@@ -17,7 +15,6 @@ import {
   NewTextMessage,
   TelegramListenOptions,
 } from "./types";
-import { CheckBot, isValidationExpired } from "./userCheckBot";
 import UserItem from "./userItem";
 
 const services: TelegramService[] = [];
@@ -90,7 +87,7 @@ export default class TelegramService implements ITelegramService {
           if ((m as Message.TextMessage).text?.startsWith("/")) {
             if (chatId) {
               const cid = chatId;
-              defFn = () => this.gotBotCommand(m as NewTextMessage, cid);
+              defFn = () => gotBotCommand.call(this, m as NewTextMessage, cid);
             }
             return {
               type: EventTypeEnum.gotBotCommand,
@@ -125,7 +122,7 @@ export default class TelegramService implements ITelegramService {
               value: m as EventTypeReturnType[EventTypeEnum.gotFile],
             };
           } else if ((m as Message.PhotoMessage).photo) {
-            // we skip the other photos
+            //WARN: we skip the other photos
             const file = (m as Message.PhotoMessage).photo[0];
             (m as EventTypeReturnType[EventTypeEnum.gotFile]).file = file;
             return {
@@ -200,40 +197,6 @@ export default class TelegramService implements ITelegramService {
     }
   }
 
-  gotBotCommand(msg: NewTextMessage, chat_id: number): boolean {
-    const text = msg.text;
-    let end: number | undefined = text.indexOf(" ", 1);
-    if (end === -1) {
-      end = undefined;
-    }
-    const textCmd = text.substring(0, end);
-    const cmd = this.commands.find((c) => c.command === textCmd);
-    if (cmd) {
-      const user = Repo.getUser(msg.from.id);
-      const allowCommand = !!user && !user.isInvalid && (!isValidationExpired(user) || process.env.DEBUG);
-      // todo: bug don't allow private commands in groupChat
-      // todo: bug allow group commands in groupChat for any user
-      if (user && (allowCommand || (cmd.allowCommand && cmd.allowCommand()))) {
-        this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
-
-        const ctx = this.getContext(chat_id, msg, user);
-        ctx.callCommand(cmd.callback);
-      } else {
-        process.env.DEBUG && console.log(`Decline command. User ${msg.from.id} is not registered or invalid`);
-      }
-      return true;
-    } else if (textCmd === appSettings.ownerRegisterCmd && !Repo.hasAnyUser) {
-      this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
-      const newUser = new UserItem(msg.from.id, CheckBot.generateUserKey());
-
-      const ctx = this.getContext(chat_id, msg, newUser);
-      ctx.callCommand(registerUser);
-
-      return true;
-    }
-    return false;
-  }
-
   /** listen for updates */
   async listen(options: TelegramListenOptions): Promise<void> {
     let si: NodeJS.Timeout;
@@ -287,7 +250,7 @@ export default class TelegramService implements ITelegramService {
     });
   }
 
-  private commands: MyBotCommand[] = [];
+  commands: MyBotCommand[] = [];
   async assignCommands(arr: MyBotCommand[]): Promise<void> {
     await this.core.setMyCommands({
       commands: arr.filter((v) => !v.isHidden).map((v) => ({ command: v.command, description: v.description })),
