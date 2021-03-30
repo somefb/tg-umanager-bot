@@ -46,6 +46,8 @@ export type ITelegramCore = Pick<
   | "deleteWebhook"
   | "leaveChat"
   | "editMessageText"
+  | "getChatAdministrators"
+  | "getChatMembersCount"
 > & {
   //
   deleteMessageForce(args: Opts<"deleteMessage">): Promise<void>;
@@ -190,6 +192,7 @@ interface EventTypeReturnType {
   [EventTypeEnum.gotEditedMessage]: EditedTextMessage;
   [EventTypeEnum.gotBotCommand]: NewTextMessage;
   [EventTypeEnum.gotFile]: NewFileMessage;
+  /** happens when member permissions are updated in the chat */
   [EventTypeEnum.memberUpdated]: ChatMemberUpdated;
 }
 //type KeyForTypeEnum<T extends EventTypeEnum> = EventTypeReturnType[T];

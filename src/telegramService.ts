@@ -167,6 +167,13 @@ export default class TelegramService implements ITelegramService {
               value: m as EventTypeReturnType[EventTypeEnum.gotEditedMessage],
             };
           }
+        } else if ((upd as Update.MyChatMemberUpdate).my_chat_member) {
+          const m = (upd as Update.MyChatMemberUpdate).my_chat_member;
+          chatId = m.chat.id;
+          return {
+            type: EventTypeEnum.memberUpdated,
+            value: m as EventTypeReturnType[EventTypeEnum.memberUpdated],
+          };
         }
 
         !chatId &&
