@@ -2,7 +2,18 @@ import FormData from "form-data";
 import { createReadStream } from "fs";
 import http from "http";
 import https, { RequestOptions } from "https";
-import { ApiError, ApiResponse, Message, P, R, TelegramPR, Update, UserFromGetMe, WebhookInfo } from "typegram";
+import {
+  ApiError,
+  ApiResponse,
+  ChatMember,
+  Message,
+  P,
+  R,
+  TelegramPR,
+  Update,
+  UserFromGetMe,
+  WebhookInfo,
+} from "typegram";
 import onExit from "./onExit";
 import { ITelegramCore, Opts } from "./types";
 
@@ -249,6 +260,14 @@ export default class TelegramCore implements ITelegramCore {
 
   leaveChat(args: { chat_id: string | number }): P<ApiResponse<true>> {
     return this.httpPost("leaveChat", args);
+  }
+
+  getChatAdministrators(args: { chat_id: string | number }): P<R<ChatMember[]>> {
+    return this.httpPost("getChatAdministrators", args);
+  }
+
+  getChatMembersCount(args: { chat_id: string | number }): P<R<number>> {
+    return this.httpPost("getChatMembersCount", args);
   }
 }
 

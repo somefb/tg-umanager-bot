@@ -1,4 +1,4 @@
-import { BotCommand, CallbackQuery, Message, Typegram, Update } from "typegram";
+import { BotCommand, CallbackQuery, ChatMemberUpdated, Message, Typegram, Update } from "typegram";
 import { Animation, Audio, Document, PhotoSize, Video, Voice } from "typegram/message";
 import ChatItem from "./chatItem";
 import { MyBotCommandTypes } from "./commands/botCommandTypes";
@@ -180,6 +180,7 @@ export const enum EventTypeEnum {
   gotNewMessage = 0b1000, // 1 << 3,
   gotEditedMessage = 0b10000, // 1 << 4,
   gotFile = 0b100000, //1 << 5,
+  memberUpdated = 0b1000000, //1 << 6,
 }
 
 interface EventTypeReturnType {
@@ -189,5 +190,6 @@ interface EventTypeReturnType {
   [EventTypeEnum.gotEditedMessage]: EditedTextMessage;
   [EventTypeEnum.gotBotCommand]: NewTextMessage;
   [EventTypeEnum.gotFile]: NewFileMessage;
+  [EventTypeEnum.memberUpdated]: ChatMemberUpdated;
 }
 //type KeyForTypeEnum<T extends EventTypeEnum> = EventTypeReturnType[T];
