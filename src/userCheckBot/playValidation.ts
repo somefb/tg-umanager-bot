@@ -66,8 +66,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   let repeatCnt = 0;
 
   const cancelSession = (isValid: boolean) => {
-    ctx.user.validationDate = Date.now();
-    ctx.user.isInvalid = !isValid;
+    ctx.user.isValid = isValid;
     // todo do we need to save reason?
     if (!isValid) {
       // todo implement unlock behavior

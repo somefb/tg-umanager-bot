@@ -1,7 +1,6 @@
 import { MyBotCommand } from "../types";
+import { validationExpiry } from "../userItem";
 import { MyBotCommandTypes, MyBotCommandTypesDescription } from "./botCommandTypes";
-
-const destroyHelpTimeout = 5 * 60000;
 
 const CommandHelp: MyBotCommand = {
   command: "help",
@@ -9,7 +8,12 @@ const CommandHelp: MyBotCommand = {
   isHidden: false,
   description: "справка",
   callback: async (ctx) => {
-    const lines: string[] = ["Добро пожаловать. Доступны следующие команды\n"];
+    const leftMs = Date.now() - ctx.user.validationDate;
+    const leftMinutes = Math.floor(leftMs / 60000);
+    const leftSec = Math.floor((leftMs - leftMinutes * 60000) / 1000);
+    const lines: string[] = [
+      `Добро пожаловать. В течение ${leftMinutes}мин ${leftSec}сек доступны следующие команды \n(по истечении времени пройдите проверку снова)\n`,
+    ];
 
     Object.keys(MyBotCommandTypes).forEach((key) => {
       const cType = MyBotCommandTypes[key];
@@ -29,7 +33,7 @@ const CommandHelp: MyBotCommand = {
         parse_mode: "HTML",
         //reply_markup: ""
       },
-      { removeTimeout: destroyHelpTimeout, removeByUpdate: true, keepAfterSession: true }
+      { removeTimeout: validationExpiry, removeByUpdate: true, keepAfterSession: true }
     );
   },
 };

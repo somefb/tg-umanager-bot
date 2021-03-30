@@ -3,7 +3,7 @@ import registerUser from "../commands/registerUser";
 import Repo from "../repo";
 import TelegramService from "../telegramService";
 import { NewTextMessage } from "../types";
-import { isValidationExpired, CheckBot } from "../userCheckBot";
+import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 
 export default function gotBotCommand(this: TelegramService, msg: NewTextMessage, chat_id: number): boolean {
@@ -16,10 +16,10 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
   const cmd = this.commands.find((c) => c.command === textCmd);
   if (cmd) {
     const user = Repo.getUser(msg.from.id);
-    const allowCommand = !!user && !user.isInvalid && (!isValidationExpired(user) || process.env.DEBUG);
     // todo: bug don't allow private commands in groupChat
     // todo: bug allow group commands in groupChat for any user
-    if (user && (allowCommand || (cmd.allowCommand && cmd.allowCommand()))) {
+    //if (user && (allowCommand || (cmd.allowCommand && cmd.allowCommand()))) {
+    if (user?.isValid) {
       this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
 
       const ctx = this.getContext(chat_id, msg, user);

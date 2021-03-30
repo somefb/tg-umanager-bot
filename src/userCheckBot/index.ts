@@ -5,27 +5,17 @@ import { generateUserKey } from "./dictionary";
 import playValidation from "./playValidation";
 
 const waitUserMs = 60000; // 1 minute
-const validationExpiry = 5 * 60 * 1000; // 5 minutes - period of time that user isValid after validation
 
-export function isValidationExpired(user: UserItem, validationExpiryMs = validationExpiry): boolean {
-  const dT = Date.now() - user.validationDate;
-  if (dT < validationExpiryMs) {
-    return false;
-  }
-  return true;
-}
-
-const myBotUserName = "";
 export const CheckBot = {
   service: {} as ITelegramService,
 
-  async validateUser(user: UserItem, validationExpiryMs = validationExpiry): Promise<boolean | null> {
+  async validateUser(user: UserItem): Promise<boolean | null> {
     try {
       if (user.isLocked) {
         console.warn(`User ${user.id} is locked. Validation is declined`);
         return Promise.resolve(false);
       }
-      if (!user.isInvalid && !isValidationExpired(user, validationExpiryMs)) {
+      if (user.isValid) {
         return Promise.resolve(true);
       }
 

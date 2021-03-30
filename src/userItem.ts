@@ -2,17 +2,15 @@
 import { FileInfo } from "./types";
 import { UserValidationKey } from "./userCheckBot/dictionary";
 
-// const t: FileInfo = {
-//   // we can't compare by file_id
-//   file_id: "",
-//   file_unique_id: "",
-//   file_name: "",
-//   file_size: 0,
-//   mime_type: "",
-//   duration: 0,
-//   width: 0,
-//   height: 0,
-// };
+export const validationExpiry = 5 * 60 * 1000; // 5 minutes - period of time that user isValid after validation
+
+function isValidationExpired(user: UserItem, validationExpiryMs = validationExpiry): boolean {
+  const dT = Date.now() - user.validationDate;
+  if (dT < validationExpiryMs) {
+    return false;
+  }
+  return true;
+}
 
 export default class UserItem {
   static userToLink(user: UserItem): string {
@@ -46,15 +44,29 @@ export default class UserItem {
   validationVoiceFile?: FileInfo;
   validationFile?: FileInfo;
   validationKey: UserValidationKey;
-  /** Date in ms when the last validation is done/failed */
-  validationDate = 0;
-  isInvalid = true;
+
   /** True when number of unsuccessful attempts of validation is over  */
   isLocked = false;
   /** Personal chat id with checkbot */
   checkBotChatId = 0;
   /** Personal chat id with termyKickBot */
   termyBotChatId = 0;
+
+  _isValid = true;
+  /** Date in ms when the last validation is done/failed */
+  validationDate = 0;
+
+  get isValid(): boolean {
+    if (!this._isValid) {
+      return false;
+    }
+    return isValidationExpired(this) || !!process.env.DEBUG;
+  }
+
+  set isValid(v: boolean) {
+    this._isValid = !v;
+    this.validationDate = Date.now();
+  }
 
   toLinkName(): string {
     return UserItem.userToLink(this);
