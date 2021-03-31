@@ -39,7 +39,7 @@ export default class UserItem {
   nickName = "";
   firstName = "";
   lastName = "";
-  sharedUserId = 0;
+  whoSharedUserId = 0;
 
   validationVoiceFile?: FileInfo;
   validationFile?: FileInfo;
@@ -52,7 +52,7 @@ export default class UserItem {
   /** Personal chat id with termyKickBot */
   termyBotChatId = 0;
 
-  _isValid = true;
+  private _isValid = true;
   /** Date in ms when the last validation is done/failed */
   validationDate = 0;
 

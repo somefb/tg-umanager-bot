@@ -92,6 +92,10 @@ export class RepoClass {
     });
   }
 
+  getСhat(id: number | undefined): ChatItem | undefined {
+    return (id && this.chats[id]) || undefined;
+  }
+
   getOrPushChat(id: number): ChatItem {
     let chat = this.chats[id];
     if (!chat) {

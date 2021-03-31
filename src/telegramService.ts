@@ -146,15 +146,11 @@ export default class TelegramService implements ITelegramService {
               value: m as EventTypeReturnType[EventTypeEnum.gotNewMessage],
             };
           } else if ((m as Message.NewChatMembersMessage).new_chat_members) {
-            const members = (m as Message.NewChatMembersMessage).new_chat_members;
-            const isMeAdded = members.some((v) => v.id === this.botUserId);
-            if (isMeAdded) {
-              const cid = chatId;
-              defFn = () => {
-                onMeAdded.call(this, m as Message.NewChatMembersMessage, cid);
-                return true;
-              };
-            }
+            //const members = (m as Message.NewChatMembersMessage).new_chat_members;
+            return {
+              type: EventTypeEnum.addedChatMembers,
+              value: m as EventTypeReturnType[EventTypeEnum.addedChatMembers],
+            };
             // todo on added user
             //const newUsers = members.filter((v) => !v.is_bot);
           }
@@ -170,9 +166,17 @@ export default class TelegramService implements ITelegramService {
         } else if ((upd as Update.MyChatMemberUpdate).my_chat_member) {
           const m = (upd as Update.MyChatMemberUpdate).my_chat_member;
           chatId = m.chat.id;
+          const mbot = m.new_chat_member;
+          if (mbot.user.id === this.botUserId && mbot.status === "member") {
+            const cid = chatId;
+            defFn = () => {
+              onMeAdded.call(this, m as EventTypeReturnType[EventTypeEnum.botUpdated], cid);
+              return true;
+            };
+          }
           return {
-            type: EventTypeEnum.memberUpdated,
-            value: m as EventTypeReturnType[EventTypeEnum.memberUpdated],
+            type: EventTypeEnum.botUpdated,
+            value: m as EventTypeReturnType[EventTypeEnum.botUpdated],
           };
         }
 
@@ -214,7 +218,7 @@ export default class TelegramService implements ITelegramService {
       isHandled = (defFn && defFn()) || isHandled;
 
       if (!isHandled) {
-        console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, upd);
+        process.env.DEBUG && console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, upd);
       }
     } catch (err) {
       console.error(`TelegramService '${this.cfg.name}'. Error in gotUpdate\n`, err);

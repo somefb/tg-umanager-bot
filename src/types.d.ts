@@ -182,7 +182,8 @@ export const enum EventTypeEnum {
   gotNewMessage = 0b1000, // 1 << 3,
   gotEditedMessage = 0b10000, // 1 << 4,
   gotFile = 0b100000, //1 << 5,
-  memberUpdated = 0b1000000, //1 << 6,
+  botUpdated = 0b1000000, //1 << 6,
+  addedChatMembers = 0b10000000, //1 << 7,
 }
 
 interface EventTypeReturnType {
@@ -192,7 +193,8 @@ interface EventTypeReturnType {
   [EventTypeEnum.gotEditedMessage]: EditedTextMessage;
   [EventTypeEnum.gotBotCommand]: NewTextMessage;
   [EventTypeEnum.gotFile]: NewFileMessage;
-  /** happens when member permissions are updated in the chat */
-  [EventTypeEnum.memberUpdated]: ChatMemberUpdated;
+  /** happens when bot permissions are updated (or bot added/removed) in the chat */
+  [EventTypeEnum.botUpdated]: ChatMemberUpdated;
+  [EventTypeEnum.addedChatMembers]: Message.NewChatMembersMessage;
 }
 //type KeyForTypeEnum<T extends EventTypeEnum> = EventTypeReturnType[T];
