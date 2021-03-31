@@ -47,7 +47,7 @@ const ShareBot: MyBotCommand = {
         if (regUserId) {
           regUser = new UserItem(regUserId, CheckBot.generateUserKey());
           regUser.validationVoiceFile = file;
-          regUser.sharedUserId = ctx.user.id;
+          regUser.whoSharedUserId = ctx.user.id;
 
           break;
         }
