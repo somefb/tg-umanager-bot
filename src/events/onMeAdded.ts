@@ -17,7 +17,7 @@ export default async function onMeAdded(
   }
 
   const user = Repo.getUser(msg.from?.id);
-  const isAnonym = msg.from && msg.from.is_bot; // && msg.from.username === "GroupAnonymousBot";
+  const isAnonym = msg.from && msg.from.is_bot && msg.from.username === "GroupAnonymousBot";
   if (!user?.isValid && !isAnonym) {
     this.core.leaveChat({ chat_id });
     return;

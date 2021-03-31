@@ -8,12 +8,17 @@ const CommandHelp: MyBotCommand = {
   isHidden: false,
   description: "справка",
   callback: async (ctx) => {
-    const leftMs = Date.now() - ctx.user.validationDate;
-    const leftMinutes = Math.floor(leftMs / 60000);
-    const leftSec = Math.floor((leftMs - leftMinutes * 60000) / 1000);
-    const lines: string[] = [
-      `Добро пожаловать. В течение ${leftMinutes}мин ${leftSec}сек доступны следующие команды \n(по истечении времени пройдите проверку снова)\n`,
-    ];
+    const lines: string[] = [];
+    if (!ctx.chat.isGroup) {
+      const leftMs = Date.now() - ctx.user.validationDate;
+      const leftMinutes = Math.floor(leftMs / 60000);
+      const leftSec = Math.floor((leftMs - leftMinutes * 60000) / 1000);
+      lines.push(
+        `Добро пожаловать. В течение ${leftMinutes}мин ${leftSec}сек доступны следующие команды \n(по истечении времени пройдите проверку снова)\n`
+      );
+    } else {
+      lines.push(`Доступны следующие команды`);
+    }
 
     Object.keys(MyBotCommandTypes).forEach((key) => {
       const cType = MyBotCommandTypes[key];
