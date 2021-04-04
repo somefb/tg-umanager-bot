@@ -1,4 +1,5 @@
 import appSettings from "../appSettingsGet";
+import ChatItem from "../chatItem";
 import { MyBotCommandTypes } from "../commands/botCommandTypes";
 import registerUser from "../commands/registerUser";
 import Repo from "../repo";
@@ -24,6 +25,7 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
     Repo.commit();
   }
 
+  //extract command from /cmd@botName
   if (isGroupChat) {
     let i = 2;
     for (; i < end; ++i) {
@@ -42,9 +44,8 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
   const cmd = this.commands.find((c) => c.command === textCmd);
   if (cmd) {
     const user = Repo.getUser(msg.from.id);
-    const isAnonym = msg.from && msg.from.is_bot && msg.from.username === "GroupAnonymousBot";
 
-    if (!user && !isAnonym) {
+    if (!isGroupChat && !user) {
       process.env.DEBUG && console.log(`Decline command. User ${msg.from.id} is not registered`);
     } else {
       this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
@@ -55,17 +56,20 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
       }
 
       let notifyText: string | undefined;
+
       if (!isGroupChat && cmd.type === MyBotCommandTypes.group) {
         notifyText = "Групповые команды доступны только в групповом чате";
       } else if (isGroupChat && cmd.type === MyBotCommandTypes.personal) {
         notifyText = "Персональные команды доступны только в приватном чате";
+      } else if (isGroupChat && !user && !ChatItem.isAnonymGroupBot(msg.from)) {
+        notifyText = "Команды доступны только для зарегестрированных пользователей";
       }
 
       if (notifyText) {
-        this.core.sendMessage({ chat_id, text: notifyText }).then((v) => {
+        this.core.sendMessage({ chat_id, text: notifyText, disable_notification: true }).then((v) => {
           setTimeout(() => {
             v.ok && this.core.deleteMessageForce({ chat_id, message_id: v.result.message_id });
-          }, 3000);
+          }, 5000);
         });
       } else {
         // todo generic command + generic context where user can be undefined for groupCommands
