@@ -61,9 +61,9 @@ const CheckAll: MyBotCommand = {
         ctx.getListener(evRef)?.resolve(eData as NewCallbackQuery);
       };
 
+      ctx.setTimeout(12 * 60 * 60000); // 12 hours
       try {
         while (1) {
-          //todo setup specific timeout
           evRef = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
           const q = await evRef;
           if (q.data != "im") {
