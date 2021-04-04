@@ -35,7 +35,9 @@ export class RepoClass {
     if (!v) {
       return;
     }
-    this.chats = Object.assign(this.chats, v.chats);
+    Object.keys(v.chats).forEach(
+      (k) => (this.chats[k] = Object.assign(new ChatItem(v.chats[k].id), v.chats[k], this.chats[k]))
+    );
     Object.keys(v.users).forEach(
       (k) =>
         (this.users[k] = Object.assign(
@@ -94,6 +96,11 @@ export class RepoClass {
 
   getСhat(id: number | undefined): ChatItem | undefined {
     return (id && this.chats[id]) || undefined;
+  }
+
+  addOrUpdateChat(chat: ChatItem): void {
+    this.chats[chat.id] = chat;
+    this.commit();
   }
 
   getOrPushChat(id: number): ChatItem {

@@ -48,6 +48,7 @@ export type ITelegramCore = Pick<
   | "editMessageText"
   | "getChatAdministrators"
   | "getChatMembersCount"
+  | "answerCallbackQuery"
 > & {
   //
   deleteMessageForce(args: Opts<"deleteMessage">): Promise<void>;
@@ -87,7 +88,7 @@ export interface ITelegramService {
     timeout?: number
   ): Promise<EventTypeReturnType[E]>;
 
-  removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): void;
+  removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void;
 
   /** Create or get existed */
   getContext(chatId: number, initMsg: NewTextMessage | null, user: UserItem): IBotContext;
@@ -159,7 +160,7 @@ export interface IBotContext {
   sendMessage(args: Omit<Opts<"sendMessage">, "chat_id">, opts?: IBotContextMsgOptions): Promise<Message.TextMessage>;
   deleteMessage(id: number): Promise<void>;
   onGotEvent<E extends EventTypeEnum>(type: E): Promise<EventTypeReturnType[E]>;
-  removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): void;
+  removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void;
   fireEvent<E extends EventTypeEnum>(type: E | null, v: EventTypeReturnType[E], u: Update): boolean;
 }
 
@@ -182,7 +183,7 @@ export const enum EventTypeEnum {
   gotNewMessage = 0b1000, // 1 << 3,
   gotEditedMessage = 0b10000, // 1 << 4,
   gotFile = 0b100000, //1 << 5,
-  botUpdated = 0b1000000, //1 << 6,
+  memberUpated = 0b1000000, //1 << 6,
   addedChatMembers = 0b10000000, //1 << 7,
 }
 
@@ -193,8 +194,8 @@ interface EventTypeReturnType {
   [EventTypeEnum.gotEditedMessage]: EditedTextMessage;
   [EventTypeEnum.gotBotCommand]: NewTextMessage;
   [EventTypeEnum.gotFile]: NewFileMessage;
-  /** happens when bot permissions are updated (or bot added/removed) in the chat */
-  [EventTypeEnum.botUpdated]: ChatMemberUpdated;
+  /** happens when user permissions are updated (or user added/removed) in the chat */
+  [EventTypeEnum.memberUpated]: ChatMemberUpdated;
   [EventTypeEnum.addedChatMembers]: Message.NewChatMembersMessage;
 }
 //type KeyForTypeEnum<T extends EventTypeEnum> = EventTypeReturnType[T];
