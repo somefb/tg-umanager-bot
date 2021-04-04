@@ -269,6 +269,10 @@ export default class TelegramCore implements ITelegramCore {
   getChatMembersCount(args: { chat_id: string | number }): P<R<number>> {
     return this.httpPost("getChatMembersCount", args);
   }
+
+  answerCallbackQuery(args?: Opts<"answerCallbackQuery">): P<R<true>> {
+    return this.httpPost("answerCallbackQuery", args);
+  }
 }
 
 export interface ErrnoException extends Error {
