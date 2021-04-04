@@ -8,7 +8,7 @@ import UserItem from "../userItem";
 /** Bot added to group chat */
 export default async function onMeAdded(
   this: TelegramService,
-  msg: EventTypeReturnType[EventTypeEnum.botUpdated],
+  msg: EventTypeReturnType[EventTypeEnum.memberUpated],
   chat_id: number
 ): Promise<void> {
   if (this === CheckBot.service) {
@@ -52,9 +52,10 @@ export default async function onMeAdded(
   const waitAdminRights = async (ctx: IBotContext) => {
     while (1) {
       ctx.setTimeout(30 * 60000);
-      const resRights = await ctx.onGotEvent(EventTypeEnum.botUpdated);
+      const resRights = await ctx.onGotEvent(EventTypeEnum.memberUpated);
       const member = resRights.new_chat_member || resRights.old_chat_member;
       if (member.user.id === this.botUserId && member.status === "administrator") {
+        // todo 0 timeout isn't good case
         ctx.setTimeout(0);
 
         const resAdmins = await ctx.service.core.getChatAdministrators({ chat_id });
