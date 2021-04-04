@@ -12,13 +12,25 @@ function isValidationExpired(user: UserItem, validationExpiryMs = validationExpi
   return true;
 }
 
-export default class UserItem {
-  static userToLink(user: UserItem): string {
-    if (user.nickName) {
-      return "@" + user.nickName;
-    }
-    return `<a href="tg://user?id=${user.id}">${[user.firstName, user.lastName].filter((v) => v).join(" ")}</a>`;
+export interface IUser {
+  id: number;
+  firstName: string;
+  lastName?: string;
+  userName?: string;
+}
+
+export default class UserItem implements IUser {
+  static ToLinkUser(user: IUser): string {
+    return this.ToLink(user.id, user.userName, user.firstName, user.lastName);
   }
+
+  static ToLink(userId: number, userName: string | undefined, firstName: string, lastName: string | undefined): string {
+    if (userName) {
+      return "@" + userName;
+    }
+    return `<a href="tg://user?id=${userId}">${[firstName, lastName].filter((v) => v).join(" ")}</a>`;
+  }
+
   static isFilesEqual(a: FileInfo, b: FileInfo): boolean {
     const someDifferent = Object.keys(a).some((key: string | keyof typeof a) => {
       if (key === "file_id" || key === "file_name" || key === "thumb") {
@@ -36,9 +48,9 @@ export default class UserItem {
   }
 
   id: number;
-  nickName = "";
   firstName = "";
-  lastName = "";
+  lastName?: string;
+  userName?: string;
   whoSharedUserId = 0;
 
   validationVoiceFile?: FileInfo;
@@ -68,8 +80,8 @@ export default class UserItem {
     this.validationDate = Date.now();
   }
 
-  toLinkName(): string {
-    return UserItem.userToLink(this);
+  toLink(): string {
+    return UserItem.ToLinkUser(this);
   }
 
   constructor(id: number, validationKey: UserValidationKey) {

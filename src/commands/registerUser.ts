@@ -54,9 +54,9 @@ async function registerUser(ctx: Parameters<MyBotCommand["callback"]>["0"]): Pro
   ctx.setTimeout(regTimeout);
 
   const user = ctx.user;
-  user.nickName = ctx.initMessage.from.username as string;
+  user.userName = ctx.initMessage.from.username;
   user.firstName = ctx.initMessage.from.first_name as string;
-  user.lastName = ctx.initMessage.from.last_name as string;
+  user.lastName = ctx.initMessage.from.last_name;
   user.termyBotChatId = ctx.chatId;
 
   await ctx.sendMessage(
@@ -107,7 +107,7 @@ async function registerUser(ctx: Parameters<MyBotCommand["callback"]>["0"]): Pro
   const isValid = await CheckBot.validateUser(user);
   if (isValid) {
     Repo.addOrUpdateUser(user);
-    console.log(`\nRegistration of user ${user.id} ${user.toLinkName()} is finished`);
+    console.log(`\nRegistration of user ${user.id} ${user.toLink()} is finished`);
   }
 
   await ctx.sendMessage(
