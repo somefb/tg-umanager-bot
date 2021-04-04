@@ -1,4 +1,4 @@
-import { Update, User } from "typegram";
+import { User } from "typegram";
 import Repo from "./repo";
 import { IUser } from "./userItem";
 

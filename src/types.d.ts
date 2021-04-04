@@ -2,6 +2,7 @@ import { BotCommand, CallbackQuery, ChatMemberUpdated, Message, Typegram, Update
 import { Animation, Audio, Document, PhotoSize, Video, Voice } from "typegram/message";
 import ChatItem from "./chatItem";
 import { MyBotCommandTypes } from "./commands/botCommandTypes";
+import ErrorCancelled from "./errorCancelled";
 import UserItem from "./userItem";
 
 /** This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data in the usual way that files are uploaded via the browser. */
@@ -162,6 +163,14 @@ export interface IBotContext {
   onGotEvent<E extends EventTypeEnum>(type: E): Promise<EventTypeReturnType[E]>;
   removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void;
   fireEvent<E extends EventTypeEnum>(type: E | null, v: EventTypeReturnType[E], u: Update): boolean;
+  getListener<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): IEventListener<E> | undefined;
+}
+
+export interface IEventListener<E extends EventTypeEnum> {
+  type: E;
+  // such typing is required otherwise TS can't match types properly
+  resolve: <T extends EventTypeEnum>(value: EventTypeReturnType[T]) => void;
+  reject: (reason: ErrorCancelled) => void;
 }
 
 export type IBotContextMsgOptions = Partial<{

@@ -1,13 +1,14 @@
 import { ApiSuccess, Message, Update } from "typegram";
 import ChatItem from "./chatItem";
+import ErrorCancelled from "./errorCancelled";
 import processNow from "./helpers/processNow";
 import Repo from "./repo";
-import { CancelledError, IEventListener } from "./telegramService";
 import {
   EventTypeEnum,
   EventTypeReturnType,
   IBotContext,
   IBotContextMsgOptions,
+  IEventListener,
   ITelegramService,
   NewTextMessage,
   Opts,
@@ -62,7 +63,7 @@ export default class BotContext implements IBotContext {
     this._updateMessageId = 0;
     this.service.removeContext(this.chatId);
     this._timer && clearTimeout(this._timer);
-    const err = new CancelledError("Context is cancelled");
+    const err = new ErrorCancelled("Context is cancelled");
     this.eventListeners.forEach((e) => e.reject(err));
 
     //todo clear all by cancel (in private chat)
@@ -109,7 +110,7 @@ export default class BotContext implements IBotContext {
 
     let data: Message.TextMessage;
 
-    if (this._updateMessageId) {
+    if (this.singleMessageMode && this._updateMessageId) {
       (args as Opts<"editMessageText">).message_id = this._updateMessageId;
       //WARN: editMessage returns text-result but we don't need one
       await this.service.core.editMessageText(args as Opts<"editMessageText">);
@@ -174,7 +175,8 @@ export default class BotContext implements IBotContext {
     return ref;
   }
 
-  removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): void {
+  removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void {
+    needReject && this.eventListeners.get(ref)?.reject(new ErrorCancelled("Cancelled by argument [needReject]"));
     this.eventListeners.delete(ref);
   }
 
@@ -194,12 +196,16 @@ export default class BotContext implements IBotContext {
     return isHandled;
   }
 
+  getListener<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): IEventListener<E> | undefined {
+    return this.eventListeners.get(ref) as IEventListener<E>;
+  }
+
   async callCommand<T extends IBotContext, U>(fn: (ctx: T) => Promise<U>): Promise<U | null> {
     let r: U | null = null;
     try {
       r = await fn((this as unknown) as T);
     } catch (err) {
-      if ((err as CancelledError).isCancelled) {
+      if ((err as ErrorCancelled).isCancelled) {
         return null;
       } else {
         console.error(err);

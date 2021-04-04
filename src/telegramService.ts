@@ -1,9 +1,11 @@
-import { ApiResponse, CallbackQuery, Message, Update } from "typegram";
+import { ApiResponse, CallbackQuery, Message, Update, User } from "typegram";
 import BotContext from "./botContext";
+import ErrorCancelled from "./errorCancelled";
 import gotBotCommand from "./events/gotBotCommand";
 import onMeAdded from "./events/onMeAdded";
 import objectRecursiveSearch from "./helpers/objectRecursiveSearch";
 import onExit from "./onExit";
+import Repo from "./repo";
 import TelegramCore from "./telegramCore";
 import {
   BotConfig,
@@ -11,6 +13,7 @@ import {
   EventTypeEnum,
   EventTypeReturnType,
   IBotContext,
+  IEventListener,
   ITelegramService,
   MyBotCommand,
   NewTextMessage,
@@ -76,10 +79,19 @@ export default class TelegramService implements ITelegramService {
       let defFn: null | (() => boolean) = null;
       let chatId: number | undefined;
 
+      const updateMember = (chatId: number, from: User, isAnonym: boolean | null | undefined) => {
+        from && Repo.getСhat(chatId)?.addOrUpdateMember(from, isAnonym);
+      };
+
+      const removeMember = (chatId: number, userId: number) => {
+        Repo.getСhat(chatId)?.removeMember(userId);
+      };
+
       const r = ((): { value: EventTypeReturnType[EventTypeEnum]; type: EventTypeEnum } => {
         if ((upd as Update.CallbackQueryUpdate).callback_query) {
           const q = (upd as Update.CallbackQueryUpdate).callback_query as CallbackQuery.DataCallbackQuery;
           chatId = q.message?.chat.id;
+          chatId && updateMember(chatId, q.from, null);
           return {
             type: EventTypeEnum.gotCallbackQuery,
             value: q as EventTypeReturnType[EventTypeEnum.gotCallbackQuery],
@@ -88,6 +100,8 @@ export default class TelegramService implements ITelegramService {
         if ((upd as Update.MessageUpdate).message) {
           const m = (upd as Update.MessageUpdate).message;
           chatId = m.chat.id;
+          updateMember(chatId, m.from, null);
+
           if ((m as Message.TextMessage).text?.startsWith("/")) {
             if (chatId) {
               const cid = chatId;
@@ -146,37 +160,51 @@ export default class TelegramService implements ITelegramService {
               value: m as EventTypeReturnType[EventTypeEnum.gotNewMessage],
             };
           } else if ((m as Message.NewChatMembersMessage).new_chat_members) {
-            //const members = (m as Message.NewChatMembersMessage).new_chat_members;
+            const members = (m as Message.NewChatMembersMessage).new_chat_members;
+            const cid = chatId;
+            members.forEach((v) => updateMember(cid, v, false));
+
+            const chat = Repo.getСhat(chatId);
+            chat?.onChatMembersCountChanged?.call(chat, members.length);
+
             return {
               type: EventTypeEnum.addedChatMembers,
               value: m as EventTypeReturnType[EventTypeEnum.addedChatMembers],
             };
-            // todo on added user
-            //const newUsers = members.filter((v) => !v.is_bot);
           }
         } else if ((upd as Update.EditedMessageUpdate).edited_message) {
           const m = (upd as Update.EditedMessageUpdate).edited_message;
           if ((m as Message.TextMessage).text) {
             chatId = m.chat.id;
+            updateMember(chatId, m.from, null);
             return {
               type: EventTypeEnum.gotEditedMessage,
               value: m as EventTypeReturnType[EventTypeEnum.gotEditedMessage],
             };
           }
-        } else if ((upd as Update.MyChatMemberUpdate).my_chat_member) {
-          const m = (upd as Update.MyChatMemberUpdate).my_chat_member;
+        } else if ((upd as Update.ChatMemberUpdate).chat_member || (upd as Update.MyChatMemberUpdate).my_chat_member) {
+          // todo we can detect blocked/unblocked for private chat here
+          const m = (upd as Update.MyChatMemberUpdate).my_chat_member || (upd as Update.ChatMemberUpdate).chat_member;
           chatId = m.chat.id;
           const mbot = m.new_chat_member;
           if (mbot.user.id === this.botUserId && mbot.status === "member") {
             const cid = chatId;
             defFn = () => {
-              onMeAdded.call(this, m as EventTypeReturnType[EventTypeEnum.botUpdated], cid);
+              onMeAdded.call(this, m as EventTypeReturnType[EventTypeEnum.memberUpated], cid);
               return true;
             };
+          } else {
+            const isLeft = m.new_chat_member.status === "kicked" || m.new_chat_member.status === "left";
+            if (isLeft) {
+              removeMember(chatId, m.new_chat_member.user.id);
+            } else {
+              updateMember(chatId, mbot.user, m.new_chat_member.is_anonymous);
+            }
           }
           return {
-            type: EventTypeEnum.botUpdated,
-            value: m as EventTypeReturnType[EventTypeEnum.botUpdated],
+            //todo rename to
+            type: EventTypeEnum.memberUpated,
+            value: m as EventTypeReturnType[EventTypeEnum.memberUpated],
           };
         }
 
@@ -202,6 +230,7 @@ export default class TelegramService implements ITelegramService {
           if (e.predicate(val, chatId)) {
             this.removeEvent(e.ref);
             e.resolve(val);
+            isHandled = true;
           }
         }
       });
@@ -305,7 +334,7 @@ export default class TelegramService implements ITelegramService {
         const timer = setTimeout(() => {
           this.removeEvent(ref);
           reject(
-            Object.assign(new CancelledError(`Waiting is cancelled via timeout(${timeout})`), { isCancelled: true })
+            Object.assign(new ErrorCancelled(`Waiting is cancelled via timeout(${timeout})`), { isCancelled: true })
           );
         }, timeout);
         fn = (e, chatId) => {
@@ -325,7 +354,8 @@ export default class TelegramService implements ITelegramService {
     return ref;
   }
 
-  removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): void {
+  removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void {
+    needReject && this.eventListeners.get(ref)?.reject(new ErrorCancelled("Cancelled by argument [needReject]"));
     this.eventListeners.delete(ref);
   }
 
@@ -352,15 +382,4 @@ interface IEventListenerRoot<E extends EventTypeEnum> extends IEventListener<E> 
   // such typing is required otherwise TS can't match types properly
   predicate: <T extends EventTypeEnum>(e: EventTypeReturnType[T], chatId?: number) => boolean;
   ref: Promise<EventTypeReturnType[E]>;
-}
-
-export interface IEventListener<E extends EventTypeEnum> {
-  type: E;
-  // such typing is required otherwise TS can't match types properly
-  resolve: <T extends EventTypeEnum>(value: EventTypeReturnType[T]) => void;
-  reject: (reason: CancelledError) => void;
-}
-
-export class CancelledError extends Error {
-  isCancelled = true;
 }

@@ -1,6 +1,6 @@
+import ErrorCancelled from "../errorCancelled";
 import arrayGetRandomItem from "../helpers/arrayGetRandomItem";
 import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
-import { CancelledError } from "../telegramService";
 import { EventTypeEnum, IBotContext } from "../types";
 import UserItem from "../userItem";
 import { generateWordPairs, generateWordPairsNext } from "./dictionary";
@@ -159,7 +159,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
       ++repeatCnt;
     } // while(1)
   } catch (err) {
-    if ((err as CancelledError).isCancelled) {
+    if ((err as ErrorCancelled).isCancelled) {
       console.log(`User ${ctx.user.id} failed validation and locked: timeout is over`);
       cancelSession(false);
       return false;

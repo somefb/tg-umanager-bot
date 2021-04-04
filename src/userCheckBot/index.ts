@@ -1,4 +1,4 @@
-import { CancelledError } from "../telegramService";
+import ErrorCancelled from "../errorCancelled";
 import { EventTypeEnum, ITelegramService, MyBotCommand } from "../types";
 import UserItem from "../userItem";
 import { generateUserKey } from "./dictionary";
@@ -30,7 +30,7 @@ export const CheckBot = {
       const r = await ctx.callCommand(playValidation);
       return r;
     } catch (err) {
-      if (!(err as CancelledError).isCancelled) {
+      if (!(err as ErrorCancelled).isCancelled) {
         console.error(err);
         return null;
       }
@@ -40,7 +40,6 @@ export const CheckBot = {
   generateUserKey,
 };
 
-// todo use answerCallbackQuery: https://core.telegram.org/bots/api#answercallbackquery
 const CheckBotCommands: MyBotCommand[] = [
   {
     command: "start",
