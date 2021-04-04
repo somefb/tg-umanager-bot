@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node build/index.js --https",
     "test": "jest",
-    "serve": "cross-env DEBUG=true ./node_modules/.bin/ts-node src/index.ts",
+    "serve": "cross-env DEBUG=true ./node_modules/.bin/ts-node src/index.ts --inspect",
     "test-google": "./node_modules/.bin/ts-node src/googleDrive/check.ts",
     "lint": "./node_modules/.bin/eslint --fix --cache ./**/*.{js,jsx,ts,tsx,json}",
     "build-old": "tsc --listEmittedFiles --incremental",
