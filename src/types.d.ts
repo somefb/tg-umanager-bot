@@ -141,6 +141,7 @@ export interface IBotContext {
   readonly initMessageId: number;
   readonly initMessage: NewTextMessage;
   readonly botUserName: string;
+  /** WARN: user can be with zero values when msg.from = anonym for groupCommands */
   readonly user: UserItem;
   readonly service: ITelegramService;
 
@@ -192,6 +193,7 @@ export const enum EventTypeEnum {
   gotNewMessage = 0b1000, // 1 << 3,
   gotEditedMessage = 0b10000, // 1 << 4,
   gotFile = 0b100000, //1 << 5,
+  /** A chat member's status was updated in a chat. The bot must be an administrator in the chat and must explicitly specify “chat_member” in the list of allowed_updates to receive these updates. */
   memberUpated = 0b1000000, //1 << 6,
   addedChatMembers = 0b10000000, //1 << 7,
 }
@@ -203,7 +205,7 @@ interface EventTypeReturnType {
   [EventTypeEnum.gotEditedMessage]: EditedTextMessage;
   [EventTypeEnum.gotBotCommand]: NewTextMessage;
   [EventTypeEnum.gotFile]: NewFileMessage;
-  /** happens when user permissions are updated (or user added/removed) in the chat */
+  /** happens when user/bot permissions are updated (or user added/removed) in the chat */
   [EventTypeEnum.memberUpated]: ChatMemberUpdated;
   [EventTypeEnum.addedChatMembers]: Message.NewChatMembersMessage;
 }

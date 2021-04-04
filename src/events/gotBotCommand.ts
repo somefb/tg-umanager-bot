@@ -72,7 +72,7 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
           }, 5000);
         });
       } else {
-        // todo generic command + generic context where user can be undefined for groupCommands
+        // WARN: user can be undefined (anonym) for groupCommands
         const ctx = this.getContext(chat_id, msg, user || new UserItem(msg.from?.id || 0, { num: 0, word: "" }));
         ctx.callCommand(cmd.callback);
       }

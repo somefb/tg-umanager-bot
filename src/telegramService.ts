@@ -202,7 +202,6 @@ export default class TelegramService implements ITelegramService {
             }
           }
           return {
-            //todo rename to
             type: EventTypeEnum.memberUpated,
             value: m as EventTypeReturnType[EventTypeEnum.memberUpated],
           };
