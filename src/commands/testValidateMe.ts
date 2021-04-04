@@ -2,10 +2,8 @@ import { MyBotCommand } from "../types";
 import { CheckBot } from "../userCheckBot";
 import { MyBotCommandTypes } from "./botCommandTypes";
 
-// todo this is test command - remove after tests
-// todo this is command doesn't work when user isInvalid
-const ValidateMe: MyBotCommand = {
-  command: "validate_me",
+const TestValidateMe: MyBotCommand = {
+  command: "test_validate_me",
   type: MyBotCommandTypes.personal,
   isHidden: true,
   description: "проверь меня",
@@ -17,4 +15,4 @@ const ValidateMe: MyBotCommand = {
   },
 };
 
-export default ValidateMe;
+export default TestValidateMe;
