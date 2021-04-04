@@ -17,7 +17,7 @@ const CommandHelp: MyBotCommand = {
         `Добро пожаловать. В течение ${leftMinutes}мин ${leftSec}сек доступны следующие команды \n(по истечении времени пройдите проверку снова)\n`
       );
     } else {
-      lines.push(`Доступны следующие команды`);
+      lines.push("Доступны следующие команды\n");
     }
 
     Object.keys(MyBotCommandTypes).forEach((key) => {

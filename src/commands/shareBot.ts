@@ -101,7 +101,7 @@ async function registrationTask(
   const ctx = service.getContext(reportChatId, null, reportUser);
   await ctx.sendMessage(
     {
-      text: `Пользователь ${regUser.toLinkName()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`,
+      text: `Пользователь ${regUser.toLink()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`,
     },
     { removeTimeout: notifyTimeout, removeByUpdate: true, keepAfterSession: true }
   );
