@@ -52,6 +52,5 @@ const CheckBotCommands: MyBotCommand[] = [
       CheckBot.service = service;
     },
   } as MyBotCommand,
-  // todo add command stop
 ];
 export default CheckBotCommands;

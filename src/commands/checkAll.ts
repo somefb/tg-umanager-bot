@@ -8,7 +8,7 @@ const CheckAll: MyBotCommand = {
   isHidden: true,
   description: "проверить участников",
   callback: async (ctx) => {
-    //todo:bug new any command will destroy it but should only this command
+    // todo:bug new any command will destroy it but should only this command
     ctx.setTimeout(0);
 
     const r1 = await ctx.service.core.getChatMembersCount({ chat_id: ctx.chatId });

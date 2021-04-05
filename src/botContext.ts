@@ -113,6 +113,7 @@ export default class BotContext implements IBotContext {
     if (this.singleMessageMode && this._updateMessageId) {
       (args as Opts<"editMessageText">).message_id = this._updateMessageId;
       //WARN: editMessage returns text-result but we don't need one
+      // todo: user can remove message by mistake. We need to create sendNew instead. Need to handle apiError
       await this.service.core.editMessageText(args as Opts<"editMessageText">);
       data = this._updateMessageData as Message.TextMessage;
     } else {
