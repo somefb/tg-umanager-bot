@@ -93,11 +93,11 @@ async function registrationTask(
       BotContext.defSessionTimeout
     );
 
-    const ctxRegUser = service.getContext(msgRegUser.chat.id, msgRegUser, regUser);
+    const ctxRegUser = service.initContext(msgRegUser.chat.id, msgRegUser, regUser);
     success = !!(await ctxRegUser.callCommand(registerUser));
   } catch {}
 
-  const ctx = service.getContext(reportChatId, null, reportUser);
+  const ctx = service.initContext(reportChatId, {} as NewTextMessage, reportUser);
   await ctx.sendMessage(
     {
       text: `Пользователь ${regUser.toLink()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`,

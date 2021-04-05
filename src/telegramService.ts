@@ -234,15 +234,8 @@ export default class TelegramService implements ITelegramService {
         }
       });
 
-      const ctx = r && chatId && this.tryGetContext(chatId);
-      if (ctx) {
-        if (r.type === EventTypeEnum.gotBotCommand) {
-          ctx.cancel();
-        } else {
-          isHandled = ctx.fireEvent(r.type, r.value, upd) || isHandled;
-        }
-      }
-
+      const ctx = r && chatId && this.getContexts(chatId);
+      isHandled = (ctx && ctx.forEach((c) => c.fireEvent(r.type, r.value, upd))) || isHandled;
       isHandled = (defFn && defFn()) || isHandled;
 
       if (!isHandled) {
@@ -358,22 +351,27 @@ export default class TelegramService implements ITelegramService {
     this.eventListeners.delete(ref);
   }
 
-  contexts: Record<number, IBotContext> = {};
-  getContext(chatId: number, initMsg: NewTextMessage, user: UserItem): IBotContext {
-    let ctx = this.contexts[chatId];
-    if (!ctx) {
-      ctx = new BotContext(chatId, initMsg, user, this);
-      this.contexts[chatId] = ctx;
+  private contexts: Record<number, Set<IBotContext>> = {};
+  removeContext(ctx: IBotContext): void {
+    const arr = this.contexts[ctx.chatId];
+    arr.delete(ctx);
+    if (!arr.size) {
+      delete this.contexts[ctx.chatId];
     }
-    return ctx;
   }
 
-  tryGetContext(chat_id: number): IBotContext | undefined {
+  getContexts(chat_id: number): Set<IBotContext> | undefined {
     return this.contexts[chat_id];
   }
 
-  removeContext(chat_id: number): void {
-    delete this.contexts[chat_id];
+  initContext(chatId: number, initMsg: NewTextMessage | null, user: UserItem): IBotContext {
+    const item = new BotContext(chatId, initMsg || ({ message_id: 0, from: {} } as NewTextMessage), user, this);
+    const arr = this.contexts[chatId];
+    if (!arr) {
+      this.contexts[chatId] = new Set();
+    }
+    this.contexts[chatId].add(item);
+    return item;
   }
 }
 

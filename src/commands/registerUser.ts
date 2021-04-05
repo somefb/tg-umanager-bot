@@ -1,6 +1,6 @@
 import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
 import Repo from "../repo";
-import { EventTypeEnum, MyBotCommand } from "../types";
+import { EventTypeEnum, IBotContext, MyBotCommand } from "../types";
 import { CheckBot } from "../userCheckBot";
 import { expectedInvalidTimes, validationTimeout, validationTimeoutMinutes } from "../userCheckBot/playValidation";
 
@@ -49,11 +49,12 @@ const botRegisterInstructions = [
   "Бот не может удалить персональный чат (ограничение телеграмма). Потому удаляйте такой чат с ботом каждый раз самостоятельно",
 ].join(". ");
 
-async function registerUser(ctx: Parameters<MyBotCommand["callback"]>["0"]): Promise<boolean> {
+async function registerUser(ctx: IBotContext): Promise<boolean> {
   ctx.removeAnyByUpdate = true;
   ctx.setTimeout(regTimeout);
 
   const user = ctx.user;
+  //todo remove initMessage from context?
   user.userName = ctx.initMessage.from.username;
   user.firstName = ctx.initMessage.from.first_name as string;
   user.lastName = ctx.initMessage.from.last_name;

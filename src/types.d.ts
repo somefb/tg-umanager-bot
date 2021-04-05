@@ -1,5 +1,6 @@
 import { BotCommand, CallbackQuery, ChatMemberUpdated, Message, Typegram, Update } from "typegram";
 import { Animation, Audio, Document, PhotoSize, Video, Voice } from "typegram/message";
+import BotContextCollection from "./botContextCollection";
 import ChatItem from "./chatItem";
 import { MyBotCommandTypes } from "./commands/botCommandTypes";
 import ErrorCancelled from "./errorCancelled";
@@ -91,9 +92,9 @@ export interface ITelegramService {
 
   removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void;
 
-  /** Create or get existed */
-  getContext(chatId: number, initMsg: NewTextMessage | null, user: UserItem): IBotContext;
-  removeContext(chat_id: number): void;
+  initContext(chatId: number, initMsg: NewTextMessage | null, user: UserItem): IBotContext;
+  getContexts(chat_id: number): Set<IBotContext> | undefined;
+  removeContext(ctx: IBotContext): void;
 }
 
 export interface TelegramListenOptions {

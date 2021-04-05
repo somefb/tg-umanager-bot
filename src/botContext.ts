@@ -61,7 +61,7 @@ export default class BotContext implements IBotContext {
 
   cancel(): void {
     this._updateMessageId = 0;
-    this.service.removeContext(this.chatId);
+    this.service.removeContext(this);
     this._timer && clearTimeout(this._timer);
     const err = new ErrorCancelled("Context is cancelled");
     this.eventListeners.forEach((e) => e.reject(err));

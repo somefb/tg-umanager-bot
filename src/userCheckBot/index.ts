@@ -26,7 +26,7 @@ export const CheckBot = {
       }
 
       // todo detect stopBot
-      const ctx = this.service.getContext(user.checkBotChatId, null, user);
+      const ctx = this.service.initContext(user.checkBotChatId, null, user);
       const r = await ctx.callCommand(playValidation);
       return r;
     } catch (err) {

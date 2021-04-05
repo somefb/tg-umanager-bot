@@ -1,4 +1,5 @@
 import { ChatMember } from "typegram";
+import CheckAll from "../commands/checkAll";
 import Repo from "../repo";
 import TelegramService from "../telegramService";
 import { EventTypeEnum, EventTypeReturnType, IBotContext, NewTextMessage } from "../types";
@@ -38,11 +39,11 @@ export default async function onMeAdded(
     //case impossible but requires to TS
     return;
   }
-  let ctx = this.tryGetContext(chat_id);
-  ctx && ctx.cancel(); // case is possible when user removes bot and adds again (there is no onLeave event)
+  const c = this.getContexts(chat_id);
+  c?.forEach((v) => v.cancel()); // case possible when user removes bot and adds again (there is no onLeave event)
 
   let admins: ChatMember[] | undefined;
-  ctx = this.getContext(
+  const ctx = this.initContext(
     chat_id,
     m.result as NewTextMessage,
     user || new UserItem(msg.from?.id || 0, { num: 0, word: "" })
@@ -55,9 +56,6 @@ export default async function onMeAdded(
       const resRights = await ctx.onGotEvent(EventTypeEnum.memberUpated);
       const member = resRights.new_chat_member || resRights.old_chat_member;
       if (member.user.id === this.botUserId && member.status === "administrator") {
-        // todo 0 timeout isn't good case
-        ctx.setTimeout(0);
-
         const resAdmins = await ctx.service.core.getChatAdministrators({ chat_id });
         if (!resAdmins.ok) {
           // impossible but requires for TS
@@ -91,13 +89,14 @@ export default async function onMeAdded(
       }
     } //while 1
   };
+
   const gotRights = await ctx.callCommand(waitAdminRights);
+  ctx.deleteMessage(m.result.message_id);
+
   if (!gotRights) {
     this.core.leaveChat({ chat_id });
     return;
   }
-
-  ctx.deleteMessage(m.result.message_id);
 
   const chat = Repo.getOrPushChat(chat_id);
   chat.isGroup = true;
@@ -110,11 +109,12 @@ export default async function onMeAdded(
         `Все команды можно увидеть используя /help@${ctx.botUserName})`,
         "\nКоманды доступны для каждого в чате (но только для зарегестрированных пользователей)",
         "Для прохождения регистрации к вам обратятся те, кто уже её прошёл...",
+        "\nА пока определим, кто у нас здесь есть!",
       ].join(".\n"),
       parse_mode: "HTML",
     },
     { keepAfterSession: true }
   );
 
-  // todo wait for user messages to collect everyone
+  await ctx.callCommand(CheckAll.callback);
 }
