@@ -73,7 +73,7 @@ export default class TelegramService implements ITelegramService {
     this.isPending = false;
   }
 
-  async gotUpdate(upd: Update): Promise<void> {
+  gotUpdate(upd: Update): void {
     //process.env.DEBUG && console.log("got update", v);
     try {
       let defFn: null | (() => boolean) = null;

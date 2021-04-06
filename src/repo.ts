@@ -64,7 +64,7 @@ export class RepoClass {
   }
 
   commitTimer: NodeJS.Timeout | undefined;
-  async commit(ignoreDebounce = false): Promise<void> {
+  commit(ignoreDebounce = false): Promise<void> {
     return new Promise((resolve) => {
       if (!ignoreDebounce && this.commitTimer) {
         return;

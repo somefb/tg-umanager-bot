@@ -92,10 +92,11 @@ export default async function onMeAdded(
   };
 
   const gotRights = await ctx.callCommand(waitAdminRights);
-  ctx.deleteMessage(m.result.message_id);
+  await ctx.deleteMessage(m.result.message_id);
 
   if (!gotRights) {
-    this.core.leaveChat({ chat_id });
+    await this.core.leaveChat({ chat_id });
+    //WARN: ctx is cancelled in waitAdminRights
     return;
   }
 
