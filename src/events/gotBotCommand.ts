@@ -81,8 +81,7 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
             } else if (cmd.repeatBehavior === CommandRepeatBehavior.restart) {
               for (const ctx of c?.values()) {
                 if (ctx.name === cmd.command) {
-                  process.env.DEBUG && console.log("Command cancelled by rule: CommandRepeatBehavior.restart");
-                  ctx.cancel();
+                  ctx.cancel("by rule CommandRepeatBehavior.restart");
                   break;
                 }
               }

@@ -56,16 +56,18 @@ export default class BotContext implements IBotContext {
     this._timer && clearTimeout(this._timer);
     if (ms) {
       this._timer = setTimeout(() => {
-        this.cancel();
+        this.cancel("timeout " + ms);
       }, ms);
     }
   }
 
-  cancel(): void {
+  cancel(reason: string): void {
     this._updateMessageId = 0;
     this.service.removeContext(this);
     this._timer && clearTimeout(this._timer);
-    const err = new ErrorCancelled("Context is cancelled");
+    const logMsg = "Context is cancelled. Reason: " + reason;
+    process.env.DEBUG && console.log(logMsg);
+    const err = new ErrorCancelled("Context is cancelled. Reason: " + logMsg);
     this.eventListeners.forEach((e) => e.reject(err));
 
     //todo clear all by cancel (in private chat)
@@ -215,7 +217,7 @@ export default class BotContext implements IBotContext {
       }
     }
 
-    this.cancel();
+    this.cancel("end");
     return r;
   }
 }

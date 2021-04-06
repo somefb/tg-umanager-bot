@@ -40,7 +40,7 @@ export default async function onMeAdded(
     return;
   }
   const c = this.getContexts(chat_id);
-  c?.forEach((v) => v.cancel()); // case possible when user removes bot and adds again (there is no onLeave event)
+  c?.forEach((v) => v.cancel("fired onMeAdded again")); // case possible when user removes bot and adds again (there is no onLeave event)
 
   let admins: ChatMember[] | undefined;
   const ctx = this.initContext(

@@ -34,7 +34,7 @@ const ShareBot: MyBotCommand = {
       reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
     });
     let ev = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-    ev.then((e) => e.data === "cancel" && ctx.cancel());
+    ev.then((e) => e.data === "cancel" && ctx.cancel("user cancelled"));
 
     let regUser: UserItem | undefined;
     while (1) {
@@ -61,7 +61,7 @@ const ShareBot: MyBotCommand = {
       ctx.setTimeout();
 
       ev = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-      ev.then((e) => e.data === "cancel" && ctx.cancel());
+      ev.then((e) => e.data === "cancel" && ctx.cancel("user cancelled"));
     } //while
 
     // this case impossible but required for TS
@@ -105,7 +105,7 @@ async function registrationTask(
     },
     { removeTimeout: notifyTimeout, removeByUpdate: true, keepAfterSession: true }
   );
-  ctx.cancel();
+  ctx.cancel("end");
 }
 
 export default ShareBot;
