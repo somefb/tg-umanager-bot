@@ -91,7 +91,6 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
             // (async () => {
             //   let ctx = this.tryGetContext(chat_id);
             //   if (ctx) {
-            //     // todo it's wrong for some commands that should be itself
             //     const m = await ctx.sendMessage({
             //       text: "Прервать предыдущую команду?",
             //       reply_markup: {

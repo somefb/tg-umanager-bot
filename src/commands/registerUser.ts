@@ -54,7 +54,6 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
   ctx.setTimeout(regTimeout);
 
   const user = ctx.user;
-  //todo remove initMessage from context?
   user.userName = ctx.initMessage.from.username;
   user.firstName = ctx.initMessage.from.first_name as string;
   user.lastName = ctx.initMessage.from.last_name;
