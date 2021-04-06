@@ -1,4 +1,4 @@
-import { MyBotCommand } from "../types";
+import { CommandRepeatBehavior, MyBotCommand } from "../types";
 import { MyBotCommandTypes } from "./botCommandTypes";
 
 const CommandClear: MyBotCommand = {
@@ -6,6 +6,7 @@ const CommandClear: MyBotCommand = {
   type: MyBotCommandTypes.group,
   isHidden: false,
   description: "удалить все возможные сообщения", // Possible restrictions: https://core.telegram.org/bots/api#deletemessage",
+  repeatBehavior: CommandRepeatBehavior.skip,
   callback: async (ctx) => {
     const resMsg = await ctx.sendMessage(
       {
@@ -19,7 +20,7 @@ const CommandClear: MyBotCommand = {
     for (let i = ctx.initMessageId - 1; i >= ctx.chat.lastDeleteIndex; --i) {
       await ctx.deleteMessage(i);
     }
-    ctx.deleteMessage(resMsg.message_id);
+    await ctx.deleteMessage(resMsg.message_id);
 
     ctx.chat.lastDeleteIndex = resMsg.message_id + 1;
   },

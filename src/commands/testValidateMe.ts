@@ -1,4 +1,4 @@
-import { MyBotCommand } from "../types";
+import { CommandRepeatBehavior, MyBotCommand } from "../types";
 import { CheckBot } from "../userCheckBot";
 import { MyBotCommandTypes } from "./botCommandTypes";
 
@@ -7,6 +7,7 @@ const TestValidateMe: MyBotCommand = {
   type: MyBotCommandTypes.personal,
   isHidden: true,
   description: "проверь меня",
+  repeatBehavior: CommandRepeatBehavior.skip,
   callback: async (ctx) => {
     const isValid = await CheckBot.validateUser(ctx.user);
     ctx.sendMessage({

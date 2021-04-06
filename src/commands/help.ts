@@ -1,4 +1,4 @@
-import { MyBotCommand } from "../types";
+import { CommandRepeatBehavior, MyBotCommand } from "../types";
 import { validationExpiry } from "../userItem";
 import { MyBotCommandTypes, MyBotCommandTypesDescription } from "./botCommandTypes";
 
@@ -7,6 +7,7 @@ const CommandHelp: MyBotCommand = {
   type: MyBotCommandTypes.common,
   isHidden: false,
   description: "справка",
+  repeatBehavior: CommandRepeatBehavior.none,
   callback: async (ctx) => {
     const lines: string[] = [];
     if (!ctx.chat.isGroup) {

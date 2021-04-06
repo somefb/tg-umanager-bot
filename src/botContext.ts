@@ -31,13 +31,15 @@ export default class BotContext implements IBotContext {
 
   removeAnyByUpdate = false;
   singleMessageMode = false;
+  name: string;
 
-  constructor(chatId: number, initMessage: NewTextMessage, user: UserItem, service: ITelegramService) {
+  constructor(chatId: number, cmdName: string, initMessage: NewTextMessage, user: UserItem, service: ITelegramService) {
     this.chatId = chatId;
     this.initMessageId = initMessage.message_id;
     this.initMessage = initMessage;
     this.user = user;
     this.service = service;
+    this.name = cmdName;
     this.setTimeout();
   }
 

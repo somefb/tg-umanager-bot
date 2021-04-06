@@ -45,6 +45,7 @@ export default async function onMeAdded(
   let admins: ChatMember[] | undefined;
   const ctx = this.initContext(
     chat_id,
+    "_meAdded",
     m.result as NewTextMessage,
     user || new UserItem(msg.from?.id || 0, { num: 0, word: "" })
   );

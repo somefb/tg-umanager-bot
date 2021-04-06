@@ -1,8 +1,8 @@
 import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
 import Repo from "../repo";
-import { EventTypeEnum, IBotContext, MyBotCommand } from "../types";
+import { EventTypeEnum, IBotContext } from "../types";
 import { CheckBot } from "../userCheckBot";
-import { expectedInvalidTimes, validationTimeout, validationTimeoutMinutes } from "../userCheckBot/playValidation";
+import { expectedInvalidTimes, validationTimeoutMinutes } from "../userCheckBot/playValidation";
 
 const regTimeoutMinutes = 10;
 const regTimeout = regTimeoutMinutes * 60000;

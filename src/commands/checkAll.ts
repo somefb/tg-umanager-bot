@@ -1,5 +1,5 @@
 import ErrorCancelled from "../errorCancelled";
-import { EventTypeEnum, MyBotCommand, NewCallbackQuery } from "../types";
+import { CommandRepeatBehavior, EventTypeEnum, MyBotCommand, NewCallbackQuery } from "../types";
 import { MyBotCommandTypes } from "./botCommandTypes";
 
 const CheckAll: MyBotCommand = {
@@ -7,6 +7,7 @@ const CheckAll: MyBotCommand = {
   type: MyBotCommandTypes.group,
   isHidden: true,
   description: "проверить участников",
+  repeatBehavior: CommandRepeatBehavior.restart,
   callback: async (ctx) => {
     // todo:bug new any command will destroy it but should only this command
     ctx.setTimeout(0);

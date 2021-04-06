@@ -4,7 +4,7 @@ import { MyBotCommandTypes } from "../commands/botCommandTypes";
 import registerUser from "../commands/registerUser";
 import Repo from "../repo";
 import TelegramService from "../telegramService";
-import { EventTypeEnum, NewTextMessage } from "../types";
+import { CommandRepeatBehavior, NewTextMessage } from "../types";
 import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 
@@ -72,37 +72,60 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
           }, 5000);
         });
       } else {
-        // (async () => {
-        //   let ctx = this.tryGetContext(chat_id);
-        //   if (ctx) {
-        //     // todo it's wrong for some commands that should be itself
-        //     const m = await ctx.sendMessage({
-        //       text: "Прервать предыдущую команду?",
-        //       reply_markup: {
-        //         inline_keyboard: [
-        //           [
-        //             { text: "Да", callback_data: "yes" },
-        //             { text: "Нет", callback_data: "no" },
-        //           ],
-        //         ],
-        //       },
-        //     });
-        //     ctx.onCancelling = () => ctx?.deleteMessage(m.message_id);
-        //     const q = await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-        //     if (q.message?.message_id === m.message_id) {
-        //       if (q.data === "yes") {
-        //         ctx.cancel();
-        //       } else {
-        //         ctx?.deleteMessage(m.message_id);
-        //       }
-        //     }
-        //   }
-
-        //   // WARN: user can be undefined (anonym) for groupCommands
-        //   ctx = ctx || this.getContext(chat_id, msg, user || new UserItem(msg.from?.id || 0, { num: 0, word: "" }));
-        //   await ctx.callCommand(cmd.callback);
-        // })();
-        const ctx = this.initContext(chat_id, msg, user || new UserItem(msg.from?.id || 0, { num: 0, word: "" }));
+        if (cmd.repeatBehavior) {
+          const c = this.getContexts(chat_id);
+          if (c) {
+            if (cmd.repeatBehavior === CommandRepeatBehavior.skip) {
+              process.env.DEBUG && console.log("Command declined by rule: CommandRepeatBehavior.skip");
+              return true;
+            } else if (cmd.repeatBehavior === CommandRepeatBehavior.restart) {
+              for (const ctx of c?.values()) {
+                if (ctx.name === cmd.command) {
+                  process.env.DEBUG && console.log("Command cancelled by rule: CommandRepeatBehavior.restart");
+                  ctx.cancel();
+                  break;
+                }
+              }
+            }
+            //else if (cmd.repeatBehavior === CommandRepeatBehavior.confirmation) {
+            // (async () => {
+            //   let ctx = this.tryGetContext(chat_id);
+            //   if (ctx) {
+            //     // todo it's wrong for some commands that should be itself
+            //     const m = await ctx.sendMessage({
+            //       text: "Прервать предыдущую команду?",
+            //       reply_markup: {
+            //         inline_keyboard: [
+            //           [
+            //             { text: "Да", callback_data: "yes" },
+            //             { text: "Нет", callback_data: "no" },
+            //           ],
+            //         ],
+            //       },
+            //     });
+            //     ctx.onCancelling = () => ctx?.deleteMessage(m.message_id);
+            //     const q = await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
+            //     if (q.message?.message_id === m.message_id) {
+            //       if (q.data === "yes") {
+            //         ctx.cancel();
+            //       } else {
+            //         ctx?.deleteMessage(m.message_id);
+            //       }
+            //     }
+            //   }
+            //   // WARN: user can be undefined (anonym) for groupCommands
+            //   ctx = ctx || this.getContext(chat_id, msg, user || new UserItem(msg.from?.id || 0, { num: 0, word: "" }));
+            //   await ctx.callCommand(cmd.callback);
+            // })();
+            //}
+          }
+        }
+        const ctx = this.initContext(
+          chat_id,
+          cmd.command,
+          msg,
+          user || new UserItem(msg.from?.id || 0, { num: 0, word: "" })
+        );
         ctx.callCommand(cmd.callback);
       }
     }
@@ -113,7 +136,7 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
     this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
     const newUser = new UserItem(msg.from.id, CheckBot.generateUserKey());
 
-    const ctx = this.initContext(chat_id, msg, newUser);
+    const ctx = this.initContext(chat_id, appSettings.ownerRegisterCmd, msg, newUser);
     ctx.callCommand(registerUser);
 
     return true;

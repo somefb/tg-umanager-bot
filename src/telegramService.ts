@@ -364,8 +364,14 @@ export default class TelegramService implements ITelegramService {
     return this.contexts[chat_id];
   }
 
-  initContext(chatId: number, initMsg: NewTextMessage | null, user: UserItem): IBotContext {
-    const item = new BotContext(chatId, initMsg || ({ message_id: 0, from: {} } as NewTextMessage), user, this);
+  initContext(chatId: number, cmdName: string, initMsg: NewTextMessage | null, user: UserItem): IBotContext {
+    const item = new BotContext(
+      chatId,
+      cmdName,
+      initMsg || ({ message_id: 0, from: {} } as NewTextMessage),
+      user,
+      this
+    );
     const arr = this.contexts[chatId];
     if (!arr) {
       this.contexts[chatId] = new Set();

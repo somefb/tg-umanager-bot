@@ -1,6 +1,5 @@
 import { BotCommand, CallbackQuery, ChatMemberUpdated, Message, Typegram, Update } from "typegram";
 import { Animation, Audio, Document, PhotoSize, Video, Voice } from "typegram/message";
-import BotContextCollection from "./botContextCollection";
 import ChatItem from "./chatItem";
 import { MyBotCommandTypes } from "./commands/botCommandTypes";
 import ErrorCancelled from "./errorCancelled";
@@ -92,7 +91,7 @@ export interface ITelegramService {
 
   removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void;
 
-  initContext(chatId: number, initMsg: NewTextMessage | null, user: UserItem): IBotContext;
+  initContext(chatId: number, cmdName: string | null, initMsg: NewTextMessage | null, user: UserItem): IBotContext;
   getContexts(chat_id: number): Set<IBotContext> | undefined;
   removeContext(ctx: IBotContext): void;
 }
@@ -113,6 +112,16 @@ export interface TelegramListenOptions {
 
 type valueof<T> = T[keyof T];
 
+export const enum CommandRepeatBehavior {
+  none = 0,
+  /** ignore new command if previous in progress*/
+  skip = 1,
+  /** cancel previous command and start new */
+  restart,
+  /** show confirm message so user makes decision Cancel/Continue */
+  //confirmation
+}
+
 export type MyBotCommand = BotCommand & {
   type?: valueof<typeof MyBotCommandTypes[]>;
   callback: (context: IBotContext) => Promise<unknown>;
@@ -120,6 +129,7 @@ export type MyBotCommand = BotCommand & {
   /** Command that is hidden from unregistered or invalid users */
   isHidden: boolean;
   allowCommand?: () => boolean;
+  repeatBehavior: CommandRepeatBehavior;
 };
 
 export interface BotConfig {
@@ -135,6 +145,8 @@ export interface IRepository {
 
 /** Session context that exists per chat and fired from any command */
 export interface IBotContext {
+  //cmdName that initialized context
+  name: string;
   /** Chat that session assigned to */
   readonly chatId: number;
   readonly chat: ChatItem;

@@ -1,4 +1,4 @@
-import { MyBotCommand } from "../types";
+import { CommandRepeatBehavior, MyBotCommand } from "../types";
 import { MyBotCommandTypes } from "./botCommandTypes";
 
 const CommandClearDisableUntilHere: MyBotCommand = {
@@ -6,6 +6,7 @@ const CommandClearDisableUntilHere: MyBotCommand = {
   type: MyBotCommandTypes.group,
   isHidden: false,
   description: "добавить предыдущие сообщения в исключение (не будут удаляться)",
+  repeatBehavior: CommandRepeatBehavior.none,
   callback: async (ctx) => {
     const res = await ctx.sendMessage(
       {

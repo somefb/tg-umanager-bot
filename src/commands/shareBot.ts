@@ -1,6 +1,6 @@
 import { Message } from "typegram";
 import BotContext from "../botContext";
-import { EventTypeEnum, ITelegramService, MyBotCommand, NewTextMessage } from "../types";
+import { CommandRepeatBehavior, EventTypeEnum, ITelegramService, MyBotCommand, NewTextMessage } from "../types";
 import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
@@ -24,6 +24,7 @@ const ShareBot: MyBotCommand = {
   type: MyBotCommandTypes.personal,
   description: "поделиться ботом",
   isHidden: true,
+  repeatBehavior: CommandRepeatBehavior.skip,
   callback: async (ctx) => {
     ctx.removeAnyByUpdate = true;
 
@@ -93,11 +94,11 @@ async function registrationTask(
       BotContext.defSessionTimeout
     );
 
-    const ctxRegUser = service.initContext(msgRegUser.chat.id, msgRegUser, regUser);
+    const ctxRegUser = service.initContext(msgRegUser.chat.id, "_reg", msgRegUser, regUser);
     success = !!(await ctxRegUser.callCommand(registerUser));
   } catch {}
 
-  const ctx = service.initContext(reportChatId, {} as NewTextMessage, reportUser);
+  const ctx = service.initContext(reportChatId, "_regReport", {} as NewTextMessage, reportUser);
   await ctx.sendMessage(
     {
       text: `Пользователь ${regUser.toLink()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`,
