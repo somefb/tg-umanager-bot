@@ -65,9 +65,9 @@ export default class BotContext implements IBotContext {
     this._updateMessageId = 0;
     this.service.removeContext(this);
     this._timer && clearTimeout(this._timer);
-    const logMsg = "Context is cancelled. Reason: " + reason;
+    const logMsg = `Context '${this.name || ""}' is cancelled. Reason: ${reason}`;
     process.env.DEBUG && console.log(logMsg);
-    const err = new ErrorCancelled("Context is cancelled. Reason: " + logMsg);
+    const err = new ErrorCancelled(logMsg);
     this.eventListeners.forEach((e) => e.reject(err));
 
     //todo clear all by cancel (in private chat)
