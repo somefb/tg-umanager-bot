@@ -18,6 +18,12 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
   const chat = Repo.getСhat(chat_id);
   //all chats must be groupChat beside privateChats assigned to
   const isGroupChat = chat?.isGroup || msg.chat.type !== "private";
+  if (isGroupChat && !chat) {
+    this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
+    console.log(`Decline command. Chat is not registered`);
+    return true;
+  }
+
   if (chat && chat.isGroup == null) {
     // possible case for old entities
     console.warn("chat group is not defined");
