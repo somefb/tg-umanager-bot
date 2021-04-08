@@ -74,7 +74,11 @@ const CheckAll: MyBotCommand = {
     Object.keys(ctx.chat.members).forEach((key) => {
       const user = Repo.getUser(ctx.chat.members[key].id);
       if (user) {
-        arr.push(CheckBot.validateUser(user).finally(report));
+        arr.push(
+          CheckBot.validateUser(user).then(() => {
+            report();
+          })
+        );
       }
     });
 

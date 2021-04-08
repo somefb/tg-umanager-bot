@@ -13,10 +13,10 @@ export const CheckBot = {
     try {
       if (user.isLocked) {
         console.warn(`User ${user.id} is locked. Validation is declined`);
-        return Promise.resolve(false);
+        return false;
       }
       if (user.isValid) {
-        return Promise.resolve(true);
+        return false;
       }
 
       // wait when user makes chat with CheckBot
