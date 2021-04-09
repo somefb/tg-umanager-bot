@@ -134,6 +134,9 @@ export class RepoClass {
     }
 
     const user = this.users[from.id];
+    if (!user) {
+      return;
+    }
     let updated = false;
     if (user.firstName != from.first_name) {
       user.firstName = from.first_name;
