@@ -37,7 +37,6 @@ const CheckAll: MyBotCommand = {
               const user = Repo.getUser(m.id);
               let status: string;
               let icon: string;
-              //todo show icons for status
               if (!user) {
                 icon = "❗️";
                 status = "не зарегестрирован, ожидание...";

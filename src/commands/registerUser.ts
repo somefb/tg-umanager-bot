@@ -76,7 +76,6 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
         inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
       },
     },
-    //todo bug Removed timeout for singleMessageMode is wrong
     { removeTimeout: destroyKeyTimeout }
   );
   await ctx.onGotEvent(EventTypeEnum.gotUpdate);
