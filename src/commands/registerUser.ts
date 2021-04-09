@@ -6,7 +6,7 @@ import { expectedInvalidTimes, validationTimeoutMinutes } from "../userCheckBot/
 
 const regTimeoutMinutes = 10;
 const regTimeout = regTimeoutMinutes * 60000;
-const destroyKeyTimeout = 15 * 1000;
+const destroyKeyTimeout = 30 * 1000; //30sec
 const destroyInstructionsTimeoutSec = 120 * 1000;
 
 function getInstructionsText(botName: string) {
@@ -17,6 +17,7 @@ function getInstructionsText(botName: string) {
     "3) из последующего списка ассоциаций важно выбрать слово согласно вашему ключу",
     "\nК примеру ваш ключ '2 танка'",
     "В списке ассоциаций вы находите любое слово, которое начинается с буквы 'Т' (первая буква вашего ключа) и отсчитываете 2 слова (2 - цифра вашего ключа)",
+    "Пример приведён ниже в виде кнопок!",
     "\nПримечания:",
     "* если при счёте нужно выбрать слово на 8-м месте, а всего их 6, - то ответ = слово на 2-м месте (счёт продолжается с начала списка - по кругу)",
     "* каждый раз проверку нужно пройти дважды",
@@ -50,7 +51,7 @@ const botRegisterInstructions = [
 ].join(". ");
 
 async function registerUser(ctx: IBotContext): Promise<boolean> {
-  ctx.removeAnyByUpdate = true;
+  ctx.singleMessageMode = true;
   ctx.setTimeout(regTimeout);
 
   const user = ctx.user;
@@ -59,17 +60,14 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
   user.lastName = ctx.initMessage.from.last_name;
   user.termyBotChatId = ctx.chatId;
 
-  await ctx.sendMessage(
-    {
-      text: `На регистрацию отведено ${regTimeout}мин. На некоторые инструкции время ещё меньше. Время уже пошло...`,
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: [[{ text: "Начнём регистрацию", callback_data: "OK" }]],
-      },
+  await ctx.sendMessage({
+    text: `На регистрацию отведено ${regTimeoutMinutes}мин. На некоторые инструкции время ещё меньше. Время уже пошло...`,
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [[{ text: "Начнём регистрацию", callback_data: "OK" }]],
     },
-    { removeTimeout: destroyKeyTimeout }
-  );
-
+  });
+  await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
   await ctx.sendMessage(
     {
       text: `Ваш ключ:\n\n<b>"${user.validationKey.num} ${user.validationKey.word}"</b>\n\nЗапомните его.`,
@@ -78,28 +76,27 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
         inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
       },
     },
+    //todo bug Removed timeout for singleMessageMode is wrong
     { removeTimeout: destroyKeyTimeout }
   );
   await ctx.onGotEvent(EventTypeEnum.gotUpdate);
 
-  console.log(`\n Start registration with new user ${user.id}`);
+  console.log(`\nStart registration with new user ${user.id}`);
 
   const botName = CheckBot.service.botUserName;
-  await ctx.sendMessage(
-    {
-      text: getInstructionsText(botName),
-      parse_mode: "HTML",
-      reply_markup: { inline_keyboard: getInstructionsMarkup() },
-    },
-    { removeTimeout: destroyInstructionsTimeoutSec }
-  );
+  await ctx.sendMessage({
+    text: getInstructionsText(botName),
+    parse_mode: "HTML",
+    reply_markup: { inline_keyboard: getInstructionsMarkup() },
+  });
   await ctx.onGotEvent(EventTypeEnum.gotUpdate);
   await ctx.sendMessage({
     text: `Инструктаж окончен. Давайте сыграем: @${botName}.\nПримечание: если бот не отвечает - используйте команду /start`,
   });
 
-  CheckBot.service
-    .onGotEvent(EventTypeEnum.gotNewMessage, (v) => v.from.id == ctx.user.id)
+  await CheckBot.service
+    //command /start is expected
+    .onGotEvent(EventTypeEnum.gotBotCommand, (v) => v.from.id == ctx.user.id)
     .then(() => {
       // disable timeout
       ctx.setTimeout(0);
@@ -117,7 +114,7 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
         inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
       },
     },
-    { removeMinTimeout: 5000 }
+    { removeByUpdate: true, removeTimeout: destroyInstructionsTimeoutSec, keepAfterSession: true }
   );
 
   return !!isValid;

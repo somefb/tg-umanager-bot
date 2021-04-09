@@ -86,7 +86,7 @@ export default class BotContext implements IBotContext {
   deleteMessage(id: number): Promise<void> {
     if (this._updateMessageId === id) {
       this._updateMessageId = 0;
-      console.warn("Removed message that shoud be updated");
+      console.warn(`Context '${this.name || ""}'. Removed message that shoud be updated`);
     }
 
     const expiryTime = this.deleteSet.get(id);
