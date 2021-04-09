@@ -137,6 +137,9 @@ export default class BotContext implements IBotContext {
       const delMsg = () => {
         timer && clearTimeout(timer);
         delEvent && delEvent();
+        if (data.message_id === this._updateMessageId) {
+          this._updateMessageId = 0;
+        }
         this.deleteMessage(data.message_id);
       };
 
