@@ -114,7 +114,16 @@ export class RepoClass {
   }
 
   addOrUpdateUser(user: UserItem): void {
+    const isNew = !this.users[user.id];
     this.users[user.id] = user;
+    if (isNew) {
+      this.eventListeners.forEach((v, ref) => {
+        if (v.userId === user.id) {
+          v.resolve(user);
+          this.removeEvent(ref);
+        }
+      });
+    }
     this.commit();
   }
 
@@ -125,9 +134,29 @@ export class RepoClass {
   get hasAnyUser(): boolean {
     return !!Object.keys(this.users).length;
   }
+
+  eventListeners = new Map<Promise<unknown>, IEventListener>();
+  onUserAdded(userId: number): Promise<UserItem> {
+    let e: IEventListener | undefined;
+    const ref = new Promise<UserItem>((resolve, reject) => {
+      e = { userId, resolve, reject };
+    });
+    // undefined required for avoiding TS-bug
+    e && this.eventListeners.set(ref, e);
+    return ref;
+  }
+  removeEvent(ref: Promise<unknown>): void {
+    this.eventListeners.delete(ref);
+  }
 }
 
 const Repo = new RepoClass();
 export default Repo;
 
 onExit(() => Repo.commit(true));
+
+interface IEventListener {
+  userId: number;
+  resolve: (value: UserItem) => void;
+  reject: () => void;
+}

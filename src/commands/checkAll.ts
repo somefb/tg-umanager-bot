@@ -20,7 +20,7 @@ const CheckAll: MyBotCommand = {
     ctx.setTimeout(0);
 
     let throttle: NodeJS.Timeout | null = null;
-    const report = (forceNow = false) => {
+    const report = (forceNow = false, isFinished = false) => {
       if (throttle) {
         return Promise.resolve();
       }
@@ -38,8 +38,7 @@ const CheckAll: MyBotCommand = {
               let status: string;
               //todo show icons for status
               if (!user) {
-                //todo wait for registration or not ?
-                status = "не зарегестрирован";
+                status = "не зарегестрирован, ожидание...";
               } else if (user.isLocked) {
                 //todo show instructions
                 status = `заблокирован ${dateToPastTime(user.validationDate)}`;
@@ -50,10 +49,11 @@ const CheckAll: MyBotCommand = {
                 status = `ожидание... Было ${dateToPastTime(user.validationDate)}`;
               }
 
-              const uLink = UserItem.ToLink(m.id, m.userName, m.firstName, m.lastName);
+              const uLink = m.isAnonym ? "анонимный админ" : UserItem.ToLink(m.id, m.userName, m.firstName, m.lastName);
               arr.push(`${uLink} - ${status}`);
             });
 
+            isFinished && arr.push("\nПроверка окончена");
             await ctx.sendMessage({
               text: arr.join("\n"),
               parse_mode: "HTML",
@@ -71,19 +71,27 @@ const CheckAll: MyBotCommand = {
 
     //todo what if this command will be fired again in a short time?
     const arr: Promise<unknown>[] = [];
+    const listeners: Promise<unknown>[] = [];
     Object.keys(ctx.chat.members).forEach((key) => {
-      const user = Repo.getUser(ctx.chat.members[key].id);
+      const member = ctx.chat.members[key];
+      const user = Repo.getUser(member.id);
       if (user) {
         arr.push(
           CheckBot.validateUser(user).then(() => {
             report();
           })
         );
+      } else if (!member.isBot) {
+        const ref = Repo.onUserAdded(member.id);
+        listeners.push(ref);
+        arr.push(ref.then(() => report()));
       }
     });
 
+    ctx.onCancelled = () => listeners.forEach((ref) => Repo.removeEvent(ref));
+
     await Promise.all(arr);
-    //todo notify task is finished
+    await report(true, true);
   },
 };
 

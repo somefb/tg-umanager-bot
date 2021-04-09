@@ -220,4 +220,17 @@ export default class BotContext implements IBotContext {
     this.cancel("end");
     return r;
   }
+
+  _onCancelled?: () => void;
+  set onCancelled(v: undefined | (() => void)) {
+    if (v && this._onCancelled) {
+      console.error("BotContext.onCancelled has not multiple listeners");
+    }
+    this._onCancelled = v;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  get onCancelled() {
+    return this._onCancelled;
+  }
 }
