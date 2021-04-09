@@ -78,7 +78,11 @@ export class RepoClass {
           const forSave = this.optionsForSave;
           try {
             console.log(`Repo. Saving bot settings to local ${this.filePath}...`);
-            fs.writeFileSync(this.filePath, JSON.stringify(forSave), { encoding: "utf-8" });
+            fs.writeFileSync(
+              this.filePath,
+              JSON.stringify(forSave, (_key, value) => (value == null ? undefined : value)),
+              { encoding: "utf-8" }
+            );
           } catch (err) {
             console.error(`Repo. Error. Can't save to local file ${this.filePath}`, err);
           }

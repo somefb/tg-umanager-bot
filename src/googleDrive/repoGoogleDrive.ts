@@ -173,7 +173,7 @@ export default class RepoGoogleDrive implements IRepository {
       fileId,
       media: {
         mimeType: "application/json",
-        body: JSON.stringify(content),
+        body: JSON.stringify(content, (_key, value) => (value == null ? undefined : value)),
       },
     });
   }
