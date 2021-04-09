@@ -1,5 +1,5 @@
 import ErrorCancelled from "../errorCancelled";
-import { EventTypeEnum, ITelegramService, MyBotCommand } from "../types";
+import { CommandRepeatBehavior, EventTypeEnum, ITelegramService, MyBotCommand } from "../types";
 import UserItem from "../userItem";
 import { generateUserKey } from "./dictionary";
 import playValidation from "./playValidation";
@@ -45,8 +45,7 @@ const CheckBotCommands: MyBotCommand[] = [
     command: "start",
     description: "Начать заново",
     isHidden: false,
-    //allowCommand: () => true,
-    // todo: bug user can reset session with this command and try to do anything many times
+    repeatBehavior: CommandRepeatBehavior.skip,
     callback: (ctx) => CheckBot.validateUser(ctx.user),
     onServiceInit: (service) => {
       CheckBot.service = service;
