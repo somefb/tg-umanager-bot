@@ -62,7 +62,8 @@ export default class BotContext implements IBotContext {
   }
 
   cancel(reason: string): void {
-    this._updateMessageId = 0;
+    //todo we need also remove timeout and event for such
+    delete this._updateMessage;
     this.service.removeContext(this);
     this._timer && clearTimeout(this._timer);
     const logMsg = `Context '${this.name || ""}' is cancelled. Reason: ${reason}`;
@@ -82,10 +83,12 @@ export default class BotContext implements IBotContext {
   }
   //needRemoveMessages = new Set<number>();
 
+  /* set of messages with removeMinTimeout */
   deleteSet = new Map<number, number>();
   deleteMessage(id: number): Promise<void> {
-    if (this._updateMessageId === id) {
-      this._updateMessageId = 0;
+    //todo we need also remove event and timeout for such messages that can be removed manually
+    if (this._updateMessage?.id === id) {
+      delete this._updateMessage;
       console.warn(`Context '${this.name || ""}'. Removed message that shoud be updated`);
     }
 
@@ -104,8 +107,7 @@ export default class BotContext implements IBotContext {
     return this.service.core.deleteMessageForce({ chat_id: this.chatId, message_id: id });
   }
 
-  private _updateMessageId = 0;
-  private _updateMessageData: Message.TextMessage | undefined;
+  private _updateMessage?: { id: number; data: Message.TextMessage; timer?: NodeJS.Timeout };
   async sendMessage(
     args: Omit<Opts<"sendMessage">, "chat_id">,
     opts?: IBotContextMsgOptions
@@ -114,17 +116,16 @@ export default class BotContext implements IBotContext {
 
     let data: Message.TextMessage;
 
-    if (this.singleMessageMode && this._updateMessageId) {
-      (args as Opts<"editMessageText">).message_id = this._updateMessageId;
+    if (this.singleMessageMode && this._updateMessage) {
+      (args as Opts<"editMessageText">).message_id = this._updateMessage.id;
       // WARN: user can remove message by mistake and we can't detect id
       await this.service.core.editMessageText(args as Opts<"editMessageText">);
-      data = this._updateMessageData as Message.TextMessage;
+      data = this._updateMessage.data as Message.TextMessage;
     } else {
       const res = await this.service.core.sendMessage(args as Opts<"sendMessage">);
       data = (res as ApiSuccess<Message.TextMessage>).result;
       if (this.singleMessageMode) {
-        this._updateMessageId = data.message_id;
-        this._updateMessageData = data;
+        this._updateMessage = { id: data.message_id, data: data };
       }
     }
 
@@ -136,14 +137,18 @@ export default class BotContext implements IBotContext {
       const delMsg = () => {
         timer && clearTimeout(timer);
         delEvent && delEvent();
-        if (data.message_id === this._updateMessageId) {
-          this._updateMessageId = 0;
+        if (data.message_id === this._updateMessage?.id) {
+          delete this._updateMessage;
         }
         this.deleteMessage(data.message_id);
       };
 
       if (opts.removeTimeout) {
         timer = setTimeout(delMsg, opts.removeTimeout);
+        if (this.singleMessageMode && this._updateMessage) {
+          this._updateMessage.timer && clearTimeout(this._updateMessage.timer);
+          this._updateMessage.timer = timer;
+        }
       }
 
       if (this.removeAnyByUpdate || opts.removeByUpdate) {
@@ -154,6 +159,7 @@ export default class BotContext implements IBotContext {
           const ref = eventRef;
           delEvent = () => this.service.removeEvent(ref);
         } else {
+          // WARN: for singleMessageMode send-without-removeByUpdate doesn't cancel previous send-with-removeByUpdate
           eventRef = this.onGotEvent(EventTypeEnum.gotUpdate);
           const ref = eventRef;
           delEvent = () => this.removeEvent(ref);
