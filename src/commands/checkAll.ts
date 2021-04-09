@@ -36,21 +36,29 @@ const CheckAll: MyBotCommand = {
               }
               const user = Repo.getUser(m.id);
               let status: string;
+              let icon: string;
               //todo show icons for status
               if (!user) {
+                icon = "❗️";
                 status = "не зарегестрирован, ожидание...";
               } else if (user.isLocked) {
                 //todo show instructions
+                icon = "❌";
                 status = `заблокирован ${dateToPastTime(user.validationDate)}`;
               } else if (user.isValid) {
+                icon = "✅";
                 status = `проверен ${dateToPastTime(user.validationDate)}`;
               } else {
                 //todo show CheckBot is blocked
+                icon = "⏳";
                 status = `ожидание... Было ${dateToPastTime(user.validationDate)}`;
               }
 
-              const uLink = m.isAnonym ? "анонимный админ" : UserItem.ToLink(m.id, m.userName, m.firstName, m.lastName);
-              arr.push(`${uLink} - ${status}`);
+              const lastName = m.lastName || m.firstName;
+              const uLink = m.isAnonym
+                ? `анон.админ (${m.firstName[0]}..${m.firstName.length > 2 ? lastName[lastName.length - 1] : ""})`
+                : UserItem.ToLink(m.id, m.userName, m.firstName, m.lastName);
+              arr.push(`${icon} ${uLink} - ${status}`);
             });
 
             isFinished && arr.push("\nПроверка окончена");
