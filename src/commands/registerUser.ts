@@ -95,8 +95,9 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
 
   await CheckBot.service
     //command /start is expected
-    .onGotEvent(EventTypeEnum.gotBotCommand, (v) => v.from.id == ctx.user.id)
-    .then(() => {
+    .onGotEvent(EventTypeEnum.gotBotCommand, (v) => v.from.id == user.id)
+    .then((v) => {
+      user.checkBotChatId = v.chat.id;
       // disable timeout
       ctx.setTimeout(0);
     });

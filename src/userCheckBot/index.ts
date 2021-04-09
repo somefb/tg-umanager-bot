@@ -16,7 +16,7 @@ export const CheckBot = {
         return false;
       }
       if (user.isValid) {
-        return false;
+        return true;
       }
 
       // wait when user makes chat with CheckBot
