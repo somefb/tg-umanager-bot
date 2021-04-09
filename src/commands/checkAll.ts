@@ -116,7 +116,10 @@ async function countAllTask(ctx: IBotContext) {
 
   admins.forEach((v) => {
     const isMe = v.user.is_bot && v.user.username === ctx.botUserName;
-    !isMe && ctx.chat.addOrUpdateMember(v.user, !!v.is_anonymous);
+    if (!isMe) {
+      ctx.chat.addOrUpdateMember(v.user, !!v.is_anonymous);
+      Repo.updateUser(v.user);
+    }
   });
 
   let definedCnt = ctx.chat.calcVisibleMembersCount() + 1;

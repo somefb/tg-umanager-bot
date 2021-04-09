@@ -80,7 +80,10 @@ export default class TelegramService implements ITelegramService {
       let chatId: number | undefined;
 
       const updateMember = (chatId: number, from: User, isAnonym: boolean | null | undefined) => {
-        from && Repo.getСhat(chatId)?.addOrUpdateMember(from, isAnonym);
+        if (from) {
+          Repo.getСhat(chatId)?.addOrUpdateMember(from, isAnonym);
+          Repo.updateUser(from);
+        }
       };
 
       const removeMember = (chatId: number, userId: number) => {

@@ -1,4 +1,5 @@
 import fs from "fs";
+import { User } from "typegram";
 import ChatItem from "./chatItem";
 import RepoGoogleDrive from "./googleDrive/repoGoogleDrive";
 import onExit from "./onExit";
@@ -89,7 +90,7 @@ export class RepoClass {
           }
           resolve();
         },
-        ignoreDebounce ? 0 : 5000
+        ignoreDebounce ? 0 : 10000
       );
     });
   }
@@ -125,6 +126,29 @@ export class RepoClass {
       });
     }
     this.commit();
+  }
+
+  updateUser(from: User): void {
+    if (from.is_bot) {
+      return;
+    }
+
+    const user = this.users[from.id];
+    let updated = false;
+    if (user.firstName != from.first_name) {
+      user.firstName = from.first_name;
+      updated = true;
+    }
+    if (user.lastName != from.last_name) {
+      user.lastName = from.last_name;
+      updated = true;
+    }
+    if (user.userName != from.username) {
+      user.userName = from.username;
+      updated = true;
+    }
+
+    updated && this.commit();
   }
 
   getUser(id: number | undefined): UserItem | undefined {
