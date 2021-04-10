@@ -1,6 +1,14 @@
-import { Message } from "typegram";
+import { Message, User } from "typegram";
 import BotContext from "../botContext";
-import { CommandRepeatBehavior, EventTypeEnum, ITelegramService, MyBotCommand, NewTextMessage } from "../types";
+import createToken from "../helpers/createToken";
+import {
+  CommandRepeatBehavior,
+  EventTypeEnum,
+  FileInfo,
+  ITelegramService,
+  MyBotCommand,
+  NewTextMessage,
+} from "../types";
 import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
@@ -35,22 +43,22 @@ const ShareBot: MyBotCommand = {
       reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
     });
     let ev = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-    ev.then((e) => e.data === "cancel" && ctx.cancel("user cancelled"));
+    ev.then((e) => e.data === "cancel" && ctx.cancel("user cancelled")).catch((v) => v);
 
-    let regUser: UserItem | undefined;
+    let regInfo: RegInfo | undefined;
     while (1) {
       const r = await ctx.onGotEvent(EventTypeEnum.gotFile);
       ctx.removeEvent(ev);
-      if ((r as Message.VoiceMessage).voice) {
-        const file = r.file;
-        const regUserId = r.forward_from?.id;
-        if (regUserId) {
-          regUser = new UserItem(regUserId, CheckBot.generateUserKey());
-          regUser.validationVoiceFile = file;
-          regUser.whoSharedUserId = ctx.user.id;
+      await ctx.deleteMessage(r.message_id);
 
-          break;
-        }
+      if ((r as Message.VoiceMessage).voice) {
+        regInfo = {
+          token: createToken(),
+          validationFile: r.file,
+          user: r.forward_from,
+          whoSharedUserId: ctx.user.id,
+        };
+        break;
       }
 
       await ctx.sendMessage({
@@ -61,50 +69,57 @@ const ShareBot: MyBotCommand = {
       ctx.setTimeout();
 
       ev = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-      ev.then((e) => e.data === "cancel" && ctx.cancel("user cancelled"));
+      ev.then((e) => e.data === "cancel" && ctx.cancel("user cancelled")).catch((v) => v);
     } //while
 
-    // this case impossible but required for TS
-    if (!regUser) {
-      return;
-    }
+    if (!regInfo) return; //requires for ingoring TS issues
 
     await ctx.sendMessage(
       {
-        text: `В течение ${BotContext.defSessionTimeoutStr} пользователь может написать боту @${ctx.botUserName}`,
+        text: `В течение ${BotContext.defSessionTimeoutStr} пользователь может написать боту @${ctx.botUserName}${
+          !regInfo.user ? " используя токен: " + regInfo.token + " как стартовое слово" : ""
+        }`,
       },
       { keepAfterSession: true, removeTimeout: BotContext.defSessionTimeout }
     );
 
     //WARN: it's important not to wait for task
-    registrationTask(ctx.service, regUser, ctx.chatId, ctx.user);
+    registrationTask(ctx.service, regInfo, ctx.user);
   },
 };
 
-async function registrationTask(
-  service: ITelegramService,
-  regUser: UserItem,
-  reportChatId: number,
-  reportUser: UserItem
-) {
-  let msgRegUser: NewTextMessage | null = null;
+interface RegInfo {
+  token: string;
+  validationFile: FileInfo;
+  user?: User;
+  whoSharedUserId: number;
+}
+
+async function registrationTask(service: ITelegramService, regInfo: RegInfo, reportUser: UserItem) {
   let success = false;
+  let regUser: UserItem | undefined;
   try {
     // wait for new user connection to this bot
-    msgRegUser = await service.onGotEvent(
+    const msgRegUser = await service.onGotEvent(
       EventTypeEnum.gotNewMessage,
-      (v) => v.from.id === regUser?.id,
+      (v) => v.from.id === regInfo.user?.id || v.text === regInfo.token,
       BotContext.defSessionTimeout
     );
+
+    regUser = new UserItem(msgRegUser.from.id, CheckBot.generateUserKey());
 
     const ctxRegUser = service.initContext(msgRegUser.chat.id, "_reg", msgRegUser, regUser);
     success = !!(await ctxRegUser.callCommand(registerUser));
   } catch {}
 
-  const ctx = service.initContext(reportChatId, "_regReport", {} as NewTextMessage, reportUser);
+  // send report to previous chat
+  // todo this report-message somehow doesn't work
+  const ctx = service.initContext(reportUser.termyBotChatId, "_regReport", {} as NewTextMessage, reportUser);
   await ctx.sendMessage(
     {
-      text: `Пользователь ${regUser.toLink()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`,
+      text: regUser
+        ? `Пользователь ${regUser?.toLink()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`
+        : `Истекло время ожидания. Токен ${regInfo.token} не действителен`,
     },
     { removeTimeout: notifyTimeout, removeByUpdate: true, keepAfterSession: true }
   );
