@@ -238,7 +238,7 @@ export default class TelegramService implements ITelegramService {
       });
 
       const ctx = r && chatId && this.getContexts(chatId);
-      isHandled = (ctx && ctx.forEach((c) => c.fireEvent(r.type, r.value, upd))) || isHandled;
+      ctx && ctx.forEach((c) => (isHandled = c.fireEvent(r.type, r.value, upd) || isHandled));
       isHandled = (defFn && defFn()) || isHandled;
 
       if (!isHandled) {
