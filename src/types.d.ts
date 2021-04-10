@@ -158,6 +158,8 @@ export interface IBotContext {
   readonly user: UserItem;
   readonly service: ITelegramService;
 
+  /** remove all messages that's sent via context except option 'keepAfterSession' */
+  removeAllByCancel: boolean;
   /** every next sendMessage will update existed */
   singleMessageMode: boolean;
   /**

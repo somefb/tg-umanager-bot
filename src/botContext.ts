@@ -29,6 +29,8 @@ export default class BotContext implements IBotContext {
   readonly user: UserItem;
   readonly service: ITelegramService;
 
+  //todo implement
+  removeAllByCancel = false;
   singleMessageMode = false;
   name: string;
 
@@ -61,52 +63,52 @@ export default class BotContext implements IBotContext {
   }
 
   cancel(reason: string): void {
-    //todo we need also remove timeout and event for such
     delete this._updateMessage;
     this.service.removeContext(this);
     this._timer && clearTimeout(this._timer);
+
+    (async () => {
+      if (this.removeAllByCancel) {
+        for (const msg of this.messages.values()) {
+          if (!msg.keepAfterSession) {
+            await this.deleteMessage(msg.id);
+          }
+        }
+      }
+    })();
+
     const logMsg = `Context '${this.name || ""}' is cancelled. Reason: ${reason}`;
     process.env.DEBUG && console.log(logMsg);
     const err = new ErrorCancelled(logMsg);
     this.eventListeners.forEach((e) => e.reject(err));
-
-    //todo clear all by cancel (in private chat)
-    //todo clear bot messages by cancel (in group chat)
-
-    // const delAll = async () => {
-    //   for (const id of this.needRemoveMessages) {
-    //     await this.deleteMessage(id);
-    //   }
-    // };
-    // delAll();
   }
-  //needRemoveMessages = new Set<number>();
 
-  /* set of messages with removeMinTimeout */
-  deleteSet = new Map<number, number>();
   deleteMessage(id: number): Promise<void> {
-    //todo we need also remove event and timeout for such messages that can be removed manually
     if (this._updateMessage?.id === id) {
       delete this._updateMessage;
       console.warn(`Context '${this.name || ""}'. Removed message that shoud be updated`);
     }
 
-    const expiryTime = this.deleteSet.get(id);
-    if (expiryTime) {
-      this.deleteSet.delete(id);
-
-      const waitMs = expiryTime - processNow();
-      if (waitMs > 0) {
-        setTimeout(() => {
-          this.service.core.deleteMessageForce({ chat_id: this.chatId, message_id: id });
-        }, waitMs);
-        return Promise.resolve();
+    const msg = this.messages.get(id);
+    if (msg) {
+      this.messages.delete(id);
+      msg.reset.forEach((fn) => fn());
+      if (msg.expiryTime) {
+        const waitMs = msg.expiryTime - processNow();
+        if (waitMs > 0) {
+          setTimeout(() => {
+            this.service.core.deleteMessageForce({ chat_id: this.chatId, message_id: id });
+          }, waitMs);
+          return Promise.resolve();
+        }
       }
     }
     return this.service.core.deleteMessageForce({ chat_id: this.chatId, message_id: id });
   }
 
-  private _updateMessage?: { id: number; data: Message.TextMessage; timer?: NodeJS.Timeout };
+  private _updateMessage?: { id: number; data: Message.TextMessage };
+  /** history with messages that was sent */
+  private messages = new Map<number, MsgHistoryItem>();
   async sendMessage(
     args: Omit<Opts<"sendMessage">, "chat_id">,
     opts?: IBotContextMsgOptions
@@ -116,38 +118,33 @@ export default class BotContext implements IBotContext {
     let data: Message.TextMessage;
 
     if (this.singleMessageMode && this._updateMessage) {
+      //reset previous timers and events because we need to apply new
+      this.messages.get(this._updateMessage.id)?.reset.forEach((fn) => fn());
       (args as Opts<"editMessageText">).message_id = this._updateMessage.id;
       // WARN: user can remove message by mistake and we can't detect id
       await this.service.core.editMessageText(args as Opts<"editMessageText">);
-      data = this._updateMessage.data as Message.TextMessage;
+      data = this._updateMessage.data;
     } else {
       const res = await this.service.core.sendMessage(args as Opts<"sendMessage">);
       data = (res as ApiSuccess<Message.TextMessage>).result;
       if (this.singleMessageMode) {
-        this._updateMessage = { id: data.message_id, data: data };
+        this._updateMessage = { id: data.message_id, data };
       }
     }
 
-    //this.needRemoveMessages.add(res.result.message_id);
+    const msgHist: MsgHistoryItem = {
+      id: data.message_id,
+      reset: [],
+      keepAfterSession: opts?.keepAfterSession,
+    };
+    this.messages.set(msgHist.id, msgHist);
 
     if (opts) {
-      let timer: NodeJS.Timeout | undefined;
-      let delEvent: undefined | (() => void);
-      const delMsg = () => {
-        timer && clearTimeout(timer);
-        delEvent && delEvent();
-        if (data.message_id === this._updateMessage?.id) {
-          delete this._updateMessage;
-        }
-        this.deleteMessage(data.message_id);
-      };
+      const delMsg = () => this.deleteMessage(data.message_id);
 
       if (opts.removeTimeout) {
-        timer = setTimeout(delMsg, opts.removeTimeout);
-        if (this.singleMessageMode && this._updateMessage) {
-          this._updateMessage.timer && clearTimeout(this._updateMessage.timer);
-          this._updateMessage.timer = timer;
-        }
+        const timer = setTimeout(delMsg, opts.removeTimeout);
+        msgHist.reset.push(() => clearTimeout(timer));
       }
 
       if (opts.removeByUpdate) {
@@ -156,19 +153,18 @@ export default class BotContext implements IBotContext {
           const cid = this.chatId;
           eventRef = this.service.onGotEvent(EventTypeEnum.gotUpdate, (_u, chatId) => chatId === cid);
           const ref = eventRef;
-          delEvent = () => this.service.removeEvent(ref);
+          msgHist.reset.push(() => this.service.removeEvent(ref));
         } else {
           // WARN: for singleMessageMode send-without-removeByUpdate doesn't cancel previous send-with-removeByUpdate
           eventRef = this.onGotEvent(EventTypeEnum.gotUpdate);
           const ref = eventRef;
-          delEvent = () => this.removeEvent(ref);
+          msgHist.reset.push(() => this.removeEvent(ref));
         }
         eventRef.then(delMsg).catch((v) => v);
       }
 
       if (opts.removeMinTimeout) {
-        const deleteTime = processNow() + opts.removeMinTimeout;
-        this.deleteSet.set(data.message_id, deleteTime);
+        msgHist.expiryTime = processNow() + opts.removeMinTimeout;
       }
     }
     return data as Message.TextMessage;
@@ -240,4 +236,12 @@ export default class BotContext implements IBotContext {
   get onCancelled() {
     return this._onCancelled;
   }
+}
+
+interface MsgHistoryItem {
+  id: number;
+  reset: Array<() => void>;
+  /** time when we can remove message (setted via opts.removeMinTimeout) */
+  expiryTime?: number;
+  keepAfterSession?: boolean;
 }
