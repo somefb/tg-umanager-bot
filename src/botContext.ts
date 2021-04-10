@@ -29,7 +29,6 @@ export default class BotContext implements IBotContext {
   readonly user: UserItem;
   readonly service: ITelegramService;
 
-  removeAnyByUpdate = false;
   singleMessageMode = false;
   name: string;
 
@@ -151,7 +150,7 @@ export default class BotContext implements IBotContext {
         }
       }
 
-      if (this.removeAnyByUpdate || opts.removeByUpdate) {
+      if (opts.removeByUpdate) {
         let eventRef: Promise<Update> | undefined;
         if (opts.keepAfterSession) {
           const cid = this.chatId;

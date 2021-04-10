@@ -36,7 +36,6 @@ const uploadFileInstructions = [
 ].join("\n");
 
 export default async function playValidation(ctx: IBotContext): Promise<boolean | null> {
-  ctx.removeAnyByUpdate = false;
   ctx.singleMessageMode = true;
   ctx.setTimeout(validationTimeout);
 

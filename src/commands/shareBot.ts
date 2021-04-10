@@ -26,7 +26,8 @@ const ShareBot: MyBotCommand = {
   isHidden: true,
   repeatBehavior: CommandRepeatBehavior.skip,
   callback: async (ctx) => {
-    ctx.removeAnyByUpdate = true;
+    ctx.singleMessageMode = true;
+    //todo: ctx.removeAllByCancel = true;
 
     await ctx.sendMessage({
       text: getInstructionsText(),
@@ -40,7 +41,6 @@ const ShareBot: MyBotCommand = {
     while (1) {
       const r = await ctx.onGotEvent(EventTypeEnum.gotFile);
       ctx.removeEvent(ev);
-      await ctx.deleteMessage(r.message_id);
       if ((r as Message.VoiceMessage).voice) {
         const file = r.file;
         const regUserId = r.forward_from?.id;
@@ -69,9 +69,12 @@ const ShareBot: MyBotCommand = {
       return;
     }
 
-    await ctx.sendMessage({
-      text: `В течение ${BotContext.defSessionTimeoutStr} пользователь может написать боту @${ctx.botUserName}`,
-    });
+    await ctx.sendMessage(
+      {
+        text: `В течение ${BotContext.defSessionTimeoutStr} пользователь может написать боту @${ctx.botUserName}`,
+      },
+      { keepAfterSession: true, removeTimeout: BotContext.defSessionTimeout }
+    );
 
     //WARN: it's important not to wait for task
     registrationTask(ctx.service, regUser, ctx.chatId, ctx.user);

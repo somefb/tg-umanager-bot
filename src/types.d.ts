@@ -158,8 +158,6 @@ export interface IBotContext {
   readonly user: UserItem;
   readonly service: ITelegramService;
 
-  /** removing previous messages by any user activity */
-  removeAnyByUpdate: boolean;
   /** every next sendMessage will update existed */
   singleMessageMode: boolean;
   /**
