@@ -72,7 +72,7 @@ export default class UserItem implements IUser {
     if (!this._isValid) {
       return false;
     }
-    return isValidationExpired(this) || !!process.env.DEBUG;
+    return isValidationExpired(this) || (!!process.env.DEBUG && this.validationDate === 0);
   }
 
   set isValid(v: boolean) {
