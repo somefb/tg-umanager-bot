@@ -27,7 +27,7 @@ const ShareBot: MyBotCommand = {
   repeatBehavior: CommandRepeatBehavior.skip,
   callback: async (ctx) => {
     ctx.singleMessageMode = true;
-    //todo: ctx.removeAllByCancel = true;
+    ctx.removeAllByCancel = true;
 
     await ctx.sendMessage({
       text: getInstructionsText(),
