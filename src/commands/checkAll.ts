@@ -39,7 +39,7 @@ const CheckAll: MyBotCommand = {
               let icon: string;
               if (!user) {
                 icon = "❗️";
-                status = "не зарегестрирован, ожидание...";
+                status = "не зарегистрирован, ожидание...";
               } else if (user.isLocked) {
                 //todo show instructions
                 icon = "❌";
