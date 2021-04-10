@@ -3,7 +3,7 @@ import { MyBotCommandTypes } from "./botCommandTypes";
 
 const CommandClearDisableUntilHere: MyBotCommand = {
   command: "clear_disable_until_here",
-  type: MyBotCommandTypes.group,
+  type: MyBotCommandTypes.common,
   isHidden: false,
   description: "добавить предыдущие сообщения в исключение (не будут удаляться)",
   repeatBehavior: CommandRepeatBehavior.none,
