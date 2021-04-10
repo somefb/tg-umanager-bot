@@ -2,6 +2,7 @@ import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
 import Repo from "../repo";
 import { EventTypeEnum, IBotContext } from "../types";
 import { CheckBot } from "../userCheckBot";
+import { declinateWord } from "../userCheckBot/dictionary";
 import { expectedInvalidTimes, validationTimeoutMinutes } from "../userCheckBot/playValidation";
 
 const regTimeoutMinutes = 10;
@@ -70,7 +71,7 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
   await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
   await ctx.sendMessage(
     {
-      text: `Ваш ключ:\n\n<b>"${user.validationKey.num} ${user.validationKey.word}"</b>\n\nЗапомните его.`,
+      text: `Ваш ключ:\n\n<b>"${declinateWord(user.validationKey)}"</b>\n\nЗапомните его.`,
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],

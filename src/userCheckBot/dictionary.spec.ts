@@ -8,6 +8,8 @@ import dictionary, {
   wordPairs,
   generateWordPairsNext,
   WordPair,
+  declinateWord,
+  dictDeclinedWords,
 } from "./dictionary";
 
 const checkUnique = <T>(arr: T[]): boolean => {
@@ -146,5 +148,22 @@ describe("dictionary functions", () => {
         expect(r.pairs.reduce((acc, v) => (v.two[0] === myPair.two[0] ? acc + 1 : acc), 0)).toBe(1);
       }
     }
+  });
+
+  test("declination words", () => {
+    expect(declinateWord({ num: 1, word: "волк" })).toBe("1 волк");
+    expect(declinateWord({ num: 2, word: "волк" })).toBe("2 волка");
+    expect(declinateWord({ num: 3, word: "волк" })).toBe("3 волка");
+    expect(declinateWord({ num: 4, word: "волк" })).toBe("4 волка");
+    expect(declinateWord({ num: 5, word: "волк" })).toBe("5 волков");
+    expect(declinateWord({ num: 20, word: "волк" })).toBe("20 волков");
+  });
+
+  test("all words have declination", () => {
+    dictionary.forEach((dict) => {
+      dict.keyWords.forEach((w) =>
+        expect(dictDeclinedWords.has(w), `word '${w}' doesn't exists in dictDeclinedWords`).toBeTruthy()
+      );
+    });
   });
 });

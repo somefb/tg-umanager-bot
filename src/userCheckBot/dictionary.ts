@@ -95,6 +95,45 @@ const dictionary = [
     ],
   },
 ];
+export const dictDeclinedWords = new Map<string, Record<number, string>>();
+dictDeclinedWords.set("волк", ["волка", "волков"]);
+dictDeclinedWords.set("варан", ["варана", "варанов"]);
+dictDeclinedWords.set("вагон", ["вагона", "вагонов"]);
+dictDeclinedWords.set("черепаха", ["черепахи", "черепах"]);
+dictDeclinedWords.set("червь", ["червя", "червей"]);
+dictDeclinedWords.set("чародей", ["чародея", "чародеев"]);
+dictDeclinedWords.set("травинка", ["травинки", "травинок"]);
+dictDeclinedWords.set("терем", ["терема", "теремов"]);
+dictDeclinedWords.set("танк", ["танка", "танков"]);
+dictDeclinedWords.set("палец", ["пальца", "пальцев"]);
+dictDeclinedWords.set("поцелуй", ["поцелуя", "поцелуев"]);
+dictDeclinedWords.set("призрак", ["призрака", "призраков"]);
+dictDeclinedWords.set("жизнь", ["жизни", "жизней"]);
+dictDeclinedWords.set("желание", ["желания", "желаний"]);
+dictDeclinedWords.set("жаба", ["жабы", "жаб"]);
+dictDeclinedWords.set("камень", ["камня", "камней"]);
+dictDeclinedWords.set("канистра", ["канистры", "канистр"]);
+dictDeclinedWords.set("кит", ["кита", "китов"]);
+dictDeclinedWords.set("луч", ["луча", "лучей"]);
+dictDeclinedWords.set("луна", ["луны", "лун"]);
+dictDeclinedWords.set("лиса", ["лисы", "лис"]);
+dictDeclinedWords.set("струна", ["струны", "струн"]);
+dictDeclinedWords.set("сова", ["совы", "сов"]);
+dictDeclinedWords.set("слон", ["слона", "слонов"]);
+dictDeclinedWords.set("апельсин", ["апельсина", "апельсинов"]);
+dictDeclinedWords.set("ананас", ["ананаса", "ананасов"]);
+dictDeclinedWords.set("антилопа", ["антилопы", "антилоп"]);
+
+export function declinateWord(str: { num: number; word: string }): string {
+  let w = str.word;
+  if (str.num !== 1) {
+    const set = dictDeclinedWords.get(str.word);
+    if (set) {
+      w = str.num >= 5 ? set[1] : set[0];
+    }
+  }
+  return `${str.num} ${w}`;
+}
 
 export const wordPairs: WordPair[] = [];
 
