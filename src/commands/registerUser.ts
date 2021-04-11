@@ -8,7 +8,7 @@ import { expectedInvalidTimes, validationTimeoutMinutes } from "../userCheckBot/
 const regTimeoutMinutes = 10;
 const regTimeout = regTimeoutMinutes * 60000;
 const destroyKeyTimeout = 30 * 1000; //30sec
-const destroyInstructionsTimeoutSec = 120 * 1000;
+const destroyInstructionsTimeout = 2 * 60000; //2min
 
 function getInstructionsText(botName: string) {
   return [
@@ -115,7 +115,7 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
         inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
       },
     },
-    { removeByUpdate: true, removeTimeout: destroyInstructionsTimeoutSec, keepAfterSession: true }
+    { removeByUpdate: true, removeTimeout: destroyInstructionsTimeout, keepAfterSession: true }
   );
 
   return !!isValid;

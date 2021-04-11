@@ -29,7 +29,6 @@ export default class BotContext implements IBotContext {
   readonly user: UserItem;
   readonly service: ITelegramService;
 
-  //todo implement
   removeAllByCancel = false;
   singleMessageMode = false;
   name: string;
