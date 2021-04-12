@@ -38,6 +38,7 @@ const uploadFileInstructions = [
 export default async function playValidation(ctx: IBotContext): Promise<boolean | null> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(validationTimeout);
+  const isFirstTime = !ctx.user.validationDate;
 
   const sendMessage = async (text: string, words: string[] | null) => {
     const args: Parameters<IBotContext["sendMessage"]>["0"] = {
@@ -73,7 +74,14 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
     }
 
     ctx.sendMessage(
-      { text: "Рекомендуется удалить этот чат (бот не может это сделать)!" },
+      {
+        text: [
+          isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом\n" : "",
+          "Рекомендуется удалить этот чат (бот не может это сделать)!",
+        ]
+          .filter((v) => v)
+          .join("\n"),
+      },
       { removeMinTimeout: notifyDeleteLastTimeout }
     );
   };
