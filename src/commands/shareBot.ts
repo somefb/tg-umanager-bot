@@ -8,7 +8,7 @@ import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
 import registerUser from "./registerUser";
 
-const notifyTimeout = 30 * 1000; //30 sec
+const notifyTimeout = 60 * 1000; //60 sec
 
 function getInstructionsText() {
   return [
@@ -121,6 +121,7 @@ async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
       text: regUser
         ? `Пользователь ${regUser?.toLink()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`
         : `Истекло время ожидания. Токен ${regInfo.token} не действителен`,
+      parse_mode: "HTML",
     },
     { removeTimeout: notifyTimeout, removeByUpdate: true, keepAfterSession: true }
   );
