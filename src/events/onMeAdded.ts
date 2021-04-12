@@ -12,6 +12,15 @@ export default async function onMeAdded(
   msg: EventTypeReturnType[EventTypeEnum.memberUpated],
   chat_id: number
 ): Promise<void> {
+  const isGroup = msg.chat.type !== "private";
+
+  process.env.DEBUG && console.warn("onMeAdded", msg);
+
+  // WARN: bot cant leave private chat itself
+  if (!isGroup) {
+    return;
+  }
+
   if (this === CheckBot.service) {
     this.core.leaveChat({ chat_id });
     return;
@@ -20,13 +29,6 @@ export default async function onMeAdded(
   const user = Repo.getUser(msg.from?.id);
   const isAnonym = msg.from && msg.from.is_bot && msg.from.username === "GroupAnonymousBot";
   if (!user?.isValid && !isAnonym) {
-    this.core.leaveChat({ chat_id });
-    return;
-  }
-
-  const isGroup = msg.chat.type !== "private";
-  if (!isGroup) {
-    await this.core.sendMessage({ chat_id, text: "Только групповые чаты разрешены" });
     this.core.leaveChat({ chat_id });
     return;
   }
