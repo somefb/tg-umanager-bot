@@ -128,7 +128,7 @@ export type MyBotCommand = BotCommand & {
   onServiceInit?: (service: ITelegramService) => void;
   /** Command that is hidden from unregistered or invalid users */
   isHidden: boolean;
-  allowCommand?: () => boolean;
+  allowCommand?: (user: UserItem | undefined) => boolean;
   repeatBehavior: CommandRepeatBehavior;
 };
 

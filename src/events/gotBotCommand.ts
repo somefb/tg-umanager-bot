@@ -1,11 +1,8 @@
-import appSettings from "../appSettingsGet";
 import ChatItem from "../chatItem";
 import { MyBotCommandTypes } from "../commands/botCommandTypes";
-import registerUser from "../commands/registerUser";
 import Repo from "../repo";
 import TelegramService from "../telegramService";
 import { CommandRepeatBehavior, NewTextMessage } from "../types";
-import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 
 export default function gotBotCommand(this: TelegramService, msg: NewTextMessage, chat_id: number): boolean {
@@ -22,13 +19,6 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
     this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
     console.log(`Decline command. Chat is not registered`);
     return true;
-  }
-
-  if (chat && chat.isGroup == null) {
-    // possible case for old entities
-    console.warn("chat group is not defined");
-    chat.isGroup = true;
-    Repo.commit();
   }
 
   //extract command from /cmd@botName
@@ -56,7 +46,7 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
     } else {
       this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
 
-      if (!isGroupChat && user && !user.isValid) {
+      if (!isGroupChat && user && !user.isValid && !cmd.allowCommand?.call(cmd, user)) {
         process.env.DEBUG && console.log(`Decline private command. User ${msg.from.id} is invalid`);
         return true;
       }
@@ -135,15 +125,15 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
     }
     return true;
   }
-  //todo; WARN remove after first assignment
-  else if (textCmd === appSettings.ownerRegisterCmd && !Repo.hasAnyUser) {
-    this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
-    const newUser = new UserItem(msg.from.id, CheckBot.generateUserKey());
+  // //WARN remove after first assignment
+  // else if (textCmd === appSettings.ownerRegisterCmd && !Repo.hasAnyUser) {
+  //   this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
+  //   const newUser = new UserItem(msg.from.id, CheckBot.generateUserKey());
 
-    const ctx = this.initContext(chat_id, appSettings.ownerRegisterCmd, msg, newUser);
-    ctx.callCommand(registerUser);
+  //   const ctx = this.initContext(chat_id, appSettings.ownerRegisterCmd, msg, newUser);
+  //   ctx.callCommand(registerUser);
 
-    return true;
-  }
+  //   return true;
+  // }
   return false;
 }

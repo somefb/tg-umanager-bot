@@ -46,6 +46,7 @@ const CheckBotCommands: MyBotCommand[] = [
     description: "Начать заново",
     isHidden: false,
     repeatBehavior: CommandRepeatBehavior.skip,
+    allowCommand: (user) => !user?.isLocked,
     callback: (ctx) => CheckBot.validateUser(ctx.user),
     onServiceInit: (service) => {
       CheckBot.service = service;

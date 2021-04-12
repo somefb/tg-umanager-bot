@@ -71,19 +71,25 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
     if (!isValid) {
       // todo implement unlock behavior
       ctx.user.isLocked = true;
+      await ctx.sendMessage(
+        {
+          text: isFirstTime ? "Вы не прошли игру! \n" : "Спасибо за игру",
+        },
+        { removeMinTimeout: notifyDeleteLastTimeout }
+      );
+    } else {
+      await ctx.sendMessage(
+        {
+          text: [
+            isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом \n" : "",
+            "Рекомендуется удалить этот чат (бот не может это сделать)!",
+          ]
+            .filter((v) => v)
+            .join("\n"),
+        },
+        { removeMinTimeout: notifyDeleteLastTimeout }
+      );
     }
-
-    await ctx.sendMessage(
-      {
-        text: [
-          isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом \n" : "",
-          "Рекомендуется удалить этот чат (бот не может это сделать)!",
-        ]
-          .filter((v) => v)
-          .join("\n"),
-      },
-      { removeMinTimeout: notifyDeleteLastTimeout }
-    );
   };
 
   try {
