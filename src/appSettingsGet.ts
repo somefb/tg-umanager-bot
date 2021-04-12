@@ -19,6 +19,6 @@ import cfgPrivate from "./appSettings.private.json";
 }
 */
 
-const appSettings = Object.assign(cfg, cfgPrivate.all, process.env.DEBUG ? cfgPrivate.dev : cfgPrivate.prod);
+const appSettings = Object.assign(cfg, cfgPrivate.all, process.env.DEV ? cfgPrivate.dev : cfgPrivate.prod);
 
 export default appSettings;
