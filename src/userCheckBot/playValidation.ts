@@ -65,7 +65,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   let msgPrefix = "";
   let repeatCnt = 0;
 
-  const cancelSession = (isValid: boolean) => {
+  const cancelSession = async (isValid: boolean) => {
     ctx.user.isValid = isValid;
     // todo do we need to save reason?
     if (!isValid) {
@@ -73,10 +73,10 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
       ctx.user.isLocked = true;
     }
 
-    ctx.sendMessage(
+    await ctx.sendMessage(
       {
         text: [
-          isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом\n" : "",
+          isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом \n" : "",
           "Рекомендуется удалить этот чат (бот не может это сделать)!",
         ]
           .filter((v) => v)
@@ -135,13 +135,13 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
             } else {
               await sendMessage(arrayGetRandomItem(answersFalse), null);
               console.log(`User ${ctx.user.id} failed validation via file and locked`);
-              cancelSession(false);
+              await cancelSession(false);
               return false;
             }
           } else {
             await sendMessage(msgPrefix, null);
           }
-          cancelSession(true);
+          await cancelSession(true);
           return true;
         } else {
           msgPrefix = arrayGetRandomItem(answersExpected_1) + ". Давайте повторим. ";
@@ -157,7 +157,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
         if (invalidTimes >= expectedInvalidTimes) {
           await sendMessage(msgPrefix, null);
           console.log(`User ${ctx.user.id} failed validation and locked: invalidTimes = ${invalidTimes}`);
-          cancelSession(false);
+          await cancelSession(false);
           return false;
         } else {
           msgPrefix += ". ";
@@ -168,7 +168,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   } catch (err) {
     if ((err as ErrorCancelled).isCancelled) {
       console.log(`User ${ctx.user.id} failed validation and locked: timeout is over`);
-      cancelSession(false);
+      await cancelSession(false);
       return false;
     }
     console.error("CheckBot error. " + err.message || err);
