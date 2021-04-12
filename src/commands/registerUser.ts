@@ -26,6 +26,7 @@ function getInstructionsText(botName: string) {
     "* если проверка провалена - вы это узнаете по тому, что бот перестанет отвечать (типа поломался). Также узнают те, кто прошёл проверку и имеет с вами связь (через бота или чат)",
     "* если вы прошли проверку и решили продолжить играть не по правилам описанным выше - будете заблокированы автоматически",
     "* если вы заблокированы - нет возможности разблокировать (скоро реализуем)",
+    "\nНиже приведён пример с ключом '2 танка'. Обратите внимание на порядок слов (нумерация сверху-вниз)!",
   ].join("\n");
 }
 
@@ -51,7 +52,7 @@ const botRegisterInstructions = [
   "Бот не может удалить персональный чат (ограничение телеграмма). Потому удаляйте такой чат с ботом каждый раз самостоятельно",
 ].join(". ");
 
-async function registerUser(ctx: IBotContext): Promise<boolean> {
+async function registerUser(ctx: IBotContext, ctxReport: IBotContext): Promise<boolean> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(regTimeout);
 
@@ -61,6 +62,15 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
   user.lastName = ctx.initMessage.from.last_name;
   user.termyBotChatId = ctx.chatId;
 
+  const report = (msg: string) => {
+    return ctxReport.sendMessage({
+      text: `${user.toLink()} ${msg}`,
+      parse_mode: "HTML",
+    });
+  };
+
+  await report("проходит инструктаж...");
+
   await ctx.sendMessage({
     text: `На регистрацию отведено ${regTimeoutMinutes}мин. На некоторые инструкции время ещё меньше. Время уже пошло...`,
     parse_mode: "HTML",
@@ -68,6 +78,7 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
       inline_keyboard: [[{ text: "Начнём регистрацию", callback_data: "OK" }]],
     },
   });
+
   await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
   await ctx.sendMessage(
     {
@@ -94,6 +105,8 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
     text: `Инструктаж окончен. Давайте сыграем: @${botName}.\nПримечание: если бот не отвечает - используйте команду /start`,
   });
 
+  await report("прошёл инструктаж");
+
   await CheckBot.service
     //command /start is expected
     .onGotEvent(EventTypeEnum.gotBotCommand, (v) => v.from.id == user.id)
@@ -102,11 +115,15 @@ async function registerUser(ctx: IBotContext): Promise<boolean> {
       // disable timeout
       ctx.setTimeout(0);
     });
+  await report("играет...");
+
   const isValid = await CheckBot.validateUser(user);
   if (isValid) {
     Repo.addOrUpdateUser(user);
     console.log(`\nRegistration of user ${user.id} ${user.toLink()} is finished`);
   }
+
+  await report("проиграл");
 
   await ctx.sendMessage(
     {

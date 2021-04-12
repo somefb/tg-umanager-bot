@@ -75,7 +75,7 @@ const ShareBot: MyBotCommand = {
         }`,
         parse_mode: "HTML",
       },
-      { keepAfterSession: true, removeTimeout: BotContext.defSessionTimeout }
+      { keepAfterSession: true }
     );
 
     //WARN: it's important not to wait for task
@@ -94,6 +94,7 @@ interface RegInfo {
 async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
   let success = false;
   let regUser: UserItem | undefined;
+  ctx.name = "_regReport";
 
   try {
     // wait for new user connection to this bot
@@ -108,18 +109,17 @@ async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
       if (!Repo.getUser(msgRegUser.from.id)) {
         regUser = new UserItem(msgRegUser.from.id, CheckBot.generateUserKey());
         const ctxRegUser = ctx.service.initContext(msgRegUser.chat.id, "_reg", msgRegUser, regUser);
-        success = !!(await ctxRegUser.callCommand(registerUser));
+        success = !!(await ctxRegUser.callCommand((c) => registerUser(c, ctx)));
         break;
       }
     }
   } catch {}
 
   // send report to previous chat
-  ctx.name = "_regReport";
   await ctx.sendMessage(
     {
       text: regUser
-        ? `Пользователь ${regUser?.toLink()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`
+        ? `${regUser?.toLink()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`
         : `Истекло время ожидания. Токен ${regInfo.token} не действителен`,
       parse_mode: "HTML",
     },
