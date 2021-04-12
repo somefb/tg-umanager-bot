@@ -123,8 +123,14 @@ export default class BotContext implements IBotContext {
       this.messages.get(this._updateMessage.id)?.reset.forEach((fn) => fn());
       (args as Opts<"editMessageText">).message_id = this._updateMessage.id;
       // WARN: user can remove message by mistake and we can't detect id
-      await this.service.core.editMessageText(args as Opts<"editMessageText">);
       data = this._updateMessage.data;
+      await this.service.core.editMessageText(args as Opts<"editMessageText">);
+      if (!this._updateMessage) {
+        console.error(
+          `Context '${this.name}' is cancelled but sendMessage() is not finished. You missed await for async function`,
+          args.text
+        );
+      }
     } else {
       const res = await this.service.core.sendMessage(args as Opts<"sendMessage">);
       data = (res as ApiSuccess<Message.TextMessage>).result;
