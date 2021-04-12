@@ -62,7 +62,9 @@ export default class BotContext implements IBotContext {
   }
 
   cancel(reason: string): void {
-    delete this._updateMessage;
+    if (this._updateMessage && !this.messages.get(this._updateMessage.id)?.keepAfterSession) {
+      delete this._updateMessage;
+    }
     this.service.removeContext(this);
     this._timer && clearTimeout(this._timer);
 

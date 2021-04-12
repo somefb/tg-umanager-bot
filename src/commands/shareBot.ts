@@ -1,20 +1,14 @@
 import { Message, User } from "typegram";
 import BotContext from "../botContext";
 import createToken from "../helpers/createToken";
-import {
-  CommandRepeatBehavior,
-  EventTypeEnum,
-  FileInfo,
-  ITelegramService,
-  MyBotCommand,
-  NewTextMessage,
-} from "../types";
+import Repo from "../repo";
+import { CommandRepeatBehavior, EventTypeEnum, FileInfo, IBotContext, MyBotCommand } from "../types";
 import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
 import registerUser from "./registerUser";
 
-const notifyTimeout = 15000;
+const notifyTimeout = 30 * 1000; //30 sec
 
 function getInstructionsText() {
   return [
@@ -72,19 +66,20 @@ const ShareBot: MyBotCommand = {
       ev.then((e) => e.data === "cancel" && ctx.cancel("user cancelled")).catch((v) => v);
     } //while
 
-    if (!regInfo) return; //requires for ingoring TS issues
+    if (!regInfo) return; //requires for ignoring TS issues
 
     await ctx.sendMessage(
       {
         text: `В течение ${BotContext.defSessionTimeoutStr} пользователь может написать боту @${ctx.botUserName}${
-          !regInfo.user ? " используя токен: " + regInfo.token + " как стартовое слово" : ""
+          !regInfo.user ? " используя токен: <b>" + regInfo.token + "</b> как стартовое слово" : ""
         }`,
+        parse_mode: "HTML",
       },
       { keepAfterSession: true, removeTimeout: BotContext.defSessionTimeout }
     );
 
     //WARN: it's important not to wait for task
-    registrationTask(ctx.service, regInfo, ctx.user);
+    registrationTask(ctx, regInfo);
   },
 };
 
@@ -95,26 +90,32 @@ interface RegInfo {
   whoSharedUserId: number;
 }
 
-async function registrationTask(service: ITelegramService, regInfo: RegInfo, reportUser: UserItem) {
+// WARN: ctx here is already cancelled
+async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
   let success = false;
   let regUser: UserItem | undefined;
+
   try {
     // wait for new user connection to this bot
-    const msgRegUser = await service.onGotEvent(
-      EventTypeEnum.gotNewMessage,
-      (v) => v.from.id === regInfo.user?.id || v.text === regInfo.token,
-      BotContext.defSessionTimeout
-    );
-
-    regUser = new UserItem(msgRegUser.from.id, CheckBot.generateUserKey());
-
-    const ctxRegUser = service.initContext(msgRegUser.chat.id, "_reg", msgRegUser, regUser);
-    success = !!(await ctxRegUser.callCommand(registerUser));
+    while (1) {
+      const msgRegUser = await ctx.service.onGotEvent(
+        EventTypeEnum.gotNewMessage,
+        (v) => v.from.id === regInfo.user?.id || v.text === regInfo.token,
+        BotContext.defSessionTimeout
+      );
+      await ctx.service.core.deleteMessageForce({ chat_id: msgRegUser.chat.id, message_id: msgRegUser.message_id });
+      //don't allow register again
+      if (!Repo.getUser(msgRegUser.from.id)) {
+        regUser = new UserItem(msgRegUser.from.id, CheckBot.generateUserKey());
+        const ctxRegUser = ctx.service.initContext(msgRegUser.chat.id, "_reg", msgRegUser, regUser);
+        success = !!(await ctxRegUser.callCommand(registerUser));
+        break;
+      }
+    }
   } catch {}
 
   // send report to previous chat
-  // todo this report-message somehow doesn't work
-  const ctx = service.initContext(reportUser.termyBotChatId, "_regReport", {} as NewTextMessage, reportUser);
+  ctx.name = "_regReport";
   await ctx.sendMessage(
     {
       text: regUser

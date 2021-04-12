@@ -357,9 +357,11 @@ export default class TelegramService implements ITelegramService {
   private contexts: Record<number, Set<IBotContext>> = {};
   removeContext(ctx: IBotContext): void {
     const arr = this.contexts[ctx.chatId];
-    arr.delete(ctx);
-    if (!arr.size) {
-      delete this.contexts[ctx.chatId];
+    if (arr) {
+      arr.delete(ctx);
+      if (!arr.size) {
+        delete this.contexts[ctx.chatId];
+      }
     }
   }
 
