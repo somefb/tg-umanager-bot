@@ -26,12 +26,12 @@ const answersExpected_2 = ["Ладно-ладно!", "А вы настойчив
 const askFile = "Понравилась игра?";
 
 const uploadFileInstructions = [
-  ".\nИ напоследок передайте мне любой ваш уникальный файл (картинка/фото, аудио/голосовое, текстовый).",
+  ".\nИ напоследок передайте мне любой уникальный файл (картинка/фото, аудио/голосовое, текстовый).",
   "* файл должен быть уникальным для вас, но абсолютно бесполезным для остальных",
-  "* сохраните его где-нибудь в доступном для вас месте и не теряйте его никогда!",
-  "\nВсякий раз как вы проходите игру с ошибкой, а также с некоторой периодичностью бот будет выдавать сообщение:",
+  "* сохраните его в доступном для вас месте и не теряйте никогда!",
+  "\nВсякий раз как вы проходите игру с ошибкой, а также с некоторой периодичностью, бот будет выдавать сообщение:",
   `<b>${askFile}</b>`,
-  "на это сообщение вам нужно будет передать боту (мне) тот самый уникальный файл.",
+  "на это сообщение нужно передать боту (мне) тот самый файл.",
   `\nЯ жду ваш файл в течение ${timeoutFirstFile / 60000} минут...`,
 ].join("\n");
 
@@ -67,27 +67,21 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
 
   const cancelSession = async (isValid: boolean) => {
     ctx.user.isValid = isValid;
-    // todo do we need to save reason?
     if (!isValid) {
       // todo implement unlock behavior
       ctx.user.isLocked = true;
       await ctx.sendMessage(
         {
-          text: isFirstTime ? "Вы не прошли игру! \n" : "Спасибо за игру",
+          text: isFirstTime ? "Вы не прошли игру! \n" : "На сегодня всё!",
         },
-        { removeMinTimeout: notifyDeleteLastTimeout }
+        { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 }
       );
     } else {
       await ctx.sendMessage(
         {
-          text: [
-            isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом \n" : "",
-            "Рекомендуется удалить этот чат (бот не может это сделать)!",
-          ]
-            .filter((v) => v)
-            .join("\n"),
+          text: isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом \n" : "Спасибо за игру",
         },
-        { removeMinTimeout: notifyDeleteLastTimeout }
+        { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 }
       );
     }
   };
@@ -117,6 +111,24 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
       );
 
       const gotWord2 = (await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery)).data;
+      if (isFirstTime && gotWord2 !== nextObj.expected) {
+        ctx.singleMessageMode = false;
+        ctx.setTimeout(validationTimeout * 5);
+        await ctx.sendMessage(
+          {
+            text: `Неправильно. Ожидаю '${nextObj.expected}'.\nПорядок сверху-вниз!\nНачнём заново!`,
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: [[{ callback_data: "Ok", text: "Ok" }]] },
+          },
+          { removeByUpdate: true, removeTimeout: validationTimeout }
+        );
+        ctx.singleMessageMode = true;
+        await ctx.onGotEvent(EventTypeEnum.gotUpdate);
+        invalidTimes = 0;
+        validTimes = 0;
+        ctx.setTimeout(validationTimeout);
+        continue;
+      }
       if (gotWord2 === nextObj.expected) {
         ++validTimes;
         if (validTimes >= expectedValidTimes) {

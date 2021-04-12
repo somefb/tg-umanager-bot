@@ -94,7 +94,9 @@ interface RegInfo {
 async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
   let success = false;
   let regUser: UserItem | undefined;
-  ctx.name = "_regReport";
+  setTimeout(() => {
+    ctx.name = "_regReport";
+  });
 
   try {
     // wait for new user connection to this bot

@@ -16,6 +16,7 @@ export const CheckBot = {
         return false;
       }
       if (user.isValid) {
+        // todo we should notify user that gaming is not required
         return true;
       }
 
