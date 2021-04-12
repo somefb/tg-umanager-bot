@@ -97,8 +97,9 @@ export default class TelegramCore implements ITelegramCore {
                           resolve(makeRequest());
                         }, t);
                       } else {
-                        console.error("TelegramCore. API error: \n" + txt);
-                        reject(result);
+                        const emptyUrl = this.getUrl("" as keyof TelegramPR);
+                        console.error(`TelegramCore. API error ${url.replace(emptyUrl, "")} \n` + txt);
+                        reject({ ...result, data });
                       }
                     } else {
                       resolve(result);
