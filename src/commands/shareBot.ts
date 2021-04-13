@@ -48,7 +48,7 @@ const ShareBot: MyBotCommand = {
       if ((r as Message.VoiceMessage).voice) {
         regInfo = {
           token: createToken(),
-          validationFile: r.file,
+          validationVoiceFile: r.file,
           user: r.forward_from,
           whoSharedUserId: ctx.user.id,
         };
@@ -85,7 +85,7 @@ const ShareBot: MyBotCommand = {
 
 interface RegInfo {
   token: string;
-  validationFile: FileInfo;
+  validationVoiceFile: FileInfo;
   user?: User;
   whoSharedUserId: number;
 }
@@ -110,6 +110,8 @@ async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
       //don't allow register again
       if (!Repo.getUser(msgRegUser.from.id)) {
         regUser = new UserItem(msgRegUser.from.id, CheckBot.generateUserKey());
+        regUser.whoSharedUserId = regInfo.whoSharedUserId;
+        regUser.validationVoiceFile = regInfo.validationVoiceFile;
         const ctxRegUser = ctx.service.initContext(msgRegUser.chat.id, "_reg", msgRegUser, regUser);
         success = !!(await ctxRegUser.callCommand((c) => registerUser(c, ctx)));
         break;
