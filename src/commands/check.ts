@@ -6,7 +6,7 @@ import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
 
-const CheckAll: MyBotCommand = {
+const Check: MyBotCommand = {
   command: "check",
   type: MyBotCommandTypes.group,
   isHidden: true,
@@ -23,6 +23,8 @@ const CheckAll: MyBotCommand = {
     ctx.setTimeout(0);
 
     let throttle: NodeJS.Timeout | null = null;
+    const mId = Object.keys(ctx.chat.members).find((id) => id === ctx.user.id);
+    const isInitMemberAnonym = !!(mId && ctx.chat.members[mId].isAnonym);
     const report = (forceNow = false, isFinished = false) => {
       if (throttle) {
         return Promise.resolve();
@@ -31,7 +33,7 @@ const CheckAll: MyBotCommand = {
         throttle = setTimeout(
           async () => {
             throttle = null;
-            const arr = ["Пройдите проверку❗️❗️❗️\nСтатус пользователей\n"];
+            const arr = [`${ctx.user.toLink(isInitMemberAnonym)} запросил проверку❗️\nСтатус пользователей\n`];
             Object.keys(ctx.chat.members).forEach((key) => {
               const m = ctx.chat.members[key];
               if (m.isBot) {
@@ -56,10 +58,7 @@ const CheckAll: MyBotCommand = {
                 status = `ожидание... Было ${dateToPastTime(user.validationDate)}`;
               }
 
-              const lastName = m.lastName || m.firstName;
-              const uLink = m.isAnonym
-                ? `анон.админ (${m.firstName[0]}..${m.firstName.length > 2 ? lastName[lastName.length - 1] : ""})`
-                : UserItem.ToLink(m.id, m.userName, m.firstName, m.lastName);
+              const uLink = UserItem.ToLink(m.id, m.userName, m.firstName, m.lastName, m.isAnonym);
               arr.push(`${icon} ${uLink} - ${status}`);
             });
 
@@ -102,7 +101,7 @@ const CheckAll: MyBotCommand = {
   },
 };
 
-export default CheckAll;
+export default Check;
 
 async function countAllTask(ctx: IBotContext) {
   ctx.setTimeout(0);

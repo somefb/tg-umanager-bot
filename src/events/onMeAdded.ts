@@ -1,5 +1,5 @@
 import { ChatMember } from "typegram";
-import CheckAll from "../commands/checkAll";
+import Check from "../commands/check";
 import Repo from "../repo";
 import TelegramService from "../telegramService";
 import { EventTypeEnum, EventTypeReturnType, IBotContext, NewTextMessage } from "../types";
@@ -120,5 +120,5 @@ export default async function onMeAdded(
     { keepAfterSession: true }
   );
 
-  await ctx.callCommand(CheckAll.callback);
+  await ctx.callCommand(Check.callback);
 }

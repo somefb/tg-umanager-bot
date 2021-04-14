@@ -20,11 +20,21 @@ export interface IUser {
 }
 
 export default class UserItem implements IUser {
-  static ToLinkUser(user: IUser): string {
-    return this.ToLink(user.id, user.userName, user.firstName, user.lastName);
+  static ToLinkUser(user: IUser, isAnonym = false): string {
+    return this.ToLink(user.id, user.userName, user.firstName, user.lastName, isAnonym);
   }
 
-  static ToLink(userId: number, userName: string | undefined, firstName: string, lastName: string | undefined): string {
+  static ToLink(
+    userId: number,
+    userName: string | undefined,
+    firstName: string,
+    lastName: string | undefined,
+    isAnonym = false
+  ): string {
+    if (isAnonym) {
+      const lN = lastName || firstName;
+      return `анон.админ (${firstName[0]}..${firstName.length > 2 ? lN[lN.length - 1] : ""})`;
+    }
     if (userName) {
       return "@" + userName;
     }
@@ -83,8 +93,8 @@ export default class UserItem implements IUser {
     this.validationDate = Date.now();
   }
 
-  toLink(): string {
-    return UserItem.ToLinkUser(this);
+  toLink(isAnonym = false): string {
+    return UserItem.ToLinkUser(this, isAnonym);
   }
 
   constructor(id: number, validationKey: UserValidationKey) {
