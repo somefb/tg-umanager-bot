@@ -7,7 +7,7 @@ import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
 
 const CheckAll: MyBotCommand = {
-  command: "check_all",
+  command: "check",
   type: MyBotCommandTypes.group,
   isHidden: true,
   description: "проверить участников",
@@ -15,6 +15,9 @@ const CheckAll: MyBotCommand = {
   callback: async (ctx) => {
     const ctxTask = ctx.service.initContext(ctx.chatId, "_cntAll", ctx.initMessage, ctx.user);
     ctxTask.callCommand(countAllTask);
+
+    //wait for previous report from task
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     ctx.singleMessageMode = true;
     ctx.setTimeout(0);
@@ -28,7 +31,7 @@ const CheckAll: MyBotCommand = {
         throttle = setTimeout(
           async () => {
             throttle = null;
-            const arr = ["Статус пользователей\n"];
+            const arr = ["Пройдите проверку❗️❗️❗️\nСтатус пользователей\n"];
             Object.keys(ctx.chat.members).forEach((key) => {
               const m = ctx.chat.members[key];
               if (m.isBot) {
@@ -83,11 +86,8 @@ const CheckAll: MyBotCommand = {
       const member = ctx.chat.members[key];
       const user = Repo.getUser(member.id);
       if (user) {
-        arr.push(
-          CheckBot.validateUser(user).then(() => {
-            report();
-          })
-        );
+        // todo somehow runtime report doesn't work
+        arr.push(CheckBot.validateUser(user).then(() => report()));
       } else if (!member.isBot) {
         const ref = Repo.onUserAdded(member.id);
         listeners.push(ref);
@@ -132,7 +132,7 @@ async function countAllTask(ctx: IBotContext) {
         .map((v) => (v.lastName ? v.firstName + " " + v.lastName : v.firstName))
         .sort();
       return ctx.sendMessage({
-        text: [`Определено ${cnt} из ${membersCnt} участников\n`, "Я", ...names].join("\n"),
+        text: [`Определено ${cnt} из ${membersCnt} участников`, "Я", ...names].join("\n"),
         parse_mode: "HTML",
       });
     };
