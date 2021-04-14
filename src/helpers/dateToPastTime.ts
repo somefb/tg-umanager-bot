@@ -9,7 +9,7 @@ export default function dateToPastTime(dt: number): string {
     const diffMin = Math.floor(diffSec / 60);
     let str = diffMin + "м ";
     if (diffMin < 5) {
-      const leftSec = diffSec - diffMin * 60;
+      const leftSec = Math.floor(diffSec - diffMin * 60);
       if (leftSec) {
         str += leftSec + "с ";
       }
