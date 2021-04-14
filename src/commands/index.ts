@@ -6,7 +6,7 @@ import ShareBot from "./shareBot";
 import TestValidateMe from "./testValidateMe";
 
 const MyBotCommands = [CommandHelp, CommandClear, CommandClearDisableUntilHere, ShareBot, CheckAll];
-if (process.env.DEBUG || process.env.NODE_ENV === "test") {
+if (process.env.DEV || process.env.NODE_ENV === "test") {
   MyBotCommands.push(TestValidateMe);
 }
 

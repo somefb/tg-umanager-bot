@@ -2,6 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Attach by Process ID",
+      "processId": "${command:PickProcess}",
+      "request": "attach",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "pwa-node"
+    },
+    {
       "type": "pwa-node",
       "request": "attach",
       "name": "Launch Program",
@@ -12,6 +19,13 @@
       "name": "Run Script: serve",
       "request": "launch",
       "command": "npm run serve",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "node-terminal",
+      "name": "Run Script: serve-prod",
+      "request": "launch",
+      "command": "npm run serve-prod",
       "cwd": "${workspaceFolder}"
     }
   ]

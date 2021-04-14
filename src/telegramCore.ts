@@ -67,7 +67,7 @@ export default class TelegramCore implements ITelegramCore {
         //"Content-Length": data.length,
       };
     }
-
+    process.env.VERBOSE && !url.endsWith("getUpdates") && console.warn("sent " + url + "\n" + data);
     const makeRequest = () => {
       return new Promise<T>((resolve, reject) => {
         const req = https

@@ -7,7 +7,7 @@
     "start": "node build/index.js --https",
     "test": "jest",
     "serve": "cross-env DEBUG=true DEV=true ./node_modules/.bin/ts-node src/index.ts --inspect",
-    "serve-prod": "cross-env DEBUG=true ./node_modules/.bin/ts-node src/index.ts",
+    "serve-prod": "cross-env DEBUG=true VERBOSE=true ./node_modules/.bin/ts-node src/index.ts",
     "test-google": "./node_modules/.bin/ts-node src/googleDrive/check.ts",
     "lint": "npm run lint-es && npm run lint-ts",
     "lint-es": "./node_modules/.bin/eslint --fix --cache ./**/*.{js,jsx,ts,tsx,json}",
