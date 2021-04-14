@@ -82,6 +82,8 @@ export default class BotContext implements IBotContext {
     process.env.DEBUG && console.log(logMsg);
     const err = new ErrorCancelled(logMsg);
     this.eventListeners.forEach((e) => e.reject(err));
+
+    this.onCancelledListeners?.forEach((resolve) => resolve());
   }
 
   deleteMessage(id: number): Promise<void> {
@@ -232,17 +234,14 @@ export default class BotContext implements IBotContext {
     return r;
   }
 
-  _onCancelled?: () => void;
-  set onCancelled(v: undefined | (() => void)) {
-    if (v && this._onCancelled) {
-      console.error("BotContext.onCancelled has not multiple listeners");
-    }
-    this._onCancelled = v;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-  get onCancelled() {
-    return this._onCancelled;
+  onCancelledListeners?: Array<() => void>;
+  onCancelled(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.onCancelledListeners) {
+        this.onCancelledListeners = [];
+      }
+      this.onCancelledListeners.push(resolve);
+    });
   }
 }
 

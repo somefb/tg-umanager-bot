@@ -71,7 +71,7 @@ async function countAll(ctx: IBotContext) {
       ctx.removeEvent(evRef);
     };
 
-    ctx.onCancelled = () => (ctx.chat.onChatMembersCountChanged = undefined);
+    ctx.onCancelled().then(() => (ctx.chat.onChatMembersCountChanged = undefined));
 
     while (1) {
       evRef = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);

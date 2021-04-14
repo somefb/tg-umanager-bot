@@ -1,4 +1,6 @@
+import ChatItem from "../chatItem";
 import dateToPastTime from "../helpers/dateToPastTime";
+import processNow from "../helpers/processNow";
 import Repo from "../repo";
 import { CommandRepeatBehavior, MyBotCommand } from "../types";
 import { CheckBot } from "../userCheckBot";
@@ -14,172 +16,85 @@ const Check: MyBotCommand = {
   repeatBehavior: CommandRepeatBehavior.restart,
   callback: async (ctx) => {
     countAllTask(ctx);
-    //wait for previous report from task
+    //wait for previous partial report from task
+    // todo we need to wait getChatAdministrators
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     ctx.singleMessageMode = true;
     ctx.setTimeout(0);
 
-    let throttle: NodeJS.Timeout | null = null;
-    const mId = Object.keys(ctx.chat.members).find((id) => id === ctx.user.id);
-    const isInitMemberAnonym = !!(mId && ctx.chat.members[mId].isAnonym);
-    const report = (forceNow = false, isFinished = false) => {
-      if (throttle) {
-        return Promise.resolve();
+    let nextTime = 0;
+    let nextTask: NodeJS.Timeout | undefined;
+    const initUserLink = ChatItem.isAnonymGroupBot(ctx.initMessage.from) ? "анонимный админ" : ctx.user.toLink();
+
+    const report = async (isFinished = false) => {
+      //wait for 5 sec between each report
+      const now = processNow();
+      if (nextTime && now >= nextTime) {
+        if (!nextTask) {
+          return new Promise((resolve) => {
+            nextTask = setTimeout(() => {
+              nextTask = undefined;
+              report().then(resolve);
+            }, now - nextTime);
+          });
+        }
+        return;
       }
-      return new Promise<void>((resolve) => {
-        throttle = setTimeout(
-          async () => {
-            throttle = null;
-            const arr = [`${ctx.user.toLink(isInitMemberAnonym)} запросил проверку❗️\nСтатус пользователей\n`];
-            Object.keys(ctx.chat.members).forEach((key) => {
-              const m = ctx.chat.members[key];
-              if (m.isBot) {
-                return;
-              }
-              const user = Repo.getUser(m.id);
-              let status: string;
-              let icon: string;
-              if (!user) {
-                icon = "❗️";
-                status = "не зарегистрирован, ожидание...";
-              } else if (user.isLocked) {
-                //todo show instructions
-                icon = "❌";
-                status = `заблокирован ${dateToPastTime(user.validationDate)}`;
-              } else if (user.isValid) {
-                icon = "✅";
-                status = `проверен ${dateToPastTime(user.validationDate)}`;
-              } else {
-                //todo show CheckBot is blocked
-                icon = "⏳";
-                status = `ожидание... Было ${dateToPastTime(user.validationDate)}`;
-              }
+      nextTime = now + 5000;
 
-              const uLink = UserItem.ToLink(m.id, m.userName, m.firstName, m.lastName, m.isAnonym);
-              arr.push(`${icon} ${uLink} - ${status}`);
-            });
+      const arr = [`${initUserLink} запросил проверку❗️\nСтатус пользователей\n`];
+      Object.keys(ctx.chat.members).forEach((key) => {
+        const m = ctx.chat.members[key];
+        if (m.isBot) {
+          return;
+        }
+        const user = Repo.getUser(m.id);
+        let status: string;
+        let icon: string;
+        if (!user) {
+          icon = "❗️";
+          status = "не зарегистрирован";
+        } else if (user.isLocked) {
+          //todo show instructions
+          icon = "❌";
+          status = `заблокирован ${dateToPastTime(user.validationDate)}`;
+        } else if (user.isValid) {
+          icon = "✅";
+          status = `проверен ${dateToPastTime(user.validationDate)}`;
+        } else {
+          //todo show CheckBot is blocked
+          icon = "⏳";
+          status = `ожидаю... ${dateToPastTime(user.validationDate)}`;
+        }
 
-            isFinished && arr.push("\nПроверка окончена");
-            await ctx.sendMessage({
-              text: arr.join("\n"),
-              parse_mode: "HTML",
-              disable_notification: true,
-            });
+        const uLink = UserItem.ToLink(m.id, m.userName, m.firstName, m.lastName, m.isAnonym);
+        arr.push(`${icon} ${uLink} - ${status}`);
+      });
 
-            resolve();
-          },
-          forceNow ? 0 : 5 * 1000
-        );
+      isFinished && arr.push("\nПроверка окончена");
+      await ctx.sendMessage({
+        text: arr.join("\n"),
+        parse_mode: "HTML",
+        disable_notification: true,
       });
     };
 
-    await report(true);
+    await report();
 
     //todo what if this command will be fired again in a short time?
     const arr: Promise<unknown>[] = [];
-    const listeners: Promise<unknown>[] = [];
     Object.keys(ctx.chat.members).forEach((key) => {
       const member = ctx.chat.members[key];
       const user = Repo.getUser(member.id);
       if (user) {
-        // todo somehow runtime report doesn't work
         arr.push(CheckBot.validateUser(user).then(() => report()));
-      } else if (!member.isBot) {
-        const ref = Repo.onUserAdded(member.id);
-        listeners.push(ref);
-        arr.push(ref.then(() => report()));
       }
     });
 
-    ctx.onCancelled = () => listeners.forEach((ref) => Repo.removeEvent(ref));
-
     await Promise.all(arr);
-    await report(true, true);
+    await report(true);
   },
 };
 
 export default Check;
-
-async function countAllTask(ctx: IBotContext) {
-  ctx.setTimeout(0);
-
-  const r1 = await ctx.service.core.getChatMembersCount({ chat_id: ctx.chatId });
-  // WARN: excluded Me from count
-  let membersCnt = (r1.ok && r1.result) || 0;
-  const r2 = await ctx.service.core.getChatAdministrators({ chat_id: ctx.chatId });
-  const admins = (r2.ok && r2.result) || [];
-
-  admins.forEach((v) => {
-    const isMe = v.user.is_bot && v.user.username === ctx.botUserName;
-    if (!isMe) {
-      ctx.chat.addOrUpdateMember(v.user, !!v.is_anonymous);
-      Repo.updateUser(v.user);
-    }
-  });
-
-  let definedCnt = ctx.chat.calcVisibleMembersCount() + 1;
-
-  if (membersCnt > definedCnt) {
-    ctx.singleMessageMode = true;
-    const sendCount = (cnt: number) => {
-      const names = Object.keys(ctx.chat.members)
-        .map((k) => ctx.chat.members[k])
-        .filter((v) => !v.isAnonym)
-        .map((v) => (v.lastName ? v.firstName + " " + v.lastName : v.firstName))
-        .sort();
-      return ctx.sendMessage({
-        text: [`Определено ${cnt} из ${membersCnt} участников`, "Я", ...names].join("\n"),
-        parse_mode: "HTML",
-      });
-    };
-    await sendCount(definedCnt);
-    ctx.singleMessageMode = false;
-    const m = await ctx.sendMessage({
-      text: [
-        "Я не имею доступа к списку участников (ограничение телеграмма), однако вижу всех администраторов.",
-        "\nЕсли среди участников есть другой бот (не администратор) и его нет в списке выше - удалите и добавьте его, или временно измените ему права...",
-        "\nПомогите обнаружить вас...",
-      ].join("\n"),
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: [[{ text: "Я здесь", callback_data: "im" }]],
-      },
-    });
-    ctx.singleMessageMode = true;
-
-    let evRef: Promise<NewCallbackQuery>;
-    ctx.chat.onChatMembersCountChanged = (inc) => {
-      membersCnt += inc;
-      const eData: Partial<NewCallbackQuery> = { data: "im" };
-      ctx.removeEvent(evRef);
-      ctx.getListener(evRef)?.resolve(eData as NewCallbackQuery);
-    };
-
-    ctx.setTimeout(12 * 60 * 60000); // 12 hours
-    try {
-      while (1) {
-        evRef = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-        const q = await evRef;
-        if (q.data != "im") {
-          continue;
-        }
-        q.id && (await ctx.service.core.answerCallbackQuery({ callback_query_id: q.id, text: "Спасибо" }));
-        const newCount = ctx.chat.calcVisibleMembersCount() + 1;
-
-        if (newCount >= membersCnt) {
-          ctx.deleteMessage(m.message_id);
-          break;
-        } else if (newCount !== definedCnt) {
-          definedCnt = newCount;
-          await sendCount(definedCnt);
-        }
-      }
-    } catch (err) {
-      if (!(err as ErrorCancelled).isCancelled) {
-        console.error(err);
-      }
-    }
-  }
-  ctx.chat.onChatMembersCountChanged = undefined;
-}

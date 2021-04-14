@@ -1,10 +1,8 @@
 import ErrorCancelled from "../errorCancelled";
-import { CommandRepeatBehavior, EventTypeEnum, ITelegramService, MyBotCommand } from "../types";
+import { CommandRepeatBehavior, IBotContext, ITelegramService, MyBotCommand } from "../types";
 import UserItem from "../userItem";
 import { generateUserKey } from "./dictionary";
 import playValidation from "./playValidation";
-
-const waitUserConnectMs = 60000; // 1 minute
 
 export const CheckBot = {
   service: {} as ITelegramService,
@@ -19,16 +17,14 @@ export const CheckBot = {
         return true;
       }
 
-      // wait when user makes chat with CheckBot
-      if (!user.checkBotChatId) {
-        const e = await this.service.onGotEvent(
-          EventTypeEnum.gotBotCommand,
-          (e) => e.from.id === user.id,
-          waitUserConnectMs
-        );
-        user.checkBotChatId = e.chat.id;
+      const c = this.service.getContexts(user.checkBotChatId);
+      // possible when others calls validateUser();
+      // todo check this case
+      if (c) {
+        const ctx = c.values().next().value as IBotContext;
+        await ctx.onCancelled();
+        return user.isValid;
       }
-
       // todo detect stopBot
       const ctx = this.service.initContext(user.checkBotChatId, "_validate", null, user);
       const r = await ctx.callCommand((ctx) => playValidation(ctx));
