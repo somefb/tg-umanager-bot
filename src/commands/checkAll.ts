@@ -72,7 +72,7 @@ const CheckAll: MyBotCommand = {
 
             resolve();
           },
-          forceNow ? 0 : 5 * 60000
+          forceNow ? 0 : 5 * 1000
         );
       });
     };
