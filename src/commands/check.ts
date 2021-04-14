@@ -1,10 +1,10 @@
-import ErrorCancelled from "../errorCancelled";
 import dateToPastTime from "../helpers/dateToPastTime";
 import Repo from "../repo";
-import { CommandRepeatBehavior, EventTypeEnum, IBotContext, MyBotCommand, NewCallbackQuery } from "../types";
+import { CommandRepeatBehavior, MyBotCommand } from "../types";
 import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
+import countAllTask from "./countAllTask";
 
 const Check: MyBotCommand = {
   command: "check",
@@ -13,9 +13,7 @@ const Check: MyBotCommand = {
   description: "проверить участников",
   repeatBehavior: CommandRepeatBehavior.restart,
   callback: async (ctx) => {
-    const ctxTask = ctx.service.initContext(ctx.chatId, "_cntAll", ctx.initMessage, ctx.user);
-    ctxTask.callCommand(countAllTask);
-
+    countAllTask(ctx);
     //wait for previous report from task
     await new Promise((resolve) => setTimeout(resolve, 1000));
 

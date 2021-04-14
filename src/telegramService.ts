@@ -80,7 +80,7 @@ export default class TelegramService implements ITelegramService {
       let chatId: number | undefined;
 
       const updateMember = (chatId: number, from: User, isAnonym: boolean | null | undefined) => {
-        if (from) {
+        if (from && from.username !== this.botUserName) {
           Repo.getСhat(chatId)?.addOrUpdateMember(from, isAnonym);
           Repo.updateUser(from);
         }
@@ -199,9 +199,19 @@ export default class TelegramService implements ITelegramService {
           } else {
             const isLeft = m.new_chat_member.status === "kicked" || m.new_chat_member.status === "left";
             if (isLeft) {
-              removeMember(chatId, m.new_chat_member.user.id);
+              //member removed from chat
+              if (mbot.user.id === this.botUserId) {
+                // onMeRemoved => dispose all contexts for this chat
+                this.contexts[chatId]?.forEach((c) => c.cancel("bot removed from chat"));
+                Repo.removeChat(chatId);
+                defFn = () => true;
+              } else {
+                removeMember(chatId, m.new_chat_member.user.id);
+              }
             } else {
+              //member added to chat
               updateMember(chatId, mbot.user, m.new_chat_member.is_anonymous);
+              Repo.getСhat(chatId)?.onChatMembersCountChanged?.call(this, 1);
             }
           }
           return {

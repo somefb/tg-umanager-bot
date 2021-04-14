@@ -1,5 +1,5 @@
 import { ChatMember } from "typegram";
-import Check from "../commands/check";
+import countAllTask from "../commands/countAllTask";
 import Repo from "../repo";
 import TelegramService from "../telegramService";
 import { EventTypeEnum, EventTypeReturnType, IBotContext, NewTextMessage } from "../types";
@@ -13,8 +13,6 @@ export default async function onMeAdded(
   chat_id: number
 ): Promise<void> {
   const isGroup = msg.chat.type !== "private";
-
-  process.env.DEBUG && console.warn("onMeAdded", msg);
 
   // WARN: bot cant leave private chat itself
   if (!isGroup) {
@@ -110,15 +108,15 @@ export default async function onMeAdded(
       text: [
         "Привет. Я ваш новый помощник",
         "Одна из моих задач - быть максимально неприметным и бестолковым для мошенников, а потому часть команд скрыта..",
-        `Все команды можно увидеть используя /help@${ctx.botUserName})`,
+        `Все команды можно увидеть используя /help@${ctx.botUserName}`,
         "\nКоманды доступны для каждого в чате (но только для зарегестрированных пользователей)",
         "Для прохождения регистрации к вам обратятся те, кто уже её прошёл...",
-        "\nА пока определим, кто у нас здесь есть!",
       ].join(".\n"),
       parse_mode: "HTML",
     },
     { keepAfterSession: true }
   );
 
-  await ctx.callCommand(Check.callback);
+  // WARN: it's important not to wait for task
+  countAllTask(ctx);
 }

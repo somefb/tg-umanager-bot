@@ -118,6 +118,11 @@ export class RepoClass {
     return chat;
   }
 
+  removeChat(id: number): void {
+    delete this.chats[id];
+    this.commit();
+  }
+
   addOrUpdateUser(user: UserItem): void {
     const isNew = !this.users[user.id];
     this.users[user.id] = user;

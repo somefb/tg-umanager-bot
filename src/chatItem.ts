@@ -28,25 +28,27 @@ export default class ChatItem {
       return;
     }
 
-    const was = this.members[user.id];
-    if (!was && !ChatItem.isAnonymGroupBot(user)) {
+    const was: MyChatMember | undefined = this.members[user.id];
+    if (!ChatItem.isAnonymGroupBot(user)) {
       const member: MyChatMember = {
         id: user.id,
         isBot: user.is_bot,
-        isAnonym: !!isAnonym,
+        isAnonym: isAnonym != null ? isAnonym : !!was?.isAnonym,
         firstName: user.first_name,
         lastName: user.last_name,
         userName: user.username,
       };
       this.members[user.id] = member;
-      Repo.addOrUpdateChat(this);
+      if (!was) {
+        Repo.addOrUpdateChat(this);
+      }
     }
   }
 
   removeMember(userId: number): void {
     // todo soft-delete
     delete this.members[userId];
-    this?.onChatMembersCountChanged?.call(this, -1);
+    this.onChatMembersCountChanged?.call(this, -1);
   }
 
   calcVisibleMembersCount(): number {
@@ -56,6 +58,6 @@ export default class ChatItem {
     ) as number;
   }
 
-  /** Fires only when we need to get count of chat members */
+  /** Fires only when we need to update count of chat members (when member added/remove in the group-chat) */
   onChatMembersCountChanged?: (increment: number) => void;
 }
