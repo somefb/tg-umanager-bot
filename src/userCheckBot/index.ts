@@ -4,7 +4,7 @@ import UserItem from "../userItem";
 import { generateUserKey } from "./dictionary";
 import playValidation from "./playValidation";
 
-const waitUserMs = 60000; // 1 minute
+const waitUserConnectMs = 60000; // 1 minute
 
 export const CheckBot = {
   service: {} as ITelegramService,
@@ -21,13 +21,17 @@ export const CheckBot = {
 
       // wait when user makes chat with CheckBot
       if (!user.checkBotChatId) {
-        const e = await this.service.onGotEvent(EventTypeEnum.gotBotCommand, (e) => e.from.id === user.id, waitUserMs);
+        const e = await this.service.onGotEvent(
+          EventTypeEnum.gotBotCommand,
+          (e) => e.from.id === user.id,
+          waitUserConnectMs
+        );
         user.checkBotChatId = e.chat.id;
       }
 
       // todo detect stopBot
       const ctx = this.service.initContext(user.checkBotChatId, "_validate", null, user);
-      const r = await ctx.callCommand((ctx) => playValidation(ctx, true));
+      const r = await ctx.callCommand((ctx) => playValidation(ctx));
       return r;
     } catch (err) {
       if (!(err as ErrorCancelled).isCancelled) {
@@ -47,7 +51,7 @@ const CheckBotCommands: MyBotCommand[] = [
     isHidden: false,
     repeatBehavior: CommandRepeatBehavior.skip,
     allowCommand: (user) => !user?.isLocked,
-    callback: (ctx) => CheckBot.validateUser(ctx.user),
+    callback: (ctx) => CheckBot.validateUser(ctx.user, true),
     onServiceInit: (service) => {
       CheckBot.service = service;
     },

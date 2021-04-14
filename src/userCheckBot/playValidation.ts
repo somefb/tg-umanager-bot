@@ -37,28 +37,9 @@ const uploadFileInstructions = [
 
 export default async function playValidation(ctx: IBotContext): Promise<boolean | null> {
   ctx.singleMessageMode = true;
-  ctx.setTimeout(validationTimeout);
+  ctx.setTimeout(10 * 60 * 60000); //wait for 10 hours for first response
+
   const isFirstTime = !ctx.user.validationDate;
-
-  const sendMessage = async (text: string, words: string[] | null) => {
-    const args: Parameters<IBotContext["sendMessage"]>["0"] = {
-      text,
-      parse_mode: "HTML",
-    };
-
-    if (words) {
-      args.reply_markup = {
-        inline_keyboard: arrayMapToTableByColumn(words, rows, collumns, (v) => ({
-          text: v,
-          callback_data: v,
-        })),
-      };
-    }
-
-    await ctx.sendMessage(args);
-
-    //todo detect if chat is blocked and somehow notify user
-  };
 
   let validTimes = 0;
   let invalidTimes = 0;
@@ -91,6 +72,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
       // first part
       const pairs = generateWordPairs(ctx.user.validationKey, rows * collumns);
       await sendMessage(
+        ctx,
         msgPrefix + (repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
         pairs.map((v) => v.one)
       );
@@ -106,6 +88,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
       // second part
       const nextObj = generateWordPairsNext(ctx.user.validationKey, trueWordPair, pairs, true);
       await sendMessage(
+        ctx,
         `Выберите ассоциацию`,
         nextObj.pairs.map((v) => v.two)
       );
@@ -135,7 +118,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
           msgPrefix = arrayGetRandomItem(answersExpected_2);
           if (!ctx.user.validationFile) {
             // init 2step validation
-            await sendMessage(msgPrefix + uploadFileInstructions, null);
+            await sendMessage(ctx, msgPrefix + uploadFileInstructions, null);
             ctx.setTimeout(timeoutFirstFile);
             const res = await ctx.onGotEvent(EventTypeEnum.gotFile);
             await ctx.deleteMessage(res.message_id);
@@ -144,20 +127,20 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
             // 2step validation
             // todo also special command to force validation via file
             ctx.setTimeout(timeoutFile);
-            await sendMessage(msgPrefix + ". " + askFile, null);
+            await sendMessage(ctx, msgPrefix + ". " + askFile, null);
             const res = await ctx.onGotEvent(EventTypeEnum.gotFile);
             await ctx.deleteMessage(res.message_id);
 
             if (UserItem.isFilesEqual(ctx.user.validationFile, res.file)) {
-              await sendMessage(arrayGetRandomItem(answersExpected_2), null);
+              await sendMessage(ctx, arrayGetRandomItem(answersExpected_2), null);
             } else {
-              await sendMessage(arrayGetRandomItem(answersFalse), null);
+              await sendMessage(ctx, arrayGetRandomItem(answersFalse), null);
               console.log(`User ${ctx.user.id} failed validation via file and locked`);
               await cancelSession(false);
               return false;
             }
           } else {
-            await sendMessage(msgPrefix, null);
+            await sendMessage(ctx, msgPrefix, null);
           }
           await cancelSession(true);
           return true;
@@ -173,7 +156,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
           msgPrefix = arrayGetRandomItem(answersFalse);
         }
         if (invalidTimes >= expectedInvalidTimes) {
-          await sendMessage(msgPrefix, null);
+          await sendMessage(ctx, msgPrefix, null);
           console.log(`User ${ctx.user.id} failed validation and locked: invalidTimes = ${invalidTimes}`);
           await cancelSession(false);
           return false;
@@ -193,4 +176,24 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   }
 
   return null;
+}
+
+function sendMessage(ctx: IBotContext, text: string, words: string[] | null) {
+  const args: Parameters<IBotContext["sendMessage"]>["0"] = {
+    text,
+    parse_mode: "HTML",
+  };
+
+  if (words) {
+    args.reply_markup = {
+      inline_keyboard: arrayMapToTableByColumn(words, rows, collumns, (v) => ({
+        text: v,
+        callback_data: v,
+      })),
+    };
+  }
+
+  return ctx.sendMessage(args);
+
+  //todo detect if chat is blocked and somehow notify user
 }
