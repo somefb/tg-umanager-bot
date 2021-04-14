@@ -9,14 +9,13 @@ const waitUserMs = 60000; // 1 minute
 export const CheckBot = {
   service: {} as ITelegramService,
 
-  async validateUser(user: UserItem): Promise<boolean | null> {
+  async validateUser(user: UserItem, allowPlayAgain = false): Promise<boolean | null> {
     try {
       if (user.isLocked) {
         console.warn(`User ${user.id} is locked. Validation is declined`);
         return false;
       }
-      if (user.isValid) {
-        // todo we should notify user that gaming is not required
+      if (user.isValid && !allowPlayAgain) {
         return true;
       }
 
@@ -28,7 +27,7 @@ export const CheckBot = {
 
       // todo detect stopBot
       const ctx = this.service.initContext(user.checkBotChatId, "_validate", null, user);
-      const r = await ctx.callCommand(playValidation);
+      const r = await ctx.callCommand((ctx) => playValidation(ctx, true));
       return r;
     } catch (err) {
       if (!(err as ErrorCancelled).isCancelled) {
