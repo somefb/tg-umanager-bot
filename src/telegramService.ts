@@ -74,7 +74,7 @@ export default class TelegramService implements ITelegramService {
   }
 
   gotUpdate(upd: Update): void {
-    process.env.VERBOSE && console.log("got update", JSON.stringify(upd));
+    process.env.VERBOSE && console.log("got update", "\n" + JSON.stringify(upd) + "\n");
     try {
       let defFn: null | (() => boolean) = null;
       let chatId: number | undefined;

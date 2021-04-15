@@ -37,9 +37,11 @@ async function countAll(ctx: IBotContext) {
         .map((v) => (v.lastName ? v.firstName + " " + v.lastName : v.firstName))
         .sort();
       return ctx.sendMessage({
-        text: [`Определено ${cnt} из ${membersCnt} участников (анонимные считаются отдельно)`, "Я", ...names].join(
-          "\n"
-        ),
+        text: [
+          `❗️❗️Определено ${cnt} из ${membersCnt} участников (анонимные считаются отдельно)`,
+          "Я",
+          ...names,
+        ].join("\n"),
         parse_mode: "HTML",
         disable_notification: true,
       });
