@@ -1,4 +1,5 @@
 import { ChatMember } from "typegram";
+import ChatItem from "../chatItem";
 import countAllTask from "../commands/countAllTask";
 import Repo from "../repo";
 import TelegramService from "../telegramService";
@@ -20,14 +21,15 @@ export default async function onMeAdded(
   }
 
   if (this === CheckBot.service) {
-    this.core.leaveChat({ chat_id });
+    await this.core.leaveChat({ chat_id });
     return;
   }
 
   const user = Repo.getUser(msg.from?.id);
-  const isAnonym = msg.from && msg.from.is_bot && msg.from.username === "GroupAnonymousBot";
-  if (!user?.isValid && !isAnonym) {
-    this.core.leaveChat({ chat_id });
+  const isAnonym = ChatItem.isAnonymGroupBot(msg.from);
+  if (user?.isLocked && !isAnonym) {
+    console.warn(`Leave chat. Reason: user ${user?.id} is locked`);
+    await this.core.leaveChat({ chat_id });
     return;
   }
 
