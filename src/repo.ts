@@ -75,6 +75,10 @@ export class RepoClass {
       this.commitTimer = setTimeout(
         async () => {
           this.commitTimer = undefined;
+          if (!this.hasAnyUser) {
+            console.error("Repo. No users for saving. Decline commit");
+            return;
+          }
           const forSave = this.optionsForSave;
           try {
             console.log(`Repo. Saving bot settings to local ${this.filePath}...`);
