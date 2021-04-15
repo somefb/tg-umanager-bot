@@ -76,25 +76,27 @@ export class RepoClass {
         async () => {
           this.commitTimer = undefined;
           if (!this.hasAnyUser) {
+            // WARN it happens when app is cancelled by ts-errors during the compilation
             console.error("Repo. No users for saving. Decline commit");
-            return;
-          }
-          const forSave = this.optionsForSave;
-          try {
-            console.log(`Repo. Saving bot settings to local ${this.filePath}...`);
-            fs.writeFileSync(
-              this.filePath,
-              JSON.stringify(forSave, (_key, value) => (value == null ? undefined : value)),
-              { encoding: "utf-8" }
-            );
-          } catch (err) {
-            console.error(`Repo. Error. Can't save to local file ${this.filePath}`, err);
-          }
-          try {
-            console.log(`Repo. Saving bot settings to googleDrive...`);
-            await this.googleDrive.save(this.filePath, forSave);
-          } catch (err) {
-            console.error(`Repo. Error. Can't save to googleDrive ${this.filePath}`, err);
+            debugger;
+          } else {
+            const forSave = this.optionsForSave;
+            try {
+              console.log(`Repo. Saving bot settings to local ${this.filePath}...`);
+              fs.writeFileSync(
+                this.filePath,
+                JSON.stringify(forSave, (_key, value) => (value == null ? undefined : value)),
+                { encoding: "utf-8" }
+              );
+            } catch (err) {
+              console.error(`Repo. Error. Can't save to local file ${this.filePath}`, err);
+            }
+            try {
+              console.log(`Repo. Saving bot settings to googleDrive...`);
+              await this.googleDrive.save(this.filePath, forSave);
+            } catch (err) {
+              console.error(`Repo. Error. Can't save to googleDrive ${this.filePath}`, err);
+            }
           }
           resolve();
         },
