@@ -23,7 +23,7 @@ async function countAll(ctx: IBotContext) {
       Repo.updateUser(v.user);
     }
   });
-
+  // todo callback here to check
   let definedCnt = ctx.chat.calcVisibleMembersCount() + 1;
 
   if (membersCnt > definedCnt) {

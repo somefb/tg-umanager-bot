@@ -82,7 +82,6 @@ const Check: MyBotCommand = {
 
     await report();
 
-    //todo what if this command will be fired again in a short time?
     const arr: Promise<unknown>[] = [];
     Object.keys(ctx.chat.members).forEach((key) => {
       const member = ctx.chat.members[key];

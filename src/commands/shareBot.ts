@@ -52,13 +52,24 @@ const ShareBot: MyBotCommand = {
           user: r.forward_from,
           whoSharedUserId: ctx.user.id,
         };
-        break;
+        if (r.forward_from?.id && Repo.getUser(r.forward_from?.id)) {
+          await ctx.sendMessage(
+            {
+              text: "Этот пользователь уже зарегистрирован",
+            },
+            { removeTimeout: 5000 }
+          );
+          ctx.singleMessageMode = false;
+        } else {
+          break;
+        }
       }
 
       await ctx.sendMessage({
         text: "Я ожидаю только голосовое сообщение...",
         reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
       });
+      ctx.singleMessageMode = true;
       //restartTimeout
       ctx.setTimeout();
 
@@ -101,11 +112,17 @@ async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
   try {
     // wait for new user connection to this bot
     while (1) {
-      const msgRegUser = await ctx.service.onGotEvent(
-        EventTypeEnum.gotNewMessage,
-        (v) => v.from.id === regInfo.user?.id || v.text === regInfo.token,
-        BotContext.defSessionTimeout
-      );
+      const msgRegUser = regInfo.user?.id
+        ? await ctx.service.onGotEvent(
+            EventTypeEnum.gotBotCommand,
+            (v) => v.from.id === regInfo.user?.id,
+            BotContext.defSessionTimeout
+          )
+        : await ctx.service.onGotEvent(
+            EventTypeEnum.gotNewMessage,
+            (v) => v.text === regInfo.token,
+            BotContext.defSessionTimeout
+          );
       await ctx.service.core.deleteMessageForce({ chat_id: msgRegUser.chat.id, message_id: msgRegUser.message_id });
       //don't allow register again
       if (!Repo.getUser(msgRegUser.from.id)) {
@@ -115,6 +132,8 @@ async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
         const ctxRegUser = ctx.service.initContext(msgRegUser.chat.id, "_reg", msgRegUser, regUser);
         success = !!(await ctxRegUser.callCommand((c) => registerUser(c, ctx)));
         break;
+      } else {
+        console.warn(`Decline registration. User ${msgRegUser.from.id} already exists`);
       }
     }
   } catch {}

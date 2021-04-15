@@ -131,7 +131,7 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
   //   const newUser = new UserItem(msg.from.id, CheckBot.generateUserKey());
 
   //   const ctx = this.initContext(chat_id, appSettings.ownerRegisterCmd, msg, newUser);
-  //   ctx.callCommand(registerUser);
+  //   ctx.callCommand((ctx) => registerUser(ctx, ctx));
 
   //   return true;
   // }
