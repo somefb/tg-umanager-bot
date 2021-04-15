@@ -1,4 +1,5 @@
 import ErrorCancelled from "../errorCancelled";
+import Repo from "../repo";
 import { CommandRepeatBehavior, IBotContext, ITelegramService, MyBotCommand } from "../types";
 import UserItem from "../userItem";
 import { generateUserKey } from "./dictionary";
@@ -19,7 +20,6 @@ export const CheckBot = {
 
       const c = this.service.getContexts(user.checkBotChatId);
       // possible when others calls validateUser();
-      // todo check this case
       if (c) {
         const ctx = c.values().next().value as IBotContext;
         await ctx.onCancelled();
@@ -28,6 +28,7 @@ export const CheckBot = {
       // todo detect stopBot
       const ctx = this.service.initContext(user.checkBotChatId, "_validate", null, user);
       const r = await ctx.callCommand((ctx) => playValidation(ctx));
+      Repo.commit();
       return r;
     } catch (err) {
       if (!(err as ErrorCancelled).isCancelled) {
@@ -35,6 +36,7 @@ export const CheckBot = {
         return null;
       }
     }
+    Repo.commit();
     return false;
   },
   generateUserKey,

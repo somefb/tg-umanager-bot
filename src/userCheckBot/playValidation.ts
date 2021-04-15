@@ -67,6 +67,14 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
     }
   };
 
+  await ctx.sendMessage({
+    text: "Поиграем?",
+    reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "Ok" }]] },
+  });
+
+  await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
+  ctx.setTimeout(validationTimeout);
+
   try {
     while (1) {
       // first part
@@ -77,7 +85,6 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
         pairs.map((v) => v.one)
       );
 
-      ctx.setTimeout(validationTimeout);
       const gotWord = (await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery)).data;
       const trueWordPair = gotWord && pairs.find((v) => v.one === gotWord);
       if (!trueWordPair) {
@@ -131,16 +138,11 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
             const res = await ctx.onGotEvent(EventTypeEnum.gotFile);
             await ctx.deleteMessage(res.message_id);
 
-            if (UserItem.isFilesEqual(ctx.user.validationFile, res.file)) {
-              await sendMessage(ctx, arrayGetRandomItem(answersExpected_2), null);
-            } else {
-              await sendMessage(ctx, arrayGetRandomItem(answersFalse), null);
+            if (!UserItem.isFilesEqual(ctx.user.validationFile, res.file)) {
               console.log(`User ${ctx.user.id} failed validation via file and locked`);
               await cancelSession(false);
               return false;
             }
-          } else {
-            await sendMessage(ctx, msgPrefix, null);
           }
           await cancelSession(true);
           return true;
@@ -156,7 +158,6 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
           msgPrefix = arrayGetRandomItem(answersFalse);
         }
         if (invalidTimes >= expectedInvalidTimes) {
-          await sendMessage(ctx, msgPrefix, null);
           console.log(`User ${ctx.user.id} failed validation and locked: invalidTimes = ${invalidTimes}`);
           await cancelSession(false);
           return false;
