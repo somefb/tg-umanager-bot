@@ -26,17 +26,18 @@ const Check: MyBotCommand = {
     let nextTime = 0;
     let nextTask: NodeJS.Timeout | undefined;
     const initUserLink = ChatItem.isAnonymGroupBot(ctx.initMessage.from) ? "анонимный админ" : ctx.user.toLink();
-
+    let prevText: string;
     const report = async (isFinished = false) => {
       //wait for 5 sec between each report
       const now = processNow();
-      if (nextTime && now >= nextTime) {
+      if (nextTime && now < nextTime) {
         if (!nextTask) {
+          const ms = nextTime - now;
           return new Promise((resolve) => {
             nextTask = setTimeout(() => {
               nextTask = undefined;
-              report().then(resolve);
-            }, now - nextTime);
+              report(isFinished).then(resolve);
+            }, ms);
           });
         }
         return;
@@ -56,7 +57,6 @@ const Check: MyBotCommand = {
           icon = "❗️";
           status = "не зарегистрирован";
         } else if (user.isLocked) {
-          //todo show instructions
           icon = "❌";
           status = `заблокирован ${dateToPastTime(user.validationDate)}`;
         } else if (user.isValid) {
@@ -73,11 +73,15 @@ const Check: MyBotCommand = {
       });
 
       isFinished && arr.push("\nПроверка окончена");
-      await ctx.sendMessage({
-        text: arr.join("\n"),
-        parse_mode: "HTML",
-        disable_notification: true,
-      });
+      const text = arr.join("\n");
+      if (prevText !== text) {
+        prevText = text;
+        await ctx.sendMessage({
+          text,
+          parse_mode: "HTML",
+          disable_notification: true,
+        });
+      }
     };
 
     await report();
