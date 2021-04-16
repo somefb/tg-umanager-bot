@@ -95,6 +95,10 @@ const Check: MyBotCommand = {
       }
     });
 
+    // update report every minute
+    const timer = setTimeout(() => report(), 60000);
+    ctx.onCancelled().then(() => clearTimeout(timer));
+
     await Promise.all(arr);
     await report(true);
   },

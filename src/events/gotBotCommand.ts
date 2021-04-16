@@ -47,7 +47,10 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
       this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
 
       if (!isGroupChat && user && !user.isValid && !cmd.allowCommand?.call(cmd, user)) {
-        process.env.DEBUG && console.log(`Decline private command. User ${msg.from.id} is invalid`);
+        // todo we should skip a lot of commands
+        // CheckBot.validateUser(user).then((v) => v && gotBotCommand.call(this, msg, chat_id));
+        process.env.DEBUG &&
+          console.log(`Decline private command. User ${msg.from.id} is invalid. Auto-allow after validation`);
         return true;
       }
 
@@ -71,6 +74,7 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
         if (cmd.repeatBehavior) {
           const c = this.getContexts(chat_id);
           if (c) {
+            // todo we should anylyze previous command behavior
             if (cmd.repeatBehavior === CommandRepeatBehavior.skip) {
               process.env.DEBUG && console.log("Command declined by rule: CommandRepeatBehavior.skip");
               return true;
