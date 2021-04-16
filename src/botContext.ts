@@ -62,6 +62,10 @@ export default class BotContext implements IBotContext {
   }
 
   cancel(reason: string): void {
+    let lastMessage;
+    if (!this.removeAllByCancel && this.singleMessageMode) {
+      lastMessage = this._updateMessage;
+    }
     if (this._updateMessage && !this.messages.get(this._updateMessage.id)?.keepAfterSession) {
       delete this._updateMessage;
     }
@@ -77,6 +81,9 @@ export default class BotContext implements IBotContext {
         }
       }
     })();
+
+    // requires for cases when we need update latest message by cancelled context
+    this._updateMessage = lastMessage;
 
     const logMsg = `Context '${this.name || ""}' is cancelled. Reason: ${reason}`;
     process.env.DEBUG && console.log(logMsg);
