@@ -12,8 +12,8 @@ const collumns = 3;
 // validation section here
 const expectedValidTimes = 2; // twice in the row
 export const expectedInvalidTimes = 3; // total possible == twice
-export const validationTimeoutMinutes = 1;
-export const validationTimeout = validationTimeoutMinutes * 60000; //1 minute
+export const validationTimeoutMinutes = expectedValidTimes * 2;
+export const validationTimeout = (validationTimeoutMinutes / 2) * 60000; // for each parti
 const timeoutFile = 5 * 60000; // 5 minute
 const timeoutFirstFile = 15 * 60000;
 const notifyDeleteLastTimeout = 60000; //1 minute
@@ -35,6 +35,13 @@ const uploadFileInstructions = [
   `\nЯ жду ваш файл в течение ${timeoutFirstFile / 60000} минут...`,
 ].join("\n");
 
+const enum CancelReason {
+  sucсess,
+  file,
+  invalidTimes,
+  timeout,
+}
+
 export default async function playValidation(ctx: IBotContext): Promise<boolean | null> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(10 * 60 * 60000); //wait for 10 hours for first response
@@ -46,14 +53,18 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   let msgPrefix = "";
   let repeatCnt = 0;
 
-  const cancelSession = async (isValid: boolean) => {
+  const cancelSession = async (isValid: boolean, reason: CancelReason) => {
     ctx.user.isValid = isValid;
     if (!isValid) {
       // todo implement unlock behavior
       ctx.user.isLocked = true;
+      // todo such timeouts is not ideal because 1) poor internet connection 2) bad proxy 3) ETIMEDOUT
+      // for timeoutError we can allow user to recover via file
       await ctx.sendMessage(
         {
-          text: isFirstTime ? "Вы не прошли игру! \n" : "На сегодня всё!",
+          text: isFirstTime
+            ? `${reason === CancelReason.timeout ? "Время истекло. " : ""}Вы не прошли игру! \n`
+            : "На сегодня всё!",
         },
         { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 }
       );
@@ -73,15 +84,15 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   });
 
   await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-  ctx.setTimeout(validationTimeout);
 
   try {
     while (1) {
+      ctx.setTimeout(validationTimeout);
       // first part
       const pairs = generateWordPairs(ctx.user.validationKey, rows * collumns);
       await sendMessage(
         ctx,
-        msgPrefix + (repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
+        msgPrefix + (isFirstTime ? "Выберите любое слово" : repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
         pairs.map((v) => v.one)
       );
 
@@ -96,7 +107,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
       const nextObj = generateWordPairsNext(ctx.user.validationKey, trueWordPair, pairs, true);
       await sendMessage(
         ctx,
-        `Выберите ассоциацию`,
+        isFirstTime ? "Выберите правильную ассоциацию❗️" : "Выберите ассоциацию❗️",
         nextObj.pairs.map((v) => v.two)
       );
 
@@ -116,7 +127,6 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
         await ctx.onGotEvent(EventTypeEnum.gotUpdate);
         invalidTimes = 0;
         validTimes = 0;
-        ctx.setTimeout(validationTimeout);
         continue;
       }
       if (gotWord2 === nextObj.expected) {
@@ -140,11 +150,11 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
 
             if (!UserItem.isFilesEqual(ctx.user.validationFile, res.file)) {
               console.log(`User ${ctx.user.id} failed validation via file and locked`);
-              await cancelSession(false);
+              await cancelSession(false, CancelReason.file);
               return false;
             }
           }
-          await cancelSession(true);
+          await cancelSession(true, CancelReason.sucсess);
           return true;
         } else {
           msgPrefix = arrayGetRandomItem(answersExpected_1) + ". Давайте повторим. ";
@@ -159,7 +169,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
         }
         if (invalidTimes >= expectedInvalidTimes) {
           console.log(`User ${ctx.user.id} failed validation and locked: invalidTimes = ${invalidTimes}`);
-          await cancelSession(false);
+          await cancelSession(false, CancelReason.invalidTimes);
           return false;
         } else {
           msgPrefix += ". ";
@@ -170,7 +180,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   } catch (err) {
     if ((err as ErrorCancelled).isCancelled) {
       console.log(`User ${ctx.user.id} failed validation and locked: timeout is over`);
-      await cancelSession(false);
+      await cancelSession(false, CancelReason.timeout);
       return false;
     }
     console.error("CheckBot error. " + err.message || err);
