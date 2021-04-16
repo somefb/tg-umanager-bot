@@ -22,8 +22,11 @@ export const CheckBot = {
       // possible when others calls validateUser();
       if (c) {
         const ctx = c.values().next().value as IBotContext;
-        await ctx.onCancelled();
-        return user.isValid;
+        // skip circural ctx detection when fired from previous context
+        if (!ctx.name.includes(CheckBotCommands[0].command)) {
+          await ctx.onCancelled();
+          return user.isValid;
+        }
       }
       // todo detect stopBot
       const ctx = this.service.initContext(user.checkBotChatId, "_validate", null, user);
