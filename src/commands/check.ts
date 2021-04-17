@@ -44,7 +44,7 @@ const Check: MyBotCommand = {
       }
       nextTime = now + 5000;
 
-      const arr = [`${initUserLink} запросил проверку❗️\nСтатус пользователей\n`];
+      const arr = [`${initUserLink} запросил cтатус пользователей❗️\n`];
       Object.keys(ctx.chat.members).forEach((key) => {
         const m = ctx.chat.members[key];
         if (m.isBot) {
@@ -59,7 +59,7 @@ const Check: MyBotCommand = {
         } else if (user.isLocked) {
           icon = "❌";
           status = `заблокирован ${dateToPastTime(user.validationDate)}`;
-        } else if (user.isValid) {
+        } else if (user._isValid) {
           icon = "✅";
           status = `проверен ${dateToPastTime(user.validationDate)}`;
         } else {
@@ -84,20 +84,22 @@ const Check: MyBotCommand = {
       }
     };
 
-    await report();
-
     const arr: Promise<unknown>[] = [];
     Object.keys(ctx.chat.members).forEach((key) => {
       const member = ctx.chat.members[key];
       const user = Repo.getUser(member.id);
       if (user) {
+        // reset validation state because isValid relared to expiryDate
+        user._isValid = user.isValid;
         arr.push(CheckBot.validateUser(user).then(() => report()));
       }
     });
 
+    await report();
+
     // update report every minute
-    const timer = setTimeout(() => report(), 60000);
-    ctx.onCancelled().then(() => clearTimeout(timer));
+    const timer = setInterval(() => report(), 60000);
+    ctx.onCancelled().then(() => clearInterval(timer));
 
     await Promise.all(arr);
     await report(true);
