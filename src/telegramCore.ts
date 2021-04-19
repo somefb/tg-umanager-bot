@@ -274,6 +274,14 @@ export default class TelegramCore implements ITelegramCore {
   answerCallbackQuery(args?: Opts<"answerCallbackQuery">): P<R<true>> {
     return this.httpPost("answerCallbackQuery", args);
   }
+
+  kickChatMember(args: Opts<"kickChatMember">): P<R<true>> {
+    return this.httpPost("kickChatMember", args);
+  }
+
+  unbanChatMember(args: Opts<"unbanChatMember">): P<R<true>> {
+    return this.httpPost("unbanChatMember", args);
+  }
 }
 
 export interface ErrnoException extends Error {

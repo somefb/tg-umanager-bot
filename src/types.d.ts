@@ -50,6 +50,8 @@ export type ITelegramCore = Pick<
   | "getChatAdministrators"
   | "getChatMembersCount"
   | "answerCallbackQuery"
+  | "kickChatMember"
+  | "unbanChatMember"
 > & {
   //
   deleteMessageForce(args: Opts<"deleteMessage">): Promise<void>;
