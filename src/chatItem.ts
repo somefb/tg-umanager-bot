@@ -13,6 +13,17 @@ export default class ChatItem {
     return (user && user.is_bot && user.username === "GroupAnonymousBot") || false;
   }
 
+  static userToMember(user: User, isAnonym: boolean | null | undefined): MyChatMember {
+    return {
+      id: user.id,
+      isBot: user.is_bot,
+      isAnonym: !!isAnonym,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      userName: user.username,
+    };
+  }
+
   id: number;
   /** Index from which we need to start deleting messages */
   lastDeleteIndex = 1;
@@ -30,14 +41,8 @@ export default class ChatItem {
 
     const was: MyChatMember | undefined = this.members[user.id];
     if (!ChatItem.isAnonymGroupBot(user)) {
-      const member: MyChatMember = {
-        id: user.id,
-        isBot: user.is_bot,
-        isAnonym: isAnonym != null ? isAnonym : !!was?.isAnonym,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        userName: user.username,
-      };
+      const willAnonym = isAnonym != null ? isAnonym : !!was?.isAnonym;
+      const member = ChatItem.userToMember(user, willAnonym);
       this.members[user.id] = member;
       if (!was) {
         Repo.addOrUpdateChat(this);
@@ -60,4 +65,16 @@ export default class ChatItem {
 
   /** Fires only when we need to update count of chat members (when member added/remove in the group-chat) */
   onChatMembersCountChanged?: (increment: number) => void;
+
+  getMemberByName(searchText: string): MyChatMember | null {
+    const ids = Object.keys(this.members);
+    for (let i = 0; i < ids.length; ++i) {
+      const id = ids[i];
+      const m = this.members[id];
+      if (m.userName === searchText || `${m.firstName}${m.lastName ? " " + m.lastName : ""}` === searchText) {
+        return m;
+      }
+    }
+    return null;
+  }
 }
