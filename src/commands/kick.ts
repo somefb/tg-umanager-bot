@@ -21,12 +21,15 @@ const CommandKick: MyBotCommand = {
       reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "kC0" }]] },
     });
 
-    ctx.onGotEvent(EventTypeEnum.gotCallbackQuery).then((q) => q.data === "kC0" && ctx.cancel("user cancelled"));
+    ctx
+      .onGotEvent(EventTypeEnum.gotCallbackQuery)
+      .then((q) => q.data === "kC0" && ctx.cancel("user cancelled"))
+      .catch();
 
     let removedMember: MyChatMember | undefined | null;
     while (1) {
       const res = await ctx.onGotEvent(EventTypeEnum.gotNewMessage);
-      console.warn(res);
+
       const msg = res.entities?.find((v) => v.type === "mention" || v.type === "text_mention");
       if (msg?.offset === 0) {
         await ctx.deleteMessage(res.message_id);
