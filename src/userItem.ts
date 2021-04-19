@@ -26,18 +26,24 @@ export default class UserItem implements IUser {
 
   static ToLink(
     userId: number,
-    userName: string | undefined,
+    _userName: string | undefined,
     firstName: string,
     lastName: string | undefined,
     isAnonym = false
   ): string {
     if (isAnonym) {
-      const lN = lastName || firstName;
-      return `анон.админ (${firstName[0]}..${firstName.length > 2 ? lN[lN.length - 1] : ""})`;
+      const ln = lastName || firstName;
+      // filtering for emoji because it costs 2...8 chars
+      const firstLetter = firstName.codePointAt(0) === firstName.charCodeAt(0) ? firstName[0] : "?";
+      let lastLetter = "";
+      if (ln.length > 2 && ln.codePointAt(ln.length - 2) == ln.charCodeAt(ln.length - 2)) {
+        lastLetter = ln[ln.length - 1];
+      }
+      return `анон.админ (${firstLetter}..${lastLetter})`;
     }
-    if (userName) {
-      return "@" + userName;
-    }
+    // if (userName) {
+    //   return "@" + userName;
+    // }
     return `<a href="tg://user?id=${userId}">${[firstName, lastName].filter((v) => v).join(" ")}</a>`;
   }
 
