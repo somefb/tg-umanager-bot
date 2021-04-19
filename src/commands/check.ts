@@ -1,4 +1,3 @@
-import ChatItem from "../chatItem";
 import dateToPastTime from "../helpers/dateToPastTime";
 import processNow from "../helpers/processNow";
 import Repo from "../repo";
@@ -25,10 +24,11 @@ const Check: MyBotCommand = {
 
     let nextTime = 0;
     let nextTask: NodeJS.Timeout | undefined;
-    const initUserLink = ChatItem.isAnonymGroupBot(ctx.initMessage.from) ? "анонимный админ" : ctx.user.toLink();
+    const initUserLink = ctx.userLink;
     let prevText: string;
     const report = async (isFinished = false) => {
       //wait for 5 sec between each report
+      // todo throttle requires testing
       const now = processNow();
       if (nextTime && now < nextTime) {
         if (!nextTask) {
@@ -64,6 +64,7 @@ const Check: MyBotCommand = {
           status = `проверен ${dateToPastTime(user.validationDate)}`;
         } else {
           //todo show CheckBot is blocked
+          //todo wrong if user doesn't respond in 10-12 hours
           icon = "⏳";
           status = `ожидаю... ${dateToPastTime(user.validationDate)}`;
         }
