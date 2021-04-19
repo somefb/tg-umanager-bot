@@ -1,4 +1,4 @@
-import { ApiSuccess, Message, Update } from "typegram";
+import { ApiSuccess, Message, Update, User } from "typegram";
 import ChatItem from "./chatItem";
 import ErrorCancelled from "./errorCancelled";
 import processNow from "./helpers/processNow";
@@ -31,6 +31,8 @@ export default class BotContext implements IBotContext {
 
   removeAllByCancel = false;
   singleMessageMode = false;
+  singleUserMode = false;
+  disableNotification = false;
   name: string;
 
   constructor(chatId: number, cmdName: string, initMessage: NewTextMessage, user: UserItem, service: ITelegramService) {
@@ -49,6 +51,10 @@ export default class BotContext implements IBotContext {
 
   get botUserName(): string {
     return this.service.botUserName;
+  }
+
+  get userLink(): string {
+    return ChatItem.isAnonymGroupBot(this.initMessage.from) ? "<b>анонимный админ</b>" : this.user.toLink();
   }
 
   _timer?: NodeJS.Timeout;
@@ -125,6 +131,9 @@ export default class BotContext implements IBotContext {
     opts?: IBotContextMsgOptions
   ): Promise<Message.TextMessage> {
     (args as Opts<"sendMessage">).chat_id = this.chatId;
+    if (this.disableNotification && args.disable_notification == null) {
+      args.disable_notification = this.disableNotification;
+    }
 
     let data: Message.TextMessage;
 
@@ -205,11 +214,40 @@ export default class BotContext implements IBotContext {
     this.eventListeners.delete(ref);
   }
 
-  fireEvent<E extends EventTypeEnum>(type: E | null, v: EventTypeReturnType[E], u: Update): boolean {
+  fireEvent<E extends EventTypeEnum>(
+    type: E | null,
+    v: EventTypeReturnType[E],
+    u: Update,
+    from: User | undefined
+  ): boolean {
     let isHandled = false;
+    let wasNotified = false;
+
     this.eventListeners.forEach((e, ref) => {
       if (e.type == type || e.type === EventTypeEnum.gotUpdate) {
         isHandled = true;
+
+        // prevents interaction other users with command
+        if (
+          this.chat.isGroup &&
+          this.singleUserMode &&
+          from &&
+          from.id !== this.initMessage.from.id &&
+          !(this.chat.members[from.id]?.isAnonym && ChatItem.isAnonymGroupBot(this.initMessage.from))
+        ) {
+          if (wasNotified) {
+            return;
+          }
+          wasNotified = true;
+          const was = this.singleMessageMode;
+          this.singleMessageMode = false;
+          this.sendMessage(
+            { text: "Жду ответа от того, кто вызвал команду..." },
+            { removeTimeout: 5000 } //
+          ).then(() => (this.singleMessageMode = was));
+          return;
+        }
+
         this.removeEvent(ref);
         if (e.type === EventTypeEnum.gotUpdate) {
           e.resolve(u);

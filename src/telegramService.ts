@@ -78,8 +78,10 @@ export default class TelegramService implements ITelegramService {
     try {
       let defFn: null | (() => boolean) = null;
       let chatId: number | undefined;
+      let updFrom: User | undefined;
 
-      const updateMember = (chatId: number, from: User, isAnonym: boolean | null | undefined) => {
+      const updateMember = (chatId: number, from: User | undefined, isAnonym: boolean | null | undefined) => {
+        updFrom = from;
         if (from && from.username !== this.botUserName) {
           Repo.getСhat(chatId)?.addOrUpdateMember(from, isAnonym);
           Repo.updateUser(from);
@@ -219,6 +221,7 @@ export default class TelegramService implements ITelegramService {
             value: m as EventTypeReturnType[EventTypeEnum.memberUpated],
           };
         }
+        // todo upd.left_chat_member
 
         !chatId &&
           objectRecursiveSearch(upd, (key, obj) => {
@@ -248,7 +251,7 @@ export default class TelegramService implements ITelegramService {
       });
 
       const ctx = r && chatId && this.getContexts(chatId);
-      ctx && ctx.forEach((c) => (isHandled = c.fireEvent(r.type, r.value, upd) || isHandled));
+      ctx && ctx.forEach((c) => (isHandled = c.fireEvent(r.type, r.value, upd, updFrom) || isHandled));
       isHandled = (defFn && defFn()) || isHandled;
 
       if (!isHandled) {

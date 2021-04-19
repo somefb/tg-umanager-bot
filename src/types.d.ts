@@ -1,4 +1,4 @@
-import { BotCommand, CallbackQuery, ChatMemberUpdated, Message, Typegram, Update } from "typegram";
+import { BotCommand, CallbackQuery, ChatMemberUpdated, Message, Typegram, Update, User } from "typegram";
 import { Animation, Audio, Document, PhotoSize, Video, Voice } from "typegram/message";
 import ChatItem from "./chatItem";
 import { MyBotCommandTypes } from "./commands/botCommandTypes";
@@ -156,12 +156,18 @@ export interface IBotContext {
   readonly botUserName: string;
   /** WARN: user can be with zero values when msg.from = anonym for groupCommands */
   readonly user: UserItem;
+  readonly userLink: string;
   readonly service: ITelegramService;
 
   /** remove all messages that's sent via context except option 'keepAfterSession' */
   removeAllByCancel: boolean;
   /** every next sendMessage will update existed */
   singleMessageMode: boolean;
+  /** sends the message silently. Users will receive a notification with no sound. */
+  disableNotification: boolean;
+  /** command works only for who called it in group chat  */
+  singleUserMode: boolean;
+
   /**
    * set timeout; after expiring session will be cancelled automatically
    * set 0 if you need to disable timeout
@@ -177,7 +183,12 @@ export interface IBotContext {
   deleteMessage(id: number): Promise<void>;
   onGotEvent<E extends EventTypeEnum>(type: E): Promise<EventTypeReturnType[E]>;
   removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void;
-  fireEvent<E extends EventTypeEnum>(type: E | null, v: EventTypeReturnType[E], u: Update): boolean;
+  fireEvent<E extends EventTypeEnum>(
+    type: E | null,
+    v: EventTypeReturnType[E],
+    u: Update,
+    from: User | undefined
+  ): boolean;
   getListener<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): IEventListener<E> | undefined;
 }
 
