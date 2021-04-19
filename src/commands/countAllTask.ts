@@ -10,6 +10,7 @@ export default async function countAllTask(initContext: IBotContext): Promise<vo
 async function countAll(ctx: IBotContext) {
   ctx.setTimeout(12 * 60 * 60000); // 12 hours
 
+  // todo telegram issue? returns 3 is 1 + 3 admins (2 anonym and 1 bot)
   const r1 = await ctx.service.core.getChatMembersCount({ chat_id: ctx.chatId });
   // WARN: excluded Me from count
   let membersCnt = (r1.ok && r1.result) || 0;
