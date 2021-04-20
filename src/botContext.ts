@@ -1,5 +1,5 @@
-import { ApiSuccess, Message, Update, User } from "typegram";
-import ChatItem from "./chatItem";
+import { ApiSuccess, Message, MessageEntity, Update, User } from "typegram";
+import ChatItem, { MyChatMember } from "./chatItem";
 import ErrorCancelled from "./errorCancelled";
 import processNow from "./helpers/processNow";
 import Repo from "./repo";
@@ -13,7 +13,7 @@ import {
   NewTextMessage,
   Opts,
 } from "./types";
-import UserItem from "./userItem";
+import UserItem, { searchByName } from "./userItem";
 
 /**
  * Default rules:
@@ -287,6 +287,65 @@ export default class BotContext implements IBotContext {
       }
       this.onCancelledListeners.push(resolve);
     });
+  }
+
+  async askForUser(text: string): Promise<UserItem | MyChatMember> {
+    await this.sendMessage({
+      text,
+      reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "askU0" }]] },
+    });
+
+    this.onGotEvent(EventTypeEnum.gotCallbackQuery)
+      .then((q) => q.data === "askU0" && this.cancel("user cancelled"))
+      .catch();
+
+    let found: UserItem | MyChatMember | null = null;
+
+    while (!found) {
+      const res = await this.onGotEvent(EventTypeEnum.gotNewMessage);
+
+      const msg = res.entities?.find((v) => v.type === "mention" || v.type === "text_mention");
+      if (msg?.offset === 0) {
+        await this.deleteMessage(res.message_id);
+
+        const mUser = (msg as MessageEntity.TextMentionMessageEntity).user;
+        if (mUser) {
+          found = ChatItem.userToMember(mUser, false);
+        } else {
+          const mention = res.text.substring(msg.offset, msg.length);
+          if (this.chat.isGroup) {
+            found = searchByName(this.chat.members, mention);
+          } else {
+            found = searchByName(Repo.users, mention);
+          }
+
+          if (!found) {
+            if (mention === "@" + this.botUserName) {
+              const was = this.singleMessageMode;
+              await this.sendMessage({ text: "Вы не можете указать на меня" }, { removeTimeout: 5000 });
+              this.singleMessageMode = was;
+            }
+          }
+        }
+
+        if (!found) {
+          const was = this.singleMessageMode;
+          console.warn("Can't define user from mention", JSON.stringify(msg));
+          await this.sendMessage({ text: "Не могу определить пользователя" }, { removeTimeout: 5000 });
+          this.singleMessageMode = was;
+        } else if (found.id === this.initMessage.from.id || found.id === this.user.termyBotChatId) {
+          const was = this.singleMessageMode;
+          await this.sendMessage({ text: "Вы не можете указать на себя или меня..." }, { removeTimeout: 5000 });
+          this.singleMessageMode = was;
+
+          found = null;
+        } else {
+          return found;
+        }
+      }
+    }
+
+    return found;
   }
 }
 

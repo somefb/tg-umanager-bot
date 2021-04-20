@@ -8,7 +8,7 @@ import UserItem from "./userItem";
 interface ISavedRepo {
   version?: number;
   chats: Record<string | number, ChatItem>;
-  users: Record<string | number, UserItem>;
+  users: Record<number, UserItem>;
 }
 
 /** This is basic singleton storage class for saving configuration etc. */
@@ -17,8 +17,8 @@ export class RepoClass {
   filePath = "testBotSettings.json";
   /**  date as number */
   version?: number;
-  private chats: Record<string | number, ChatItem> = {};
-  private users: Record<string | number, UserItem> = {};
+  chats: Record<string | number, ChatItem> = {};
+  users: Record<number, UserItem> = {};
 
   googleDrive = new RepoGoogleDrive();
   // watch-fix: https://github.com/Microsoft/TypeScript/issues/3841#issuecomment-337560146

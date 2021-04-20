@@ -65,16 +65,4 @@ export default class ChatItem {
 
   /** Fires only when we need to update count of chat members (when member added/remove in the group-chat) */
   onChatMembersCountChanged?: (increment: number) => void;
-
-  getMemberByName(searchText: string): MyChatMember | null {
-    const ids = Object.keys(this.members);
-    for (let i = 0; i < ids.length; ++i) {
-      const id = ids[i];
-      const m = this.members[id];
-      if (m.userName === searchText || `${m.firstName}${m.lastName ? " " + m.lastName : ""}` === searchText) {
-        return m;
-      }
-    }
-    return null;
-  }
 }

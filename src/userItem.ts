@@ -108,3 +108,15 @@ export default class UserItem implements IUser {
     this.validationKey = validationKey;
   }
 }
+
+export function searchByName<T extends IUser>(arrSet: Record<number, T>, searchText: string): T | null {
+  const ids = Object.keys(arrSet);
+  for (let i = 0; i < ids.length; ++i) {
+    const id = ids[i];
+    const m = arrSet[id];
+    if (m.userName === searchText || `${m.firstName}${m.lastName ? " " + m.lastName : ""}` === searchText) {
+      return m;
+    }
+  }
+  return null;
+}

@@ -3,7 +3,7 @@ import { Animation, Audio, Document, PhotoSize, Video, Voice } from "typegram/me
 import ChatItem from "./chatItem";
 import { MyBotCommandTypes } from "./commands/botCommandTypes";
 import ErrorCancelled from "./errorCancelled";
-import UserItem from "./userItem";
+import UserItem, { IUser } from "./userItem";
 
 /** This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data in the usual way that files are uploaded via the browser. */
 export type InputFile = { path: string };
@@ -183,6 +183,8 @@ export interface IBotContext {
 
   sendMessage(args: Omit<Opts<"sendMessage">, "chat_id">, opts?: IBotContextMsgOptions): Promise<Message.TextMessage>;
   deleteMessage(id: number): Promise<void>;
+  askForUser(text: string): Promise<UserItem | IUser>;
+
   onGotEvent<E extends EventTypeEnum>(type: E): Promise<EventTypeReturnType[E]>;
   removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void;
   fireEvent<E extends EventTypeEnum>(
