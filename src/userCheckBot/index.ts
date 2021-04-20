@@ -8,14 +8,11 @@ import playValidation from "./playValidation";
 export const CheckBot = {
   service: {} as ITelegramService,
 
-  async validateUser(user: UserItem, allowPlayAgain = false): Promise<boolean | null> {
+  async validateUser(user: UserItem): Promise<boolean | null> {
     try {
       if (user.isLocked) {
         console.warn(`User ${user.id} is locked. Validation is declined`);
         return false;
-      }
-      if (user.isValid && !allowPlayAgain) {
-        return true;
       }
 
       const c = this.service.getContexts(user.checkBotChatId);
@@ -52,7 +49,7 @@ const CheckBotCommands: MyBotCommand[] = [
     isHidden: false,
     repeatBehavior: CommandRepeatBehavior.skip,
     allowCommand: (user) => !user?.isLocked,
-    callback: (ctx) => CheckBot.validateUser(ctx.user, true),
+    callback: (ctx) => CheckBot.validateUser(ctx.user),
     onServiceInit: (service) => {
       CheckBot.service = service;
     },
