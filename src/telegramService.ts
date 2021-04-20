@@ -1,4 +1,3 @@
-import { ApiResponse, Update } from "typegram";
 import BotContext from "./botContext";
 import ErrorCancelled from "./errorCancelled";
 import gotUpdate from "./events/gotUpdate";
@@ -37,7 +36,6 @@ export default class TelegramService implements ITelegramService {
 
     this.assignCommands(botConfig.commands);
 
-    // todo: bug if not successfull we should destroy such service!
     this.core.getMe().then((v) => {
       if (v.ok) {
         this.botUserName = v.result.username;
@@ -46,28 +44,27 @@ export default class TelegramService implements ITelegramService {
     });
   }
 
-  isPending = false;
   updateOffset?: number;
   async getUpdates(): Promise<void> {
-    this.isPending = true;
-
-    let v: ApiResponse<Update[]> | undefined;
     try {
-      v = await this.core.getUpdates({ offset: this.updateOffset });
-    } catch {
-      process.stdout.write("\n");
-    }
+      process.env.DEBUG &&
+        // console.warn(
+        //   `The script uses approximately ${Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 100) / 100} MB`
+        // );
+        process.stdout.write(".");
 
-    if (v && v.ok && v.result.length) {
-      this.updateOffset = v.result[v.result.length - 1].update_id + 1;
-      v.result.forEach((r) => {
-        gotUpdate.call(this, r);
-      });
-    } else {
-      process.env.DEBUG && process.stdout.write(".");
-    }
+      const v = await this.core.getUpdates({ offset: this.updateOffset });
 
-    this.isPending = false;
+      if (v && v.ok && v.result.length) {
+        this.updateOffset = v.result[v.result.length - 1].update_id + 1;
+        v.result.forEach((r) => {
+          gotUpdate.call(this, r);
+        });
+      }
+    } catch (err) {
+      process.env.DEBUG && process.stdout.write("\n");
+      console.log(`TelegramService '${this.cfg.name}'. Error in getUpdates()\n` + err);
+    }
   }
 
   /** listen for updates */
@@ -92,11 +89,9 @@ export default class TelegramService implements ITelegramService {
       } else {
         console.log(`TelegramService '${this.cfg.name}'. Using getUpdates() with interval ${options.interval} ms`);
       }
-      const listenFn = () => this.getUpdates();
+
+      const listenFn = () => this.getUpdates().finally(() => (si = setTimeout(listenFn, options.interval)));
       await listenFn();
-      si = setInterval(() => {
-        !this.isPending && listenFn();
-      }, options.interval);
     } else {
       console.log(`TelegramService '${this.cfg.name}'. Setting up webhook logic`);
 

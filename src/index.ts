@@ -88,10 +88,10 @@ async function runApp() {
       certPath,
     };
 
-    bots.forEach((botConfig) => {
-      const tg = new TelegramService(botConfig);
-      tg.listen(options);
-    });
+    for (let i = 0; i < bots.length; ++i) {
+      const tg = new TelegramService(bots[i]);
+      await tg.listen(options);
+    }
   } catch (err) {
     console.error("Error in the main module\n" + err);
     console.trace(err);
