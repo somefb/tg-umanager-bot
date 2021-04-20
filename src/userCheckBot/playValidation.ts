@@ -56,7 +56,6 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   const cancelSession = async (isValid: boolean, reason: CancelReason) => {
     ctx.user.isValid = isValid;
     if (!isValid) {
-      // todo implement unlock behavior
       ctx.user.isLocked = true;
       // todo such timeouts is not ideal because 1) poor internet connection 2) bad proxy 3) ETIMEDOUT
       // for timeoutError we can allow user to recover via file
@@ -87,7 +86,6 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
 
   try {
     while (1) {
-      ctx.setTimeout(validationTimeout);
       // first part
       const pairs = generateWordPairs(ctx.user.validationKey, rows * collumns);
       await sendMessage(
@@ -95,6 +93,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
         msgPrefix + (isFirstTime ? "Выберите любое слово" : repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
         pairs.map((v) => v.one)
       );
+      ctx.setTimeout(validationTimeout);
 
       const gotWord = (await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery)).data;
       const trueWordPair = gotWord && pairs.find((v) => v.one === gotWord);
@@ -142,7 +141,6 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
             ctx.user.validationFile = res.file;
           } else if (invalidTimes) {
             // 2step validation
-            // todo also special command to force validation via file
             ctx.setTimeout(timeoutFile);
             await sendMessage(ctx, msgPrefix + ". " + askFile, null);
             const res = await ctx.onGotEvent(EventTypeEnum.gotFile);

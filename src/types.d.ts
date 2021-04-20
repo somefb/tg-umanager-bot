@@ -116,9 +116,9 @@ type valueof<T> = T[keyof T];
 
 export const enum CommandRepeatBehavior {
   none = 0,
-  /** ignore new command if previous in progress*/
+  /** ignore new command if any previous in progress*/
   skip = 1,
-  /** cancel previous command and start new */
+  /** cancel previous same command and start new */
   restart,
   /** show confirm message so user makes decision Cancel/Continue */
   //confirmation

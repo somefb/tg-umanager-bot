@@ -74,7 +74,6 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
         if (cmd.repeatBehavior) {
           const c = this.getContexts(chat_id);
           if (c) {
-            // todo we should anylyze previous command behavior
             if (cmd.repeatBehavior === CommandRepeatBehavior.skip) {
               process.env.DEBUG && console.log("Command declined by rule: CommandRepeatBehavior.skip");
               return true;
