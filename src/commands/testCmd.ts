@@ -1,16 +1,19 @@
 import { CommandRepeatBehavior, MyBotCommand } from "../types";
 import { MyBotCommandTypes } from "./botCommandTypes";
-import countAllTask from "./countAllTask";
+import { getInstructionsMarkup, getInstructionsText } from "./registerUser";
 
 const TestCmd: MyBotCommand = {
   command: "test",
   type: MyBotCommandTypes.common,
   isHidden: true,
-  description: "проверь меня",
+  description: "test",
   repeatBehavior: CommandRepeatBehavior.skip,
   callback: async (ctx) => {
-    countAllTask(ctx);
-    await Promise.resolve();
+    await ctx.sendMessage({
+      text: getInstructionsText(ctx.botUserName),
+      parse_mode: "HTML",
+      reply_markup: { inline_keyboard: getInstructionsMarkup() },
+    });
   },
 };
 

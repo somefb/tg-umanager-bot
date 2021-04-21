@@ -45,6 +45,7 @@ const enum CancelReason {
 export default async function playValidation(ctx: IBotContext): Promise<boolean | null> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(10 * 60 * 60000); //wait for 10 hours for first response
+  //todo we should lock by this timeout
 
   const isFirstTime = !ctx.user.validationDate;
 
@@ -77,10 +78,18 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
     }
   };
 
-  await ctx.sendMessage({
-    text: "Поиграем?",
-    reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "Ok" }]] },
-  });
+  try {
+    await ctx.sendMessage({
+      text: "Поиграем?",
+      reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "Ok" }]] },
+    });
+  } catch (error) {
+    if (error.error_code === 403) {
+      // todo error_code: 403, description: 'Forbidden: user is deactivated' when user is Deleted account
+      console.warn("got error", error);
+    }
+    return null;
+  }
 
   await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
 
@@ -93,7 +102,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
         msgPrefix + (isFirstTime ? "Выберите любое слово" : repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
         pairs.map((v) => v.one)
       );
-      ctx.setTimeout(validationTimeout);
+      ctx.setTimeout(isFirstTime ? validationTimeout * 5 : validationTimeout);
 
       const gotWord = (await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery)).data;
       const trueWordPair = gotWord && pairs.find((v) => v.one === gotWord);
@@ -106,7 +115,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
       const nextObj = generateWordPairsNext(ctx.user.validationKey, trueWordPair, pairs, true);
       await sendMessage(
         ctx,
-        isFirstTime ? "Выберите правильную ассоциацию❗️" : "Выберите ассоциацию❗️",
+        isFirstTime ? "Выберите вашу ассоциацию❗️❗️❗️" : "Выберите ассоциацию❗️",
         nextObj.pairs.map((v) => v.two)
       );
 
