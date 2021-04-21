@@ -1,5 +1,6 @@
 import { Message, User } from "typegram";
 import BotContext from "../botContext";
+import ErrorCancelled from "../errorCancelled";
 import createToken from "../helpers/createToken";
 import Repo from "../repo";
 import { CommandRepeatBehavior, EventTypeEnum, FileInfo, IBotContext, MyBotCommand } from "../types";
@@ -36,6 +37,7 @@ const ShareBot: MyBotCommand = {
       parse_mode: "HTML",
       reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
     });
+
     let ev = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
     ev.then((e) => e.data === "cancel" && ctx.cancel("user cancelled")).catch((v) => v);
 
@@ -136,7 +138,11 @@ async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
         console.warn(`Decline registration. User ${msgRegUser.from.id} already exists`);
       }
     }
-  } catch {}
+  } catch (err) {
+    if (!(err as ErrorCancelled).isCancelled) {
+      console.error(err);
+    }
+  }
 
   // send report to previous chat
   await ctx.sendMessage(
