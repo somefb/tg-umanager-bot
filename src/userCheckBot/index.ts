@@ -15,28 +15,23 @@ export const CheckBot = {
         return false;
       }
 
-      const c = this.service.getContexts(user.checkBotChatId);
       // possible when others calls validateUser();
+      const c = this.service.getContexts(user.checkBotChatId);
       if (c) {
         const ctx = c.values().next().value as IBotContext;
-        // skip circural ctx detection when fired from previous context
-        if (!ctx.name.includes(CheckBotCommands[0].command)) {
-          await ctx.onCancelled();
-          return user.isValid;
-        }
+        await ctx.onCancelled();
+      } else {
+        const cmd = CheckBotCommands[0];
+        const ctx = this.service.initContext(user.checkBotChatId, cmd.command, null, user);
+        await ctx.callCommand(cmd.callback);
       }
-      // todo detect stopBot
-      const ctx = this.service.initContext(user.checkBotChatId, "_validate", null, user);
-      const r = await ctx.callCommand((ctx) => playValidation(ctx));
-      Repo.commit();
-      return r;
+      return user._isValid;
     } catch (err) {
       if (!(err as ErrorCancelled).isCancelled) {
         console.error(err);
         return null;
       }
     }
-    Repo.commit();
     return false;
   },
   generateUserKey,
@@ -49,9 +44,13 @@ const CheckBotCommands: MyBotCommand[] = [
     isHidden: false,
     repeatBehavior: CommandRepeatBehavior.skip,
     allowCommand: (user) => !user?.isLocked,
-    callback: (ctx) => CheckBot.validateUser(ctx.user),
     onServiceInit: (service) => {
       CheckBot.service = service;
+    },
+    callback: async (ctx) => {
+      // todo detect stopBot
+      await playValidation(ctx);
+      ctx.onCancelled().finally(() => Repo.commit());
     },
   } as MyBotCommand,
 ];

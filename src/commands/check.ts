@@ -79,9 +79,11 @@ const Check: MyBotCommand = {
         } else if (user._isValid) {
           icon = "✅";
           status = `проверен ${dateToPastTime(user.validationDate)}`;
+        } else if (isFinished) {
+          icon = "❗️";
+          status = `не отвечает/заблокирован бот ${dateToPastTime(user.validationDate)}`;
         } else {
-          //todo show CheckBot is blocked
-          //todo wrong if user doesn't respond in 10-12 hours
+          //todo show CheckBot is blocked immediately
           icon = "⏳";
           status = `ожидаю... ${dateToPastTime(user.validationDate)}`;
         }
