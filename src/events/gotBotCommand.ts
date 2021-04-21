@@ -30,7 +30,7 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
       }
     }
     const toBotName = text.substring(i + 1, end);
-    if (toBotName !== this.botUserName) {
+    if (toBotName && toBotName !== this.botUserName) {
       return true;
     }
     end = i;
