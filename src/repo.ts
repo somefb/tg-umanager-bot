@@ -78,7 +78,6 @@ export class RepoClass {
           if (!this.hasAnyUser) {
             // WARN it happens when app is cancelled by ts-errors during the compilation
             console.error("Repo. No users for saving. Decline commit");
-            debugger;
           } else {
             const forSave = this.optionsForSave;
             try {

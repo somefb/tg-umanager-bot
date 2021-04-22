@@ -3,6 +3,7 @@ import { MyBotCommandTypes } from "../commands/botCommandTypes";
 import Repo from "../repo";
 import TelegramService from "../telegramService";
 import { CommandRepeatBehavior, NewTextMessage } from "../types";
+import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 
 export default function gotBotCommand(this: TelegramService, msg: NewTextMessage, chat_id: number): boolean {
@@ -48,7 +49,7 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
 
       if (!isGroupChat && user && !user.isValid && !cmd.allowCommand?.call(cmd, user)) {
         // todo we should skip a lot of commands
-        // CheckBot.validateUser(user).then((v) => v && gotBotCommand.call(this, msg, chat_id));
+        CheckBot.validateUser(user); //.then((v) => v && gotBotCommand.call(this, msg, chat_id));
         process.env.DEBUG &&
           console.log(`Decline private command. User ${msg.from.id} is invalid. Auto-allow after validation`);
         return true;

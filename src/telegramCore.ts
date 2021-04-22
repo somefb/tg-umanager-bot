@@ -163,6 +163,10 @@ export default class TelegramCore implements ITelegramCore {
     return this.httpPost("sendMessage", args);
   }
 
+  sendVoice(args: Opts<"sendVoice">): P<ApiResponse<Message.VoiceMessage>> {
+    return this.httpPost("sendVoice", args);
+  }
+
   editMessageText(args: Opts<"editMessageText">): P<ApiResponse<true | (Update.Edited & Message.TextMessage)>> {
     return this.httpPost("editMessageText", args);
   }

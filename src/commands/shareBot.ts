@@ -11,14 +11,22 @@ import registerUser from "./registerUser";
 
 const notifyTimeout = 60 * 1000; //60 sec
 
-function getInstructionsText() {
+export function getInstructionsText(isUnlock = false, targetUser?: UserItem): string {
   return [
-    "Для того, чтобы поделиться ботом (зарегистрировать пользователя) выполните следующие шаги:\n",
+    `Для того, чтобы ${isUnlock ? "разблокировать" : "зарегистрировать"} ${
+      targetUser ? targetUser.toLink() : "пользователя"
+    } выполните следующие шаги:\n`,
     "1) проверьте, что ваш пользователь не мошенник (наверняка у вас есть секреты)",
-    '2) запросите у него новое голосовое сообщение, которое невозможно подготовить заранее (к примеру "Сегодня хороший день, а завтра в 2022 будет лучше")',
-    "3) убедитесь, что голос соответствует ожидаемому. Очень важно, чтобы бы бот не попал в руки мошенников! А уникальное голосовое сообщение на сегодня самый безопасный и относительно надёжный способ верификации пользователя",
+    `2) запросите у него ${
+      isUnlock ? "новое " : ""
+    }голосовое сообщение, которое невозможно подготовить заранее (к примеру назвать сегодняшнюю дату + 1 год)`,
+    isUnlock
+      ? "3) Убедитесь, что голос соответствует ожидаемому или если не знаете, то сравните с голосом в сообщении ниже"
+      : "3) убедитесь, что голос соответствует ожидаемому. Очень важно, чтобы бы бот не попал в руки мошенников! А уникальное голосовое сообщение на сегодня самый безопасный и относительно надёжный способ верификации пользователя",
     "4) передайте голосовое сообщение боту (мне). Бот не сохраняет сообщение, а лишь анализирует и сохраняет некоторые уникальные данные. Это нужно на крайний случай, если мошенник сможет пройти проверку в последующем",
-    `\nСкоро продолжим. А пока ожидаю голосовое сообщение от пользователя (в течение ${BotContext.defSessionTimeoutStr})...`,
+    `\nСкоро продолжим. А пока ожидаю голосовое сообщение от ${
+      targetUser ? targetUser.toLink() : "пользователя"
+    } (в течение ${BotContext.defSessionTimeoutStr})...`,
   ].join("\n");
 }
 
@@ -35,16 +43,14 @@ const ShareBot: MyBotCommand = {
     await ctx.sendMessage({
       text: getInstructionsText(),
       parse_mode: "HTML",
-      reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
+      reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: ctx.getCallbackCancel() }]] },
     });
-
-    let ev = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-    ev.then((e) => e.data === "cancel" && ctx.cancel("user cancelled")).catch((v) => v);
 
     let regInfo: RegInfo | undefined;
     while (1) {
+      ctx.setTimeout();
       const r = await ctx.onGotEvent(EventTypeEnum.gotFile);
-      ctx.removeEvent(ev);
+      ctx.setTimeout();
       await ctx.deleteMessage(r.message_id);
 
       if ((r as Message.VoiceMessage).voice) {
@@ -54,38 +60,24 @@ const ShareBot: MyBotCommand = {
           user: r.forward_from,
           whoSharedUserId: ctx.user.id,
         };
-        if (r.forward_from?.id && Repo.getUser(r.forward_from?.id)) {
-          await ctx.sendMessage(
-            {
-              text: "Этот пользователь уже зарегистрирован",
-            },
-            { removeTimeout: 5000 }
-          );
-          ctx.singleMessageMode = false;
-        } else {
-          break;
-        }
+        break;
       }
 
       await ctx.sendMessage({
         text: "Я ожидаю только голосовое сообщение...",
-        reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "cancel" }]] },
+        reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: ctx.getCallbackCancel() }]] },
       });
-      ctx.singleMessageMode = true;
-      //restartTimeout
-      ctx.setTimeout();
-
-      ev = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-      ev.then((e) => e.data === "cancel" && ctx.cancel("user cancelled")).catch((v) => v);
     } //while
 
     if (!regInfo) return; //requires for ignoring TS issues
 
+    ctx.singleMessageMode = true;
+    //todo looks like the message isn't deleted after
     await ctx.sendMessage(
       {
         text: `В течение ${BotContext.defSessionTimeoutStr} пользователь может написать боту @${ctx.botUserName}${
           !regInfo.user ? " используя токен: <b>" + regInfo.token + "</b> как стартовое слово" : ""
-        }`,
+        }\n`,
         parse_mode: "HTML",
       },
       { keepAfterSession: true }
@@ -114,17 +106,11 @@ async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
   try {
     // wait for new user connection to this bot
     while (1) {
-      const msgRegUser = regInfo.user?.id
-        ? await ctx.service.onGotEvent(
-            EventTypeEnum.gotBotCommand,
-            (v) => v.from.id === regInfo.user?.id,
-            BotContext.defSessionTimeout
-          )
-        : await ctx.service.onGotEvent(
-            EventTypeEnum.gotNewMessage,
-            (v) => v.text === regInfo.token,
-            BotContext.defSessionTimeout
-          );
+      const msgRegUser = await ctx.service.onGotEvent(
+        EventTypeEnum.gotNewMessage,
+        (v) => v.text === regInfo.token,
+        BotContext.defSessionTimeout
+      );
       await ctx.service.core.deleteMessageForce({ chat_id: msgRegUser.chat.id, message_id: msgRegUser.message_id });
       //don't allow register again
       if (!Repo.getUser(msgRegUser.from.id)) {

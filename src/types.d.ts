@@ -52,6 +52,7 @@ export type ITelegramCore = Pick<
   | "answerCallbackQuery"
   | "kickChatMember"
   | "unbanChatMember"
+  | "sendVoice"
 > & {
   //
   deleteMessageForce(args: Opts<"deleteMessage">): Promise<void>;

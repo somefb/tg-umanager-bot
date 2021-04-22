@@ -8,8 +8,18 @@ import CommandKick from "./kick";
 import countAllTask from "./countAllTask";
 import { CommandRepeatBehavior } from "../types";
 import { MyBotCommandTypes } from "./botCommandTypes";
+import UnlockUser from "./unlockUser";
 
-const MyBotCommands = [CommandHelp, CommandClear, CommandClearDisableUntilHere, ShareBot, Check, CommandKick];
+const MyBotCommands = [
+  CommandHelp,
+  CommandClear,
+  CommandClearDisableUntilHere,
+  ShareBot,
+  Check,
+  CommandKick,
+  UnlockUser,
+];
+
 if (process.env.DEV || process.env.NODE_ENV === "test") {
   MyBotCommands.push(TestValidateMe);
   MyBotCommands.push({
