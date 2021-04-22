@@ -291,63 +291,94 @@ export default class BotContext implements IBotContext {
     });
   }
 
+  private _wasAskMsg = false;
   async askForUser(text: string): Promise<UserItem | MyChatMember> {
-    await this.sendMessage({
-      text,
-      reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: "askU0" }]] },
-    });
-
-    this.onGotEvent(EventTypeEnum.gotCallbackQuery)
-      .then((q) => q.data === "askU0" && this.cancel("user cancelled"))
-      .catch();
+    if (!this._wasAskMsg) {
+      await this.sendMessage({
+        text,
+        reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: this.getCallbackCancel() }]] },
+      });
+      this._wasAskMsg = true;
+    }
 
     let found: UserItem | MyChatMember | null = null;
 
     while (!found) {
       const res = await this.onGotEvent(EventTypeEnum.gotNewMessage);
+      let mention = "";
 
       const msg = res.entities?.find((v) => v.type === "mention" || v.type === "text_mention");
       if (msg?.offset === 0) {
         await this.deleteMessage(res.message_id);
-
         const mUser = (msg as MessageEntity.TextMentionMessageEntity).user;
         if (mUser) {
           found = ChatItem.userToMember(mUser, false);
         } else {
-          const mention = res.text.substring(msg.offset, msg.length);
-          if (this.chat.isGroup) {
-            found = searchByName(this.chat.members, mention);
-          } else {
-            found = searchByName(Repo.users, mention);
-          }
-
-          if (!found) {
-            if (mention === "@" + this.botUserName) {
-              const was = this.singleMessageMode;
-              await this.sendMessage({ text: "Вы не можете указать на меня" }, { removeTimeout: 5000 });
-              this.singleMessageMode = was;
-            }
-          }
+          mention = res.text.substring(msg.offset, msg.length);
         }
+      } else if (!this.chat.isGroup) {
+        await this.deleteMessage(res.message_id);
+        mention = res.text;
+      }
 
+      if (!found && !mention) {
+        continue;
+      }
+
+      let reportText = "";
+
+      if (!found) {
+        if (mention.startsWith("@") && mention === "@" + this.botUserName) {
+          reportText = "Вы не можете указать на меня";
+        } else if (this.chat.isGroup) {
+          found = searchByName(this.chat.members, mention);
+        } else {
+          found = searchByName(Repo.users, mention);
+        }
+      }
+
+      if (!reportText) {
         if (!found) {
-          const was = this.singleMessageMode;
+          reportText = "Пользователь не найден/не зарегистрирован";
           console.warn("Can't define user from mention", JSON.stringify(msg));
-          await this.sendMessage({ text: "Не могу определить пользователя" }, { removeTimeout: 5000 });
-          this.singleMessageMode = was;
         } else if (found.id === this.initMessage.from.id || found.id === this.user.termyBotChatId) {
-          const was = this.singleMessageMode;
-          await this.sendMessage({ text: "Вы не можете указать на себя или меня..." }, { removeTimeout: 5000 });
-          this.singleMessageMode = was;
-
+          reportText = "Вы не можете указать на себя или меня...";
           found = null;
         } else {
           return found;
         }
       }
+
+      if (reportText) {
+        const was = this.singleMessageMode;
+        this.singleMessageMode = false;
+        await this.sendMessage({ text: reportText }, { removeTimeout: 5000 });
+        this.singleMessageMode = was;
+      }
     }
 
     return found;
+  }
+
+  private callbackData?: string;
+  getCallbackCancel(): string {
+    if (!this.callbackData) {
+      this.callbackData = "_bc" + getNextUniqueId().toString();
+      const applyEvent = () => {
+        this.onGotEvent(EventTypeEnum.gotCallbackQuery)
+          .then((e) => {
+            if (e.data === this.callbackData) {
+              this.callbackData = undefined;
+              this.cancel("user cancelled");
+            } else {
+              applyEvent();
+            }
+          })
+          .catch((v) => v);
+      };
+      applyEvent();
+    }
+    return this.callbackData;
   }
 }
 
@@ -357,4 +388,10 @@ interface MsgHistoryItem {
   /** time when we can remove message (setted via opts.removeMinTimeout) */
   expiryTime?: number;
   keepAfterSession?: boolean;
+}
+
+let _uid = 0;
+function getNextUniqueId(): number {
+  //we can reduce number via checking service contexts
+  return ++_uid;
 }

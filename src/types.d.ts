@@ -178,6 +178,8 @@ export interface IBotContext {
   /** method cancelled session and removes any listeners inside */
   cancel(reason: string): void;
   onCancelled: () => Promise<void>;
+  /** returns unique callback_data: string that user can click for cancelling  */
+  getCallbackCancel: () => string;
   /** use this method to call context-dependant function properly */
   callCommand<T extends IBotContext, U>(fn: (ctx: T) => Promise<U>): Promise<U | null>;
 

@@ -111,12 +111,15 @@ export default class UserItem implements IUser {
 
 export function searchByName<T extends IUser>(arrSet: Record<number, T>, searchText: string): T | null {
   const ids = Object.keys(arrSet);
-  for (let i = 0; i < ids.length; ++i) {
-    const id = ids[i];
-    const m = arrSet[id];
-    if (m.userName === searchText || `${m.firstName}${m.lastName ? " " + m.lastName : ""}` === searchText) {
-      return m;
-    }
+
+  let predicate: (user: T) => boolean;
+  if (searchText.startsWith("@")) {
+    searchText = searchText.replace("@", "");
+    predicate = (user: T) => user.userName === searchText;
+  } else {
+    predicate = (u: T) => `${u.firstName}${u.lastName ? " " + u.lastName : ""}` === searchText;
   }
-  return null;
+
+  const id = ids.find((id) => predicate(arrSet[id]));
+  return id ? arrSet[id] : null;
 }
