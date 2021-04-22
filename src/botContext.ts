@@ -89,7 +89,9 @@ export default class BotContext implements IBotContext {
     })();
 
     // requires for cases when we need update latest message by cancelled context
-    this._updateMessage = lastMessage;
+    if (lastMessage) {
+      this._updateMessage = lastMessage;
+    }
 
     const logMsg = `Context '${this.name || ""}' is cancelled. Reason: ${reason}`;
     process.env.DEBUG && console.log(logMsg);
