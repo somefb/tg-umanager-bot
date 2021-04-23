@@ -9,6 +9,7 @@ import countAllTask from "./countAllTask";
 import { CommandRepeatBehavior } from "../types";
 import { MyBotCommandTypes } from "./botCommandTypes";
 import UnlockUser from "./unlockUser";
+import CommandCheckUser from "./checkUser";
 
 const MyBotCommands = [
   CommandHelp,
@@ -16,6 +17,7 @@ const MyBotCommands = [
   CommandClearDisableUntilHere,
   ShareBot,
   Check,
+  CommandCheckUser,
   CommandKick,
   UnlockUser,
 ];
