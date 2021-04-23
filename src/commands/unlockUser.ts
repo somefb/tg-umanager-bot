@@ -24,7 +24,7 @@ const UnlockUser: MyBotCommand = {
 
     while (!targetUser) {
       ctx.setTimeout();
-      targetUser = (await ctx.askForUser("Кого разблокируем? Укажите имя/никнейм пользователя")) as UserItem;
+      targetUser = (await ctx.askForUser("Кого разблокируем?")) as UserItem;
       if (!targetUser.isLocked) {
         ctx.singleMessageMode = false;
         await ctx.sendMessage(
