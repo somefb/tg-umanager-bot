@@ -48,7 +48,7 @@ export function getInstructionsMarkup(): { text: string; callback_data: string }
 function botRegisterInstructions(wasLocked = false) {
   return [
     `${
-      wasLocked ? "Регистрация" : "Пере-регистрация"
+      wasLocked ? "Пере-регистрация" : "Регистрация"
     } завершена.\nТеперь вам доступен расширенный набор команд. Используйте /help`,
     "\nНекоторые команды бота доступны/видимы в течение 5 минут после проверки",
     "По истечении времени играйте снова, чтобы получить доступ к командам",
@@ -125,6 +125,7 @@ async function registerUser(ctx: IBotContext, ctxReport: IBotContext): Promise<b
 
   user.isLocked = false;
   user.validationDate = 0;
+  user.validationFile = undefined;
   const isValid = await CheckBot.validateUser(user);
   if (isValid) {
     Repo.addOrUpdateUser(user);
