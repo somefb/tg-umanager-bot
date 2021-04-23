@@ -291,34 +291,38 @@ export default class BotContext implements IBotContext {
     });
   }
 
-  private _wasAskMsg = false;
+  private _askMsgId?: number;
   async askForUser(text: string): Promise<UserItem | MyChatMember> {
-    if (!this._wasAskMsg) {
-      await this.sendMessage({
-        text,
+    if (!this._askMsgId) {
+      const msg = await this.sendMessage({
+        text: `${text} Укажите имя/@никнейм пользователя${
+          this.chat.isGroup
+            ? "\n\nДля указания анонимных администраторов используйте функцию телеграмма 'ответить на сообщение'"
+            : ""
+        }`,
         reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: this.getCallbackCancel() }]] },
       });
-      this._wasAskMsg = true;
+      this._askMsgId = msg.message_id;
     }
 
     let found: UserItem | MyChatMember | null = null;
 
     while (!found) {
-      const res = await this.onGotEvent(EventTypeEnum.gotNewMessage);
+      const msg = await this.onGotEvent(EventTypeEnum.gotNewMessage);
       let mention = "";
 
-      const msg = res.entities?.find((v) => v.type === "mention" || v.type === "text_mention");
-      if (msg?.offset === 0) {
-        await this.deleteMessage(res.message_id);
-        const mUser = (msg as MessageEntity.TextMentionMessageEntity).user;
+      const entity = msg.entities?.find((v) => v.type === "mention" || v.type === "text_mention");
+      if (entity?.offset === 0 && entity.length === msg.text.length) {
+        await this.deleteMessage(msg.message_id);
+        const mUser = (entity as MessageEntity.TextMentionMessageEntity).user;
         if (mUser) {
           found = ChatItem.userToMember(mUser, false);
         } else {
-          mention = res.text.substring(msg.offset, msg.length);
+          mention = msg.text.substring(entity.offset, entity.length);
         }
-      } else if (!this.chat.isGroup) {
-        await this.deleteMessage(res.message_id);
-        mention = res.text;
+      } else if (!this.chat.isGroup || msg.reply_to_message?.message_id === this._askMsgId) {
+        await this.deleteMessage(msg.message_id);
+        mention = msg.text;
       }
 
       if (!found && !mention) {
@@ -332,7 +336,8 @@ export default class BotContext implements IBotContext {
           reportText = "Вы не можете указать на меня";
         } else if (this.chat.isGroup) {
           found = searchByName(this.chat.members, mention);
-        } else {
+        }
+        if (!found) {
           found = searchByName(Repo.users, mention);
         }
       }
@@ -340,7 +345,7 @@ export default class BotContext implements IBotContext {
       if (!reportText) {
         if (!found) {
           reportText = "Пользователь не найден/не зарегистрирован";
-          console.warn("Can't define user from mention", JSON.stringify(msg));
+          console.warn("Can't define user from mention", JSON.stringify(entity));
         } else if (found.id === this.initMessage.from.id || found.id === this.user.termyBotChatId) {
           reportText = "Вы не можете указать на себя или меня...";
           found = null;
