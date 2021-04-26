@@ -18,47 +18,51 @@ export async function kickUser(ctx: IBotContext, delMember: IUser): Promise<bool
       inline_keyboard: [
         [
           { text: "Да", callback_data: "kOk" },
-          { text: "Отмена", callback_data: "kC0" },
+          { text: "Отмена", callback_data: ctx.getCallbackCancel() },
         ],
       ],
     },
   });
 
-  const q = await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-  if (q.data === "kOk" && m.message_id === q.message?.message_id) {
-    try {
-      await ctx.service.core.kickChatMember({
-        chat_id: ctx.chatId,
-        user_id: delMember.id,
-        revoke_messages: true,
-      });
-      await ctx.service.core.unbanChatMember({
-        chat_id: ctx.chatId,
-        user_id: delMember.id,
-        only_if_banned: true,
-      });
-
-      ctx.chat.removeMember(delMember.id);
-
-      await ctx.sendMessage(
-        {
-          text: `${ctx.userLink} удалил ${uRemovedLink}`,
-          parse_mode: "HTML",
-          disable_notification: false,
-        },
-        { keepAfterSession: true }
-      );
-      return true;
-    } catch (error) {
-      console.error(error);
-      await ctx.sendMessage(
-        {
-          text: `Не могу удалить ${uRemovedLink}. Вероятно недостаточно прав`,
-          parse_mode: "HTML", //
-        },
-        { keepAfterSession: true, removeTimeout: 5000 }
-      );
+  while (1) {
+    const q = await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
+    if (m.message_id === q.message?.message_id) {
+      break;
     }
+  }
+
+  try {
+    await ctx.service.core.kickChatMember({
+      chat_id: ctx.chatId,
+      user_id: delMember.id,
+      revoke_messages: true,
+    });
+    await ctx.service.core.unbanChatMember({
+      chat_id: ctx.chatId,
+      user_id: delMember.id,
+      only_if_banned: true,
+    });
+
+    ctx.chat.removeMember(delMember.id);
+
+    await ctx.sendMessage(
+      {
+        text: `${ctx.userLink} удалил ${uRemovedLink}`,
+        parse_mode: "HTML",
+        disable_notification: false,
+      },
+      { keepAfterSession: true }
+    );
+    return true;
+  } catch (error) {
+    console.error(error);
+    await ctx.sendMessage(
+      {
+        text: `Не могу удалить ${uRemovedLink}. Вероятно недостаточно прав`,
+        parse_mode: "HTML", //
+      },
+      { keepAfterSession: true, removeTimeout: 5000 }
+    );
   }
 
   return false;
@@ -77,7 +81,7 @@ const CommandKick: MyBotCommand = {
     ctx.singleUserMode = true;
 
     const delMember = await ctx.askForUser("Кого удаляем?");
-    kickUser(ctx, delMember);
+    await kickUser(ctx, delMember);
   },
 };
 
