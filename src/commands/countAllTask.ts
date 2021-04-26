@@ -1,13 +1,14 @@
 import Repo from "../repo";
 import { EventTypeEnum, IBotContext, NewCallbackQuery } from "../types";
 
-export default async function countAllTask(initContext: IBotContext): Promise<void> {
+export default async function countAllTask(initContext: IBotContext, partialWait = false): Promise<void> {
   const ctx = initContext.service.initContext(initContext.chatId, "_cntAll", initContext.initMessage, initContext.user);
-  await ctx.callCommand(countAll);
+  await ctx.callCommand((ctx) => countAll(ctx, partialWait));
   return;
 }
 
-async function countAll(ctx: IBotContext) {
+async function countAll(ctx: IBotContext, partialWait: boolean) {
+  ctx.removeAllByCancel = true;
   ctx.setTimeout(12 * 60 * 60000); // 12 hours
 
   // todo telegram issue? returns 3 is 1 + 3 admins (2 anonym and 1 bot)
@@ -17,19 +18,37 @@ async function countAll(ctx: IBotContext) {
   const r2 = await ctx.service.core.getChatAdministrators({ chat_id: ctx.chatId });
   const admins = (r2.ok && r2.result) || [];
 
+  const arrAnonym = new Set<number>();
   admins.forEach((v) => {
     const isMe = v.user.is_bot && v.user.username === ctx.botUserName;
     if (!isMe) {
-      ctx.chat.addOrUpdateMember(v.user, !!v.is_anonymous);
+      const isAnonym = !!v.is_anonymous;
+      ctx.chat.addOrUpdateMember(v.user, isAnonym);
       Repo.updateUser(v.user);
+      isAnonym && arrAnonym.add(v.user.id);
     }
   });
-  // todo callback here to check
-  let definedCnt = ctx.chat.calcVisibleMembersCount() + 1;
 
-  if (membersCnt > definedCnt) {
-    ctx.singleMessageMode = true;
-    ctx.removeAllByCancel = true;
+  Object.keys(ctx.chat.members).forEach((key) => {
+    const v = ctx.chat.members[key];
+    if (v.isAnonym && !arrAnonym.has(v.id)) {
+      v.isAnonym = false;
+    }
+  });
+
+  const promise = new Promise<void>(async (resolve) => {
+    let definedCnt = ctx.chat.calcVisibleMembersCount() + 1;
+
+    if (membersCnt == definedCnt) {
+      process.env.DEBUG && console.log("Count of members is correct. Nothing to report");
+      return;
+    }
+    if (definedCnt > membersCnt) {
+      process.env.DEBUG && console.log("Warning in countAll. definedCnt > membersCnt for chat: " + ctx.chatId);
+      return;
+    }
+
+    // membersCnt > definedCnt
 
     const sendCount = (cnt: number) => {
       const names = Object.keys(ctx.chat.members)
@@ -37,6 +56,7 @@ async function countAll(ctx: IBotContext) {
         .filter((v) => !v.isAnonym)
         .map((v) => (v.lastName ? v.firstName + " " + v.lastName : v.firstName))
         .sort();
+
       return ctx.sendMessage({
         text: [
           `❗️❗️Определено ${cnt} из ${membersCnt} участников (анонимные считаются отдельно)`,
@@ -83,7 +103,7 @@ async function countAll(ctx: IBotContext) {
         continue;
       }
       q.id && (await ctx.service.core.answerCallbackQuery({ callback_query_id: q.id, text: "Спасибо" }));
-      const newCount = ctx.chat.calcVisibleMembersCount() + 1;
+      const newCount = ctx.chat.calcVisibleMembersCount() + 1; // and me
 
       if (newCount >= membersCnt) {
         break;
@@ -97,9 +117,12 @@ async function countAll(ctx: IBotContext) {
       { text: "Все участники определены!", disable_notification: true },
       { removeMinTimeout: 10000 }
     );
-  } else if (membersCnt !== definedCnt) {
-    console.error("Error in countAll. membersCnt != definedCnt for chat: " + ctx.chatId);
+    resolve();
+  });
+
+  if (partialWait) {
+    return Promise.resolve();
   } else {
-    process.env.DEBUG && console.log("Count of members is correct. Nothing to report");
+    return promise;
   }
 }
