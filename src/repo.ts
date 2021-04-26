@@ -176,6 +176,14 @@ export class RepoClass {
     return !!Object.keys(this.users).length;
   }
 
+  removeUser(id: number): void {
+    delete this.users[id];
+    Object.keys(this.chats).forEach((cid) => {
+      delete this.chats[cid].members[id];
+    });
+    this.commit();
+  }
+
   eventListeners = new Map<Promise<unknown>, IEventListener>();
   onUserAdded(userId: number): Promise<UserItem> {
     let e: IEventListener | undefined;
