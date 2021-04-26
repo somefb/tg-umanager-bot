@@ -1,4 +1,4 @@
-import { ApiSuccess, Message, MessageEntity, Update, User } from "typegram";
+import { ApiError, ApiSuccess, Message, MessageEntity, Update, User } from "typegram";
 import ChatItem, { MyChatMember } from "./chatItem";
 import ErrorCancelled from "./errorCancelled";
 import processNow from "./helpers/processNow";
@@ -137,27 +137,42 @@ export default class BotContext implements IBotContext {
       args.disable_notification = this.disableNotification;
     }
 
-    let data: Message.TextMessage;
+    let data: Message.TextMessage | undefined;
 
     if (this.singleMessageMode && this._updateMessage) {
       //reset previous timers and events because we need to apply new
       this.messages.get(this._updateMessage.id)?.reset.forEach((fn) => fn());
       (args as Opts<"editMessageText">).message_id = this._updateMessage.id;
-      // WARN: user can remove message by mistake and we can't detect id
       data = this._updateMessage.data;
-      await this.service.core.editMessageText(args as Opts<"editMessageText">);
-      if (!this._updateMessage) {
-        console.error(
-          `Context '${this.name}' is cancelled but sendMessage() is not finished. You missed await for async function`,
-          args.text
-        );
+      try {
+        await this.service.core.editMessageText(args as Opts<"editMessageText">);
+        if (!this._updateMessage) {
+          console.error(
+            `Context '${this.name}' is cancelled but sendMessage() is not finished. You missed await for async function`,
+            args.text
+          );
+        }
+      } catch (error) {
+        const err = error as ApiError;
+        // possible when user can message by mistake
+        if (err.error_code === 400) {
+          // description: 'Bad Request: message to edit not found',
+          if (err.description.includes("not found")) {
+            delete this._updateMessage;
+          }
+        }
       }
-    } else {
+    }
+
+    if (!this.singleMessageMode || !this._updateMessage) {
       const res = await this.service.core.sendMessage(args as Opts<"sendMessage">);
       data = (res as ApiSuccess<Message.TextMessage>).result;
       if (this.singleMessageMode) {
         this._updateMessage = { id: data.message_id, data };
       }
+    } else {
+      // case impossible but requires for TS
+      data = this._updateMessage.data;
     }
 
     const msgHist: MsgHistoryItem = {
@@ -168,7 +183,7 @@ export default class BotContext implements IBotContext {
     this.messages.set(msgHist.id, msgHist);
 
     if (opts) {
-      const delMsg = () => this.deleteMessage(data.message_id);
+      const delMsg = () => data && this.deleteMessage(data.message_id);
 
       if (opts.removeTimeout) {
         const timer = setTimeout(delMsg, opts.removeTimeout);
