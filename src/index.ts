@@ -58,7 +58,7 @@ async function runApp() {
       res.end();
     });
     srv.listen(process.env.PORT || 3000).on("error", (err) => {
-      console.error("Impossible to run http server\n", err);
+      console.error("Impossible to run http server\n", err.message);
     });
     onExit(() => srv.close());
 
