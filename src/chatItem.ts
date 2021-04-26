@@ -28,7 +28,7 @@ export default class ChatItem {
   /** Index from which we need to start deleting messages */
   lastDeleteIndex = 1;
   isGroup = false;
-  members: Record<string | number, MyChatMember> = {};
+  members: Record<number, MyChatMember> = {};
 
   constructor(id: number) {
     this.id = id;

@@ -1,6 +1,8 @@
+import { ApiError } from "typegram/api";
 import ErrorCancelled from "../errorCancelled";
 import arrayGetRandomItem from "../helpers/arrayGetRandomItem";
 import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
+import Repo from "../repo";
 import { EventTypeEnum, IBotContext } from "../types";
 import UserItem from "../userItem";
 import { generateWordPairs, generateWordPairsNext } from "./dictionary";
@@ -30,8 +32,8 @@ const uploadFileInstructions = [
   "* файл должен быть уникальным для вас, но абсолютно бесполезным для остальных",
   "* сохраните его в доступном для вас месте и не теряйте никогда!",
   "\nВсякий раз как вы проходите игру с ошибкой, а также с некоторой периодичностью, бот будет выдавать сообщение:",
-  `<b>${askFile}</b>`,
-  "на это сообщение нужно передать боту (мне) тот самый файл.",
+  `\n<b>${askFile}</b>\n`,
+  "на это сообщение нужно передать мне тот самый файл. Прочтите ещё раз и запомните!",
   `\nЯ жду ваш файл в течение ${timeoutFirstFile / 60000} минут...`,
 ].join("\n");
 
@@ -42,10 +44,12 @@ const enum CancelReason {
   timeout,
 }
 
+export const checkWaitResponse = 10 * 60 * 60000; //wait for 10 hours for first response
+
 export default async function playValidation(ctx: IBotContext): Promise<boolean | null> {
   ctx.singleMessageMode = true;
-  ctx.setTimeout(10 * 60 * 60000); //wait for 10 hours for first response
-  //todo we should lock by this timeout
+  ctx.setTimeout(checkWaitResponse);
+  //todo we should remove by this timeout
 
   const isFirstTime = !ctx.user.validationDate;
 
@@ -84,12 +88,23 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
       reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "Ok" }]] },
     });
   } catch (error) {
-    if (error.error_code === 403) {
-      // todo error_code: 403, description: 'Forbidden: user is deactivated' when user is Deleted account
-      console.warn("got error", error);
+    if ((error as ApiError).error_code === 403) {
+      // error_code: 403, description: 'Forbidden: user is deactivated' when user is Deleted account
+      // error_code: 403, description: 'Forbidden: bot was blocked by the user'
+      const err = error as ApiError;
+      if (err.description.includes("deactivated")) {
+        console.log(`User ${ctx.user.toLink()} deleted account`);
+        Repo.removeUser(ctx.user.id);
+      } else if (err.description.includes("blocked")) {
+        ctx.user.isCheckBotChatBlocked = true;
+        //todo we should wait 10h timeout and remove
+      } else {
+        console.warn("got error", error);
+      }
     }
     return null;
   }
+  delete ctx.user.isCheckBotChatBlocked;
 
   await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
 

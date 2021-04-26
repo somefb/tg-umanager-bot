@@ -79,6 +79,7 @@ export default class UserItem implements IUser {
   checkBotChatId = 0;
   /** Personal chat id with termyKickBot */
   termyBotChatId = 0;
+  isCheckBotChatBlocked?: true;
 
   _isValid = true;
   /** Date in ms when the last validation is done/failed */

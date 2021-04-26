@@ -1,14 +1,13 @@
 import { MyChatMember } from "../chatItem";
-import dateToPastTime from "../helpers/dateToPastTime";
+import dateToPastTime, { dateDiffToTime } from "../helpers/dateToPastTime";
 import processNow from "../helpers/processNow";
 import Repo from "../repo";
 import { CommandRepeatBehavior, IBotContext, MyBotCommand } from "../types";
 import { CheckBot } from "../userCheckBot";
+import { checkWaitResponse } from "../userCheckBot/playValidation";
 import UserItem, { IUser } from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
 import countAllTask from "./countAllTask";
-
-const cache = new Map<number, number>();
 
 export function getUserStatus(user: UserItem | undefined, m: IUser, isAnonym: boolean, isFinished: boolean): string {
   let status: string;
@@ -22,13 +21,17 @@ export function getUserStatus(user: UserItem | undefined, m: IUser, isAnonym: bo
   } else if (user._isValid) {
     icon = "✅";
     status = `проверен ${dateToPastTime(user.validationDate)}`;
+  } else if (user.isCheckBotChatBlocked) {
+    icon = "❗️";
+    // todo wait unblock ???
+    status = `бот заблокирован. ${dateToPastTime(user.validationDate)}`;
   } else if (isFinished) {
     icon = "❗️";
-    status = `не отвечает/заблокирован бот ${dateToPastTime(user.validationDate)}`;
+    status = `не отвечает. ${dateToPastTime(user.validationDate)}`;
   } else {
-    //todo show CheckBot is blocked immediately
     icon = "⏳";
-    status = `ожидаю... ${dateToPastTime(user.validationDate)}`;
+    //case when user re-register
+    status = `ожидаю... ${user.validationDate ? dateToPastTime(user.validationDate) : ""}`;
   }
 
   const uLink = UserItem.ToLink(m.id, m.userName, m.firstName, m.lastName, isAnonym);
@@ -38,12 +41,12 @@ export function getUserStatus(user: UserItem | undefined, m: IUser, isAnonym: bo
 export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] | null): Promise<void> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(0);
+  const dtEnd = Date.now() + checkWaitResponse;
 
   let nextTime = 0;
   let nextTask: NodeJS.Timeout | undefined;
   const initUserLink = ctx.userLink;
   let prevText: string;
-  let hasLocked = false;
 
   let getMembers: () => MyChatMember[];
   if (specificUsers) {
@@ -53,7 +56,17 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
     getMembers = () =>
       Object.keys(ctx.chat.members)
         .map((key) => ctx.chat.members[key])
-        .filter((m) => !m.isBot);
+        .filter((m) => !m.isBot)
+        .sort((a, b) => {
+          if (a.isAnonym && b.isAnonym) {
+            return a.firstName.localeCompare(b.firstName);
+          } else if (a.isAnonym) {
+            return -1;
+          } else if (b.isAnonym) {
+            return 1;
+          }
+          return a.firstName.localeCompare(b.firstName);
+        });
   }
 
   const report = async (isFinished = false) => {
@@ -78,13 +91,10 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
     nextTime = now + 5000;
 
     const arr: string[] = ctx.chat.isGroup
-      ? [
-          `${initUserLink} запросил cтатус ${specificUsers ? "определенных " : ""}пользовател${
-            specificUsers?.length === 1 ? "ей" : "я"
-          }❗️\n`,
-        ]
+      ? [`${initUserLink} запросил cтатус ${specificUsers ? "определенных " : ""}пользователей❗️\n`]
       : [];
 
+    let hasLocked = false;
     getMembers().forEach((m) => {
       const user = Repo.getUser(m.id);
       if (user?.isLocked) {
@@ -93,6 +103,13 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
       const str = getUserStatus(user, m, m.isAnonym, isFinished);
       arr.push(str);
     });
+
+    arr.push(
+      `\nЧерез ${dateDiffToTime(Math.max(dtEnd - Date.now(), 1000))} удалю из группы тех, кто не начал на проверку!`
+    );
+    arr.push("Провалившие проверку, будут удаляться немедленно");
+    // todo button kickAllNow
+    // todo implement return back
 
     hasLocked &&
       arr.push("\nДля разблокирования - команда /unlock (блокированный пользователь не может общаться с ботом)");
@@ -145,22 +162,9 @@ const Check: MyBotCommand = {
   type: MyBotCommandTypes.group,
   isHidden: true,
   description: "проверить участников",
-  repeatBehavior: CommandRepeatBehavior.none,
+  repeatBehavior: CommandRepeatBehavior.restart,
   callback: async (ctx) => {
-    const now = processNow();
-    const expiry = cache.get(ctx.chatId);
-    if (expiry && now < expiry) {
-      console.warn("Command check declined by rule: cache 1min");
-      await ctx.sendMessage(
-        { text: "Команда /check была вызвана меньше минуты назад", disable_notification: true },
-        { keepAfterSession: true, removeTimeout: 5000 }
-      );
-      return;
-    } else {
-      cache.set(ctx.chatId, now + 60000);
-    }
-
-    countAllTask(ctx);
+    await countAllTask(ctx, true);
     //wait for previous partial report from task
     // todo we need to wait getChatAdministrators
     await new Promise((resolve) => setTimeout(resolve, 1000));
