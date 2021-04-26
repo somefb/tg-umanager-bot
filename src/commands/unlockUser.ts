@@ -28,7 +28,7 @@ const UnlockUser: MyBotCommand = {
       if (!targetUser.isLocked) {
         ctx.singleMessageMode = false;
         await ctx.sendMessage(
-          { text: `${UserItem.ToLinkUser(targetUser)} не блокирован`, parse_mode: "HTML" },
+          { text: `${targetUser.toLink()} не блокирован`, parse_mode: "HTML" },
           { removeTimeout: 5000, removeByUpdate: true }
         );
         targetUser = undefined;
@@ -115,7 +115,10 @@ async function unlockTask(ctx: IBotContext, targetUser: UserItem, validationVoic
           chat_id: targetUser.termyBotChatId,
           text: "Используйте команду /start",
         });
-        await ctx.sendMessage({ text: "Ожидаю ответа пользователя..." });
+        await ctx.sendMessage({
+          text: `Сообщение отправлено ${targetUser.toLink()}. Ожидаю ответа...`,
+          parse_mode: "HTML",
+        });
       } catch {}
       const msgRegUser = await ctx.service.onGotEvent(
         EventTypeEnum.gotBotCommand,
