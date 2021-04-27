@@ -37,7 +37,7 @@ const CommandCheckUser: MyBotCommand = {
         inline_keyboard: [
           [
             { text: "Да", callback_data: "cuOk" },
-            { text: "Отмена", callback_data: "cuC0" },
+            { text: "Отмена", callback_data: ctx.getCallbackCancel() },
           ],
         ],
       },
@@ -45,12 +45,8 @@ const CommandCheckUser: MyBotCommand = {
 
     while (1) {
       const q = await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-      if (q.message?.message_id === msg.message_id) {
-        if (q.data === "cuOk") {
-          break;
-        } else {
-          return;
-        }
+      if (q.message?.message_id !== msg.message_id) {
+        continue;
       }
     }
 
