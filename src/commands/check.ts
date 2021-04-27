@@ -91,7 +91,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
       arr.push(str);
     });
 
-    if (ctx.chat.isGroup) {
+    if (ctx.chat.isGroup && Object.keys(ctx.chat.removedMembers).length) {
       arr.push("\nУдалённые");
       ChatItem.getSortedMembers(ctx.chat.removedMembers).forEach((m) => {
         const user = Repo.getUser(m.id);
@@ -99,6 +99,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
         arr.push(str);
       });
     }
+
     if (!isFinished) {
       // todo remove and notify
       arr.push(
