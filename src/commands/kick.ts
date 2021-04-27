@@ -42,8 +42,8 @@ export async function kickUser(ctx: IBotContext, delMember: IUser): Promise<bool
       user_id: delMember.id,
       only_if_banned: true,
     });
-
-    ctx.chat.removeMember(delMember.id);
+    //todo option kickFromGroupList
+    ctx.chat.removeMember(delMember.id, true);
 
     await ctx.sendMessage(
       {

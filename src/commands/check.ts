@@ -1,4 +1,4 @@
-import { MyChatMember } from "../chatItem";
+import ChatItem, { MyChatMember } from "../chatItem";
 import dateToPastTime, { dateDiffToTime } from "../helpers/dateToPastTime";
 import processNow from "../helpers/processNow";
 import Repo from "../repo";
@@ -53,20 +53,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
     const arr: MyChatMember[] = specificUsers.map<MyChatMember>((u) => ({ ...u, isBot: false, isAnonym: false }));
     getMembers = () => arr;
   } else {
-    getMembers = () =>
-      Object.keys(ctx.chat.members)
-        .map((key) => ctx.chat.members[key])
-        .filter((m) => !m.isBot)
-        .sort((a, b) => {
-          if (a.isAnonym && b.isAnonym) {
-            return a.firstName.localeCompare(b.firstName);
-          } else if (a.isAnonym) {
-            return -1;
-          } else if (b.isAnonym) {
-            return 1;
-          }
-          return a.firstName.localeCompare(b.firstName);
-        });
+    getMembers = () => ChatItem.getSortedMembers(ctx.chat.members);
   }
 
   const report = async (isFinished = false) => {
@@ -104,15 +91,28 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
       arr.push(str);
     });
 
-    arr.push(
-      `\nЧерез ${dateDiffToTime(Math.max(dtEnd - Date.now(), 1000))} удалю из группы тех, кто не начал на проверку!`
-    );
-    arr.push("Провалившие проверку, будут удаляться немедленно");
+    if (ctx.chat.isGroup) {
+      arr.push("\nУдалённые");
+      ChatItem.getSortedMembers(ctx.chat.removedMembers).forEach((m) => {
+        const user = Repo.getUser(m.id);
+        const str = getUserStatus(user, m, m.isAnonym, isFinished);
+        arr.push(str);
+      });
+    }
+    if (!isFinished) {
+      // todo remove and notify
+      arr.push(
+        `\n* Не начавших проверку, удалю из всех групп через <b>${dateDiffToTime(
+          Math.max(dtEnd - Date.now(), 1000)
+        )}</b>`
+      );
+      arr.push("   Такие смогут вернуться по прохождению проверки");
+    }
+    arr.push("* Проваливших проверку, удалю из всех групп немедленно");
     // todo button kickAllNow
     // todo implement return back
 
-    hasLocked &&
-      arr.push("\nДля разблокирования - команда /unlock (блокированный пользователь не может общаться с ботом)");
+    hasLocked && arr.push("\n* Для разблокирования - команда /unlock ('блокированный' не может общаться с ботом)");
 
     isFinished && arr.push("\nПроверка окончена");
 
@@ -166,7 +166,6 @@ const Check: MyBotCommand = {
   callback: async (ctx) => {
     await countAllTask(ctx, true);
     //wait for previous partial report from task
-    // todo we need to wait getChatAdministrators
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     await reportValidation(ctx, null);

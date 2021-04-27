@@ -24,17 +24,39 @@ export default class ChatItem {
     };
   }
 
+  static getSortedMembers(
+    members: Record<number, MyChatMember>,
+    filter?: (v: MyChatMember) => boolean
+  ): MyChatMember[] {
+    let arr = Object.keys(members).map((key) => members[key]);
+    if (filter) {
+      arr = arr.filter(filter);
+    }
+    return arr.sort((a, b) => {
+      if (a.isAnonym && b.isAnonym) {
+        return a.firstName.localeCompare(b.firstName);
+      } else if (a.isAnonym) {
+        return -1;
+      } else if (b.isAnonym) {
+        return 1;
+      }
+      return a.firstName.localeCompare(b.firstName);
+    });
+  }
+
   id: number;
   /** Index from which we need to start deleting messages */
   lastDeleteIndex = 1;
   isGroup = false;
   members: Record<number, MyChatMember> = {};
+  removedMembers: Record<number, MyChatMember> = {};
 
   constructor(id: number) {
     this.id = id;
   }
 
   addOrUpdateMember(user: User, isAnonym: boolean | null | undefined): void {
+    // todo find and update member in each chat
     if (!this.isGroup) {
       return;
     }
@@ -45,13 +67,16 @@ export default class ChatItem {
       const member = ChatItem.userToMember(user, willAnonym);
       this.members[user.id] = member;
       if (!was) {
+        delete this.removedMembers[user.id];
         Repo.addOrUpdateChat(this);
       }
     }
   }
 
-  removeMember(userId: number): void {
-    // todo soft-delete
+  removeMember(userId: number, soft: boolean): void {
+    if (soft && this.members[userId] && !this.members[userId].isBot) {
+      this.removedMembers[userId] = this.members[userId];
+    }
     delete this.members[userId];
     this.onChatMembersCountChanged?.call(this, -1);
   }
@@ -63,6 +88,6 @@ export default class ChatItem {
     ) as number;
   }
 
-  /** Fires only when we need to update count of chat members (when member added/remove in the group-chat) */
+  /** Fires only when we need to update count of chat members (when member added/removed in the group-chat) */
   onChatMembersCountChanged?: (increment: number) => void;
 }

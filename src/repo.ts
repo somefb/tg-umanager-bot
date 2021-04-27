@@ -17,7 +17,7 @@ export class RepoClass {
   filePath = "testBotSettings.json";
   /**  date as number */
   version?: number;
-  chats: Record<string | number, ChatItem> = {};
+  chats: Record<number, ChatItem> = {};
   users: Record<number, UserItem> = {};
 
   googleDrive = new RepoGoogleDrive();
@@ -37,7 +37,7 @@ export class RepoClass {
       return;
     }
     Object.keys(v.chats).forEach(
-      (k) => (this.chats[k] = Object.assign(new ChatItem(v.chats[k].id), v.chats[k], this.chats[k]))
+      (k) => (this.chats[k as number] = Object.assign(new ChatItem(v.chats[k].id), v.chats[k], this.chats[k as number]))
     );
     Object.keys(v.users).forEach(
       (k) =>
@@ -176,10 +176,12 @@ export class RepoClass {
     return !!Object.keys(this.users).length;
   }
 
+  /** Remove user if such user account is removed */
   removeUser(id: number): void {
     delete this.users[id];
     Object.keys(this.chats).forEach((cid) => {
-      delete this.chats[cid].members[id];
+      this.chats[cid].removeMember(id, false);
+      // todo kick such user from all chats
     });
     this.commit();
   }

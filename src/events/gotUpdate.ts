@@ -21,8 +21,13 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
       }
     };
 
-    const removeMember = (chatId: number, userId: number) => {
-      Repo.getСhat(chatId)?.removeMember(userId);
+    const removeMember = (chatId: number, user: User) => {
+      const chat = Repo.getСhat(chatId);
+      if (chat) {
+        // update only if it wasn't removed before
+        !chat.removedMembers[user.id] && updateMember(chatId, user, false);
+        chat.removeMember(user.id, true);
+      }
     };
 
     const r = ((): { value: EventTypeReturnType[EventTypeEnum]; type: EventTypeEnum } => {
@@ -109,6 +114,10 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
             type: EventTypeEnum.addedChatMembers,
             value: m as EventTypeReturnType[EventTypeEnum.addedChatMembers],
           };
+        } else if ((m as Message.LeftChatMemberMessage).left_chat_member) {
+          const member = (m as Message.LeftChatMemberMessage).left_chat_member;
+          // member leaved the chat
+          removeMember(chatId, member);
         }
       } else if ((upd as Update.EditedMessageUpdate).edited_message) {
         const m = (upd as Update.EditedMessageUpdate).edited_message;
@@ -141,7 +150,7 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
               Repo.removeChat(chatId);
               defFn = () => true;
             } else {
-              removeMember(chatId, m.new_chat_member.user.id);
+              removeMember(chatId, m.new_chat_member.user);
             }
           } else {
             //member added to chat
@@ -154,7 +163,6 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
           value: m as EventTypeReturnType[EventTypeEnum.memberUpated],
         };
       }
-      // todo upd.left_chat_member
 
       !chatId &&
         objectRecursiveSearch(upd, (key, obj) => {

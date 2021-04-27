@@ -227,6 +227,4 @@ function sendMessage(ctx: IBotContext, text: string, words: string[] | null) {
   }
 
   return ctx.sendMessage(args);
-
-  //todo detect if chat is blocked and somehow notify user
 }
