@@ -71,48 +71,47 @@ export default class TelegramCore implements ITelegramCore {
     process.env.VERBOSE && !url.endsWith("getUpdates") && console.warn("\nsent " + url + "\n" + data + "\n");
     const makeRequest = () => {
       return new Promise<T>((resolve, reject) => {
-        const req = https
-          .request(
-            url,
-            options,
-            opts?.skipResponse
-              ? undefined
-              : (res) => {
-                  let txt = "";
-                  res.on("data", (chunk) => {
-                    txt += chunk;
-                  });
-                  res.on("end", () => {
-                    const result = JSON.parse(txt) as T;
-                    if (!opts?.skipApiErrors && (!result || !((result as unknown) as ApiResponse<unknown>).ok)) {
-                      const rErr = (result as unknown) as ApiError | undefined;
-                      if (rErr?.error_code === 429) {
-                        // limits 30 usersOrMessages/sec and 20 messagesToSameGroup/minute === error_code 429
-                        // todo theoreticaly possible: Maximum call stack size exceeded
+        const req = https.request(
+          url,
+          options,
+          opts?.skipResponse
+            ? undefined
+            : (res) => {
+                let txt = "";
+                res.on("data", (chunk) => {
+                  txt += chunk;
+                });
+                res.on("end", () => {
+                  const result = JSON.parse(txt) as T;
+                  if (!opts?.skipApiErrors && (!result || !((result as unknown) as ApiResponse<unknown>).ok)) {
+                    const rErr = (result as unknown) as ApiError | undefined;
+                    if (rErr?.error_code === 429) {
+                      // limits 30 usersOrMessages/sec and 20 messagesToSameGroup/minute === error_code 429
+                      // todo theoreticaly possible: Maximum call stack size exceeded
 
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        const t = (rErr.parameters?.retry_after || 1) * 1000;
-                        console.warn(`TelegramCore. Got 429 error. Will retry response after ${t} sec`);
-                        setTimeout(() => resolve(makeRequest()), t);
-                      } else {
-                        const emptyUrl = this.getUrl("" as keyof TelegramPR);
-                        console.error(`TelegramCore. API error ${url.replace(emptyUrl, "")} \n` + txt);
-                        reject({ ...result, data });
-                      }
+                      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                      // @ts-ignore
+                      const t = (rErr.parameters?.retry_after || 1) * 1000;
+                      console.warn(`TelegramCore. Got 429 error. Will retry response after ${t} sec`);
+                      setTimeout(() => resolve(makeRequest()), t);
                     } else {
-                      resolve(result);
+                      const emptyUrl = this.getUrl("" as keyof TelegramPR);
+                      console.error(`TelegramCore. API error ${url.replace(emptyUrl, "")} \n` + txt);
+                      reject({ ...result, data });
                     }
-                  });
-                }
-          )
-          .on("timeout", () => {
-            req.destroy();
-            console.warn(`TelegramCore. Got timeout ${options.timeout}. Will retry response`);
-            setTimeout(() => resolve(makeRequest()), 50);
-          })
+                  } else {
+                    resolve(result);
+                  }
+                });
+              }
+        );
+        req
+          .on("timeout", () => req.destroy())
           .on("error", (err: ErrnoException) => {
-            if (err.code === "ETIMEDOUT") {
+            if (req.connection?.destroyed) {
+              console.warn(`TelegramCore. Got timeout ${options.timeout}. Will retry response`);
+              setTimeout(() => resolve(makeRequest()), 50);
+            } else if (err.code === "ETIMEDOUT") {
               console.warn("TelegramCore. Got ETIMEDOUT. Will retry response");
               setTimeout(() => resolve(makeRequest()), 50);
             } else {
