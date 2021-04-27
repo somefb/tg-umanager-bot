@@ -45,8 +45,8 @@ const CommandCheckUser: MyBotCommand = {
 
     while (1) {
       const q = await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-      if (q.message?.message_id !== msg.message_id) {
-        continue;
+      if (q.message?.message_id === msg.message_id) {
+        break;
       }
     }
 
