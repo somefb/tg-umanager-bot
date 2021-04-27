@@ -94,9 +94,7 @@ export default class TelegramCore implements ITelegramCore {
                         // @ts-ignore
                         const t = (rErr.parameters?.retry_after || 1) * 1000;
                         console.warn(`TelegramCore. Got 429 error. Will retry response after ${t} sec`);
-                        setTimeout(() => {
-                          resolve(makeRequest());
-                        }, t);
+                        setTimeout(() => resolve(makeRequest()), t);
                       } else {
                         const emptyUrl = this.getUrl("" as keyof TelegramPR);
                         console.error(`TelegramCore. API error ${url.replace(emptyUrl, "")} \n` + txt);
