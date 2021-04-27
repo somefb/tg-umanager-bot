@@ -2,7 +2,7 @@
 import { FileInfo } from "./types";
 import { UserValidationKey } from "./userCheckBot/dictionary";
 
-export const validationExpiry = 5 * 60 * 1000; // 5 minutes - period of time that user isValid after validation
+export const validationExpiry = 5 * 60000; // 5 minutes - period of time that user isValid after validation
 
 function isValidationExpired(user: UserItem, validationExpiryMs = validationExpiry): boolean {
   const dT = Date.now() - user.validationDate;

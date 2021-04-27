@@ -1,3 +1,4 @@
+import { dateDiffToTime } from "../helpers/dateToPastTime";
 import { CommandRepeatBehavior, MyBotCommand } from "../types";
 import { validationExpiry } from "../userItem";
 import { MyBotCommandTypes, MyBotCommandTypesDescription } from "./botCommandTypes";
@@ -11,11 +12,11 @@ const CommandHelp: MyBotCommand = {
   callback: async (ctx) => {
     const lines: string[] = [];
     if (!ctx.chat.isGroup) {
-      const leftMs = Date.now() - ctx.user.validationDate;
-      const leftMinutes = Math.floor(leftMs / 60000);
-      const leftSec = Math.floor((leftMs - leftMinutes * 60000) / 1000);
+      const leftMs = Math.max(validationExpiry + ctx.user.validationDate - Date.now(), 1000);
       lines.push(
-        `Добро пожаловать. В течение ${leftMinutes}мин ${leftSec}сек доступны следующие команды \n(по истечении времени пройдите проверку снова)\n`
+        `Добро пожаловать. В течение ${dateDiffToTime(
+          leftMs
+        )} доступны следующие команды (по истечении времени пройдите проверку снова)\n`
       );
     } else {
       lines.push("Доступны следующие команды\n");
