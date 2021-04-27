@@ -41,10 +41,12 @@ async function countAll(ctx: IBotContext, partialWait: boolean) {
 
     if (membersCnt == definedCnt) {
       process.env.DEBUG && console.log("Count of members is correct. Nothing to report");
+      resolve();
       return;
     }
     if (definedCnt > membersCnt) {
       process.env.DEBUG && console.log("Warning in countAll. definedCnt > membersCnt for chat: " + ctx.chatId);
+      resolve();
       return;
     }
 
@@ -94,7 +96,7 @@ async function countAll(ctx: IBotContext, partialWait: boolean) {
       ctx.removeEvent(evRef);
     };
 
-    ctx.onCancelled().then(() => (ctx.chat.onChatMembersCountChanged = undefined));
+    ctx.onCancelled().then(() => delete ctx.chat.onChatMembersCountChanged);
 
     while (1) {
       evRef = ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
