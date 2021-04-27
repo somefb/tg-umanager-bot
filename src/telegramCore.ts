@@ -41,6 +41,7 @@ export default class TelegramCore implements ITelegramCore {
   ): Promise<T> {
     const options: RequestOptions = {
       method,
+      timeout: 10000,
     };
 
     let data: string | undefined;
@@ -107,12 +108,15 @@ export default class TelegramCore implements ITelegramCore {
                   });
                 }
           )
+          .on("timeout", () => {
+            req.destroy();
+            console.warn(`TelegramCore. Got timeout ${options.timeout}. Will retry response`);
+            setTimeout(() => resolve(makeRequest()), 50);
+          })
           .on("error", (err: ErrnoException) => {
             if (err.code === "ETIMEDOUT") {
               console.warn("TelegramCore. Got ETIMEDOUT. Will retry response");
-              setTimeout(() => {
-                resolve(makeRequest());
-              }, 50);
+              setTimeout(() => resolve(makeRequest()), 50);
             } else {
               console.error("TelegramCore. HTTP error: \n" + err.message, err);
               reject(err);
