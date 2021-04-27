@@ -91,7 +91,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
       arr.push(str);
     });
 
-    if (ctx.chat.isGroup && Object.keys(ctx.chat.removedMembers).length) {
+    if (ctx.chat.isGroup && !specificUsers && Object.keys(ctx.chat.removedMembers).length) {
       arr.push("\nУдалённые");
       ChatItem.getSortedMembers(ctx.chat.removedMembers).forEach((m) => {
         const user = Repo.getUser(m.id);
@@ -136,7 +136,12 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
   }; // end: report()
 
   const arr: Promise<unknown>[] = [];
-  getMembers().forEach((m) => {
+  const marr = getMembers();
+  if (!specificUsers) {
+    const mr = Object.keys(ctx.chat.removedMembers).map((id) => ctx.chat.removedMembers[id]);
+    marr.push(...mr);
+  }
+  marr.forEach((m) => {
     const user = Repo.getUser(m.id);
     if (user) {
       // reset validation state because isValid related to expiryDate
