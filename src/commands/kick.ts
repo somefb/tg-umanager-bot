@@ -1,4 +1,4 @@
-import { CommandRepeatBehavior, EventTypeEnum, IBotContext, MyBotCommand } from "../types";
+import { CommandRepeatBehavior, IBotContext, MyBotCommand } from "../types";
 import UserItem, { IUser } from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
 
@@ -11,9 +11,8 @@ export async function kickUser(ctx: IBotContext, delMember: IUser): Promise<bool
 
   const uRemovedLink = UserItem.ToLinkUser(delMember); //, delMember.isAnonym);
 
-  const m = await ctx.sendMessage({
+  await ctx.sendAndWait({
     text: `Удалить ${uRemovedLink} из группы?`,
-
     reply_markup: {
       inline_keyboard: [
         [
@@ -23,13 +22,6 @@ export async function kickUser(ctx: IBotContext, delMember: IUser): Promise<bool
       ],
     },
   });
-
-  while (1) {
-    const q = await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-    if (m.message_id === q.message?.message_id) {
-      break;
-    }
-  }
 
   try {
     await ctx.service.core.kickChatMember({

@@ -10,6 +10,7 @@ import {
   IBotContextMsgOptions,
   IEventListener,
   ITelegramService,
+  NewCallbackQuery,
   NewTextMessage,
   Opts,
 } from "./types";
@@ -399,6 +400,21 @@ export default class BotContext implements IBotContext {
       applyEvent();
     }
     return this.callbackData;
+  }
+
+  async sendAndWait(
+    args: Omit<Opts<"sendMessage">, "chat_id"> & Required<Pick<Opts<"sendMessage">, "reply_markup">>,
+    opts?: IBotContextMsgOptions
+  ): Promise<NewCallbackQuery> {
+    const msg = await this.sendMessage(args, opts);
+    let q: NewCallbackQuery | null = null;
+    while (!q) {
+      q = await this.onGotEvent(EventTypeEnum.gotCallbackQuery);
+      if (q.message?.message_id !== msg.message_id) {
+        q = null;
+      }
+    }
+    return q;
   }
 }
 

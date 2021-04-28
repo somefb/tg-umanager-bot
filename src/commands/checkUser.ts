@@ -1,5 +1,5 @@
 import Repo from "../repo";
-import { CommandRepeatBehavior, EventTypeEnum, MyBotCommand } from "../types";
+import { CommandRepeatBehavior, MyBotCommand } from "../types";
 import UserItem, { IUser } from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
 import { reportValidation } from "./check";
@@ -30,9 +30,8 @@ const CommandCheckUser: MyBotCommand = {
       }
     }
 
-    const msg = await ctx.sendMessage({
+    await ctx.sendAndWait({
       text: `Проверить ${ulink}?`,
-
       reply_markup: {
         inline_keyboard: [
           [
@@ -42,13 +41,6 @@ const CommandCheckUser: MyBotCommand = {
         ],
       },
     });
-
-    while (1) {
-      const q = await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-      if (q.message?.message_id === msg.message_id) {
-        break;
-      }
-    }
 
     await reportValidation(ctx, [targetMember]);
 

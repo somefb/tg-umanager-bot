@@ -185,6 +185,11 @@ export interface IBotContext {
   callCommand<T extends IBotContext, U>(fn: (ctx: T) => Promise<U>): Promise<U | null>;
 
   sendMessage(args: Omit<Opts<"sendMessage">, "chat_id">, opts?: IBotContextMsgOptions): Promise<Message.TextMessage>;
+  /** sendMessage and wait for callbackQuery related to this message */
+  sendAndWait(
+    args: Omit<Opts<"sendMessage">, "chat_id"> & Required<Pick<Opts<"sendMessage">, "reply_markup">>,
+    opts?: IBotContextMsgOptions
+  ): Promise<NewCallbackQuery>;
   deleteMessage(id: number): Promise<void>;
   askForUser(text: string): Promise<UserItem | IUser>;
 
