@@ -103,17 +103,17 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
     if (!isFinished) {
       // todo remove and notify
       arr.push(
-        `\n* Не начавших проверку, удалю из всех групп через <b>${dateDiffToTime(
+        `\n▪️ Не начавших проверку, удалю из всех групп через <b>${dateDiffToTime(
           Math.max(dtEnd - Date.now(), 1000)
         )}</b>`
       );
-      arr.push("   Такие смогут вернуться по прохождению проверки");
+      arr.push("Такие смогут вернуться по прохождению проверки");
     }
-    arr.push("* Проваливших проверку, удалю из всех групп немедленно");
+    arr.push("▪️ Проваливших проверку, удалю из всех групп немедленно");
     // todo button kickAllNow
     // todo implement return back
 
-    hasLocked && arr.push("\n* Для разблокирования - команда /unlock ('блокированный' не может общаться с ботом)");
+    hasLocked && arr.push("\n▪️ Для разблокирования - команда /unlock ('блокированный' не может общаться с ботом)");
 
     isFinished && arr.push("\nПроверка окончена");
 
