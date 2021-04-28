@@ -28,7 +28,7 @@ const UnlockUser: MyBotCommand = {
       if (!targetUser.isLocked) {
         ctx.singleMessageMode = false;
         await ctx.sendMessage(
-          { text: `${targetUser.toLink()} не блокирован`, parse_mode: "HTML" },
+          { text: `${targetUser.toLink()} не блокирован` },
           { removeTimeout: 5000, removeByUpdate: true }
         );
         targetUser = undefined;

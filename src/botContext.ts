@@ -89,7 +89,7 @@ export default class BotContext implements IBotContext {
       }
     })();
 
-    // requires for cases when we need update latest message by cancelled context
+    // requires for cases when we need to update latest message by cancelled context
     if (lastMessage) {
       this._updateMessage = lastMessage;
     }
