@@ -172,6 +172,9 @@ export default class TelegramCore implements ITelegramCore {
   }
 
   editMessageText(args: Opts<"editMessageText">): P<ApiResponse<true | (Update.Edited & Message.TextMessage)>> {
+    if (!args.parse_mode) {
+      args.parse_mode = "HTML";
+    }
     return this.httpPost("editMessageText", args);
   }
 
