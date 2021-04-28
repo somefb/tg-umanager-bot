@@ -14,7 +14,8 @@ const collumns = 3;
 // validation section here
 const expectedValidTimes = 2; // twice in the row
 export const expectedInvalidTimes = 3; // total possible == twice
-export const validationTimeoutMinutes = expectedValidTimes * 2;
+export const validationTimeoutPartyMinutes = 2;
+export const validationTimeoutMinutes = expectedValidTimes * validationTimeoutPartyMinutes;
 export const validationTimeout = (validationTimeoutMinutes / 2) * 60000; // for each parti
 const timeoutFile = 5 * 60000; // 5 minute
 const timeoutFirstFile = 15 * 60000;
@@ -28,13 +29,14 @@ const answersExpected_2 = ["Ладно-ладно!", "А вы настойчив
 const askFile = "Понравилась игра?";
 
 const uploadFileInstructions = [
-  ".\nИ напоследок передайте мне любой уникальный файл (картинка/фото, аудио/голосовое, текстовый).",
-  "* файл должен быть уникальным для вас, но абсолютно бесполезным для остальных",
-  "* сохраните его в доступном для вас месте и не теряйте никогда!",
-  "\nВсякий раз как вы проходите игру с ошибкой, а также с некоторой периодичностью, бот будет выдавать сообщение:",
+  ".\nИ напоследок передайте мне любой уникальный файл (картинка/фото, аудио/голосовое, текстовый - абсолютно любой).",
+  "▪️ файл должен быть уникальным для вас, но бесполезным и бесмысленным для остальных",
+  "▪️ сохраните его в доступном для вас месте и не теряйте никогда",
+  "\nВсякий раз, как вы проходите игру с ошибкой, а также с некоторой периодичностью, бот будет выдавать сообщение:",
   `\n<b>${askFile}</b>\n`,
-  "на это сообщение нужно передать мне тот самый файл. Прочтите ещё раз и запомните!",
-  `\nЯ жду ваш файл в течение ${timeoutFirstFile / 60000} минут...`,
+  "Запомните этот вопрос❗️",
+  "На него нужно передать мне тот самый файл (каждый раз когда увидите этот вопрос). Ни в коем случае не отвечайте текстом - только файлом (иначе будете заблокированы). Прочтите ещё раз и запомните❗️",
+  `\nЯ жду ваш файл в течение ${Math.floor(timeoutFirstFile / 60000)} минут...`,
 ].join("\n");
 
 const enum CancelReason {
@@ -44,6 +46,7 @@ const enum CancelReason {
   timeout,
 }
 
+export const checkWaitResponseStr = "10ч";
 export const checkWaitResponse = 10 * 60 * 60000; //wait for 10 hours for first response
 
 export default async function playValidation(ctx: IBotContext): Promise<boolean | null> {
@@ -60,26 +63,18 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
 
   const cancelSession = async (isValid: boolean, reason: CancelReason) => {
     ctx.user.isValid = isValid;
+    let text: string;
     if (!isValid) {
       ctx.user.isLocked = true;
       // todo such timeouts is not ideal because 1) poor internet connection 2) bad proxy 3) ETIMEDOUT
       // for timeoutError we can allow user to recover via file
-      await ctx.sendMessage(
-        {
-          text: isFirstTime
-            ? `${reason === CancelReason.timeout ? "Время истекло. " : ""}Вы не прошли игру! \n`
-            : "На сегодня всё!",
-        },
-        { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 }
-      );
+      text = isFirstTime
+        ? `${reason === CancelReason.timeout ? "Время истекло. " : ""}Вы не прошли игру! \n`
+        : "На сегодня всё!";
     } else {
-      await ctx.sendMessage(
-        {
-          text: isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом \n" : "Спасибо за игру",
-        },
-        { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 }
-      );
+      text = isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом \n" : "Спасибо за игру";
     }
+    await ctx.sendMessage({ text }, { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 });
   };
 
   try {

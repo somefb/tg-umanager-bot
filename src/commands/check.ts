@@ -92,7 +92,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
     });
 
     if (ctx.chat.isGroup && !specificUsers && Object.keys(ctx.chat.removedMembers).length) {
-      arr.push("\nУдалённые");
+      arr.push("\nУдалённые из группы");
       ChatItem.getSortedMembers(ctx.chat.removedMembers).forEach((m) => {
         const user = Repo.getUser(m.id);
         const str = getUserStatus(user, m, m.isAnonym, isFinished);

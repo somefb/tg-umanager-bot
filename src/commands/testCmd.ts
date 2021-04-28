@@ -1,6 +1,6 @@
 import { CommandRepeatBehavior, MyBotCommand } from "../types";
 import { MyBotCommandTypes } from "./botCommandTypes";
-import { getInstructionsMarkup, getInstructionsText } from "./registerUser";
+import { getFinishInstructions } from "./registerUser";
 
 const TestCmd: MyBotCommand = {
   command: "test",
@@ -10,9 +10,9 @@ const TestCmd: MyBotCommand = {
   repeatBehavior: CommandRepeatBehavior.skip,
   callback: async (ctx) => {
     await ctx.sendMessage({
-      text: getInstructionsText(ctx.botUserName),
+      text: getFinishInstructions(),
       parse_mode: "HTML",
-      reply_markup: { inline_keyboard: getInstructionsMarkup() },
+      //reply_markup: { inline_keyboard: getInstructionsMarkup() },
     });
   },
 };

@@ -113,7 +113,8 @@ async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
       );
       await ctx.service.core.deleteMessageForce({ chat_id: msgRegUser.chat.id, message_id: msgRegUser.message_id });
       //don't allow register again
-      if (!Repo.getUser(msgRegUser.from.id)) {
+      const u = Repo.getUser(msgRegUser.from.id);
+      if (!u) {
         regUser = new UserItem(msgRegUser.from.id, CheckBot.generateUserKey());
         regUser.whoSharedUserId = regInfo.whoSharedUserId;
         regUser.validationVoiceFile = regInfo.validationVoiceFile;
@@ -121,7 +122,11 @@ async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
         success = !!(await ctxRegUser.callCommand((c) => registerUser(c, ctx)));
         break;
       } else {
-        console.warn(`Decline registration. User ${msgRegUser.from.id} already exists`);
+        console.log(`Decline registration. User ${msgRegUser.from.id} already exists`);
+        await ctx.sendMessage(
+          { text: `${u.toLink()} уже зарегистрирован ранее!` },
+          { keepAfterSession: true, removeTimeout: 30000 }
+        );
       }
     }
   } catch (err) {
