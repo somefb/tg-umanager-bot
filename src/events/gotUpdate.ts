@@ -1,4 +1,4 @@
-import { Update, User, CallbackQuery, Message } from "typegram";
+import { Update, User, CallbackQuery, Message, Chat } from "typegram";
 import objectRecursiveSearch from "../helpers/objectRecursiveSearch";
 import Repo from "../repo";
 import TelegramService from "../telegramService";
@@ -7,11 +7,13 @@ import gotBotCommand from "./gotBotCommand";
 import onMeAdded from "./onMeAdded";
 
 export default function gotUpdate(this: TelegramService, upd: Update): void {
-  process.env.VERBOSE && console.log("got update", "\n" + JSON.stringify(upd) + "\n");
+  //process.env.VERBOSE &&
+  console.log("got update", "\n" + JSON.stringify(upd) + "\n");
   try {
     let defFn: null | (() => boolean) = null;
     let chatId: number | undefined;
     let updFrom: User | undefined;
+    let isHandled = false;
 
     const updateMember = (chatId: number, from: User | undefined, isAnonym: boolean | null | undefined) => {
       updFrom = from;
@@ -34,7 +36,22 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
       if ((upd as Update.CallbackQueryUpdate).callback_query) {
         const q = (upd as Update.CallbackQueryUpdate).callback_query as CallbackQuery.DataCallbackQuery;
         chatId = q.message?.chat.id;
-        chatId && updateMember(chatId, q.from, null);
+        if (chatId && q.message) {
+          updateMember(chatId, q.from, null);
+          if (q.data?.startsWith("/")) {
+            defFn = () => {
+              if (!isHandled) {
+                const msg = Object.assign({}, q.message, {
+                  text: q.data,
+                  from: q.from,
+                  chat: q.message?.chat as Chat.PrivateChat,
+                } as Partial<NewTextMessage>) as NewTextMessage;
+                return !isHandled && gotBotCommand.call(this, msg, q.message?.chat.id || 0);
+              }
+              return false;
+            };
+          }
+        }
         return {
           type: EventTypeEnum.gotCallbackQuery,
           value: q as EventTypeReturnType[EventTypeEnum.gotCallbackQuery],
@@ -179,7 +196,6 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
       };
     })();
 
-    let isHandled = false;
     this.eventListeners.forEach((e) => {
       if (e.type === r.type || e.type === EventTypeEnum.gotUpdate) {
         const val = e.type === EventTypeEnum.gotUpdate ? upd : r.value;

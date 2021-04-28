@@ -49,7 +49,7 @@ const enum CancelReason {
 export const checkWaitResponseStr = "10ч";
 export const checkWaitResponse = 10 * 60 * 60000; //wait for 10 hours for the first response
 
-export default async function playValidation(ctx: IBotContext): Promise<boolean | null> {
+export default async function playValidation(ctx: IBotContext, skipAskForPlay = false): Promise<boolean | null> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(checkWaitResponse);
   //todo we should remove by this timeout
@@ -61,7 +61,9 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   let msgPrefix = "";
   let repeatCnt = 0;
 
-  await askForPlay(ctx);
+  if (!skipAskForPlay) {
+    await askForPlay(ctx);
+  }
   delete ctx.user.isCheckBotChatBlocked;
 
   // play game block
@@ -222,7 +224,7 @@ async function askForPlay(ctx: IBotContext) {
     const askForPlay = async (silent = false) => {
       const m = ctx.sendMessage({
         text: "Поиграем?",
-        reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "/start" }]] },
+        reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "/go" }]] },
         disable_notification: silent,
       });
 

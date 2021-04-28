@@ -48,8 +48,18 @@ const CheckBotCommands: MyBotCommand[] = [
       CheckBot.service = service;
     },
     callback: async (ctx) => {
-      // todo detect stopBot
       await playValidation(ctx);
+      ctx.onCancelled().finally(() => Repo.commit());
+    },
+  } as MyBotCommand,
+  {
+    command: "go",
+    description: "Начать",
+    isHidden: true,
+    repeatBehavior: CommandRepeatBehavior.skip,
+    allowCommand: (user) => !user?.isLocked,
+    callback: async (ctx) => {
+      await playValidation(ctx, true);
       ctx.onCancelled().finally(() => Repo.commit());
     },
   } as MyBotCommand,
