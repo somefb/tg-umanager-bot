@@ -47,7 +47,7 @@ const enum CancelReason {
 }
 
 export const checkWaitResponseStr = "10ч";
-export const checkWaitResponse = 10 * 60 * 60000; //wait for 10 hours for first response
+export const checkWaitResponse = 10 * 60 * 60000; //wait for 10 hours for the first response
 
 export default async function playValidation(ctx: IBotContext): Promise<boolean | null> {
   ctx.singleMessageMode = true;
@@ -61,46 +61,10 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   let msgPrefix = "";
   let repeatCnt = 0;
 
-  const cancelSession = async (isValid: boolean, reason: CancelReason) => {
-    ctx.user.isValid = isValid;
-    let text: string;
-    if (!isValid) {
-      ctx.user.isLocked = true;
-      // todo such timeouts is not ideal because 1) poor internet connection 2) bad proxy 3) ETIMEDOUT
-      // for timeoutError we can allow user to recover via file
-      text = isFirstTime
-        ? `${reason === CancelReason.timeout ? "Время истекло. " : ""}Вы не прошли игру! \n`
-        : "На сегодня всё!";
-    } else {
-      text = isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом \n" : "Спасибо за игру";
-    }
-    await ctx.sendMessage({ text }, { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 });
-  };
-
-  try {
-    await ctx.sendAndWait({
-      text: "Поиграем?",
-      reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "Ok" }]] },
-    });
-  } catch (error) {
-    if ((error as ApiError).error_code === 403) {
-      // error_code: 403, description: 'Forbidden: user is deactivated' when user is Deleted account
-      // error_code: 403, description: 'Forbidden: bot was blocked by the user'
-      const err = error as ApiError;
-      if (err.description.includes("deactivated")) {
-        console.log(`User ${ctx.user.toLink()} deleted account`);
-        Repo.removeUser(ctx.user.id);
-      } else if (err.description.includes("blocked")) {
-        ctx.user.isCheckBotChatBlocked = true;
-        //todo we should wait 10h timeout and remove
-      } else {
-        console.warn("got error", error);
-      }
-    }
-    return null;
-  }
+  await askForPlay(ctx);
   delete ctx.user.isCheckBotChatBlocked;
 
+  // play game block
   try {
     while (1) {
       // first part
@@ -165,11 +129,11 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
 
             if (!UserItem.isFilesEqual(ctx.user.validationFile, res.file)) {
               console.log(`User ${ctx.user.id} failed validation via file and locked`);
-              await cancelSession(false, CancelReason.file);
+              await cancelSession(ctx, false, isFirstTime, CancelReason.file);
               return false;
             }
           }
-          await cancelSession(true, CancelReason.sucсess);
+          await cancelSession(ctx, true, isFirstTime, CancelReason.sucсess);
           return true;
         } else {
           msgPrefix = arrayGetRandomItem(answersExpected_1) + ". Давайте повторим. ";
@@ -184,7 +148,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
         }
         if (invalidTimes >= expectedInvalidTimes) {
           console.log(`User ${ctx.user.id} failed validation and locked: invalidTimes = ${invalidTimes}`);
-          await cancelSession(false, CancelReason.invalidTimes);
+          await cancelSession(ctx, false, isFirstTime, CancelReason.invalidTimes);
           return false;
         } else {
           msgPrefix += ". ";
@@ -195,7 +159,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   } catch (err) {
     if ((err as ErrorCancelled).isCancelled) {
       console.log(`User ${ctx.user.id} failed validation and locked: timeout is over`);
-      await cancelSession(false, CancelReason.timeout);
+      await cancelSession(ctx, false, isFirstTime, CancelReason.timeout);
       return false;
     }
     console.error("CheckBot error. " + err.message || err);
@@ -231,4 +195,70 @@ async function sendAndWait(
     }
   }
   return q.data;
+}
+
+async function cancelSession(ctx: IBotContext, isValid: boolean, isFirstTime: boolean, reason: CancelReason) {
+  // WARN: validationDate set inside
+  ctx.user.isValid = isValid;
+  let text: string;
+  if (!isValid) {
+    ctx.user.isLocked = true;
+    // todo such timeouts is not ideal because 1) poor internet connection 2) bad proxy 3) ETIMEDOUT
+    // for timeoutError we can allow user to recover via file
+    text = isFirstTime
+      ? `${reason === CancelReason.timeout ? "Время истекло. " : ""}Вы не прошли игру! \n`
+      : "На сегодня всё!";
+  } else {
+    text = isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом \n" : "Спасибо за игру";
+  }
+  await ctx.sendMessage({ text }, { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 });
+}
+
+async function askForPlay(ctx: IBotContext) {
+  let timer: NodeJS.Timeout | undefined;
+  let removeMessageId: number | undefined;
+  try {
+    //todo what if user fired 'Go' without any command (because bot was reloaded)
+    const askForPlay = async (silent = false) => {
+      const m = ctx.sendMessage({
+        text: "Поиграем?",
+        reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "/start" }]] },
+        disable_notification: silent,
+      });
+
+      // notify to play after 1hour
+      timer = setTimeout(async () => {
+        removeMessageId && (await ctx.deleteMessage(removeMessageId));
+        removeMessageId = undefined;
+        timer = undefined;
+        await askForPlay(); // todo maybe silent?
+      }, 59 * 60000); //ask every 59min
+
+      removeMessageId = (await m).message_id;
+    };
+
+    await askForPlay();
+
+    ctx.onCancelled().finally(() => timer && clearTimeout(timer));
+    // wait for any response because user can remove previous message by mistake
+    await ctx.onGotEvent(EventTypeEnum.gotUpdate);
+  } catch (error) {
+    if ((error as ApiError).error_code === 403) {
+      // error_code: 403, description: 'Forbidden: user is deactivated' when user is Deleted account
+      // error_code: 403, description: 'Forbidden: bot was blocked by the user'
+      const err = error as ApiError;
+      if (err.description.includes("deactivated")) {
+        console.log(`User ${ctx.user.toLink()} deleted account`);
+        Repo.removeUser(ctx.user.id);
+      } else if (err.description.includes("blocked")) {
+        ctx.user.isCheckBotChatBlocked = true;
+        //todo we should wait 10h timeout and remove
+      } else {
+        console.warn("got error", error);
+      }
+    }
+    return null;
+  }
+  timer && clearTimeout(timer);
+  timer = undefined;
 }
