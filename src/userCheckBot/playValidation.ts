@@ -3,7 +3,7 @@ import ErrorCancelled from "../errorCancelled";
 import arrayGetRandomItem from "../helpers/arrayGetRandomItem";
 import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
 import Repo from "../repo";
-import { EventTypeEnum, IBotContext } from "../types";
+import { EventTypeEnum, IBotContext, NewCallbackQuery } from "../types";
 import UserItem from "../userItem";
 import { generateWordPairs, generateWordPairsNext } from "./dictionary";
 
@@ -78,7 +78,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   };
 
   try {
-    await ctx.sendMessage({
+    await ctx.sendAndWait({
       text: "Поиграем?",
       reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "Ok" }]] },
     });
@@ -101,20 +101,17 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   }
   delete ctx.user.isCheckBotChatBlocked;
 
-  await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
-
   try {
     while (1) {
       // first part
       const pairs = generateWordPairs(ctx.user.validationKey, rows * collumns);
-      await sendMessage(
+      let gotWord = await sendAndWait(
         ctx,
         msgPrefix + (isFirstTime ? "Выберите любое слово" : repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
-        pairs.map((v) => v.one)
+        pairs.map((v) => v.one),
+        isFirstTime ? validationTimeout * 5 : validationTimeout
       );
-      ctx.setTimeout(isFirstTime ? validationTimeout * 5 : validationTimeout);
 
-      const gotWord = (await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery)).data;
       const trueWordPair = gotWord && pairs.find((v) => v.one === gotWord);
       if (!trueWordPair) {
         await ctx.sendMessage({ text: "Упс, я поломался. Давайте ещё раз" });
@@ -123,37 +120,36 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
 
       // second part
       const nextObj = generateWordPairsNext(ctx.user.validationKey, trueWordPair, pairs, true);
-      await sendMessage(
+      gotWord = await sendAndWait(
         ctx,
         isFirstTime ? "Выберите вашу ассоциацию❗️❗️❗️" : "Выберите ассоциацию❗️",
-        nextObj.pairs.map((v) => v.two)
+        nextObj.pairs.map((v) => v.two),
+        null
       );
 
-      const gotWord2 = (await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery)).data;
-      if (isFirstTime && gotWord2 !== nextObj.expected) {
+      if (isFirstTime && gotWord !== nextObj.expected) {
         ctx.singleMessageMode = false;
         ctx.setTimeout(validationTimeout * 5);
-        await ctx.sendMessage(
+        await ctx.sendAndWait(
           {
             text: `Неправильно. Ожидаю '${nextObj.expected}'.\nПорядок сверху-вниз!\nНачнём заново!`,
-
             reply_markup: { inline_keyboard: [[{ callback_data: "Ok", text: "Ok" }]] },
           },
           { removeByUpdate: true, removeTimeout: validationTimeout }
         );
         ctx.singleMessageMode = true;
-        await ctx.onGotEvent(EventTypeEnum.gotUpdate);
         invalidTimes = 0;
         validTimes = 0;
         continue;
       }
-      if (gotWord2 === nextObj.expected) {
+      if (gotWord === nextObj.expected) {
         ++validTimes;
         if (validTimes >= expectedValidTimes) {
           msgPrefix = arrayGetRandomItem(answersExpected_2);
           if (!ctx.user.validationFile) {
             // init 2step validation
-            await sendMessage(ctx, msgPrefix + uploadFileInstructions, null);
+            ctx.setTimeout(timeoutFirstFile);
+            await ctx.sendMessage({ text: msgPrefix + uploadFileInstructions });
             ctx.setTimeout(timeoutFirstFile);
             const res = await ctx.onGotEvent(EventTypeEnum.gotFile);
             await ctx.deleteMessage(res.message_id);
@@ -161,7 +157,9 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
           } else if (invalidTimes) {
             // 2step validation
             ctx.setTimeout(timeoutFile);
-            await sendMessage(ctx, msgPrefix + ". " + askFile, null);
+            await ctx.sendMessage({ text: msgPrefix + ". " + askFile });
+            //todo lock if user sent not file by message
+            ctx.setTimeout(timeoutFile);
             const res = await ctx.onGotEvent(EventTypeEnum.gotFile);
             await ctx.deleteMessage(res.message_id);
 
@@ -179,7 +177,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
       } else {
         validTimes = 0;
         ++invalidTimes;
-        if (gotWord2 === nextObj.truthy) {
+        if (gotWord === nextObj.truthy) {
           msgPrefix = arrayGetRandomItem(answersTrue);
         } else {
           msgPrefix = arrayGetRandomItem(answersFalse);
@@ -206,19 +204,31 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
   return null;
 }
 
-function sendMessage(ctx: IBotContext, text: string, words: string[] | null) {
-  const args: Parameters<IBotContext["sendMessage"]>["0"] = {
+async function sendAndWait(
+  ctx: IBotContext,
+  text: string,
+  words: string[],
+  restartTimeoutMs: number | null
+): Promise<string | undefined> {
+  const msg = await ctx.sendMessage({
     text,
-  };
-
-  if (words) {
-    args.reply_markup = {
+    reply_markup: {
       inline_keyboard: arrayMapToTableByColumn(words, rows, collumns, (v) => ({
         text: v,
         callback_data: v,
       })),
-    };
+    },
+  });
+  if (restartTimeoutMs) {
+    ctx.setTimeout(restartTimeoutMs);
   }
 
-  return ctx.sendMessage(args);
+  let q: NewCallbackQuery | null = null;
+  while (!q) {
+    q = await ctx.onGotEvent(EventTypeEnum.gotCallbackQuery);
+    if (q.message?.message_id !== msg.message_id) {
+      q = null;
+    }
+  }
+  return q.data;
 }
