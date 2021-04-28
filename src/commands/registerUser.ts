@@ -79,7 +79,6 @@ async function registerUser(ctx: IBotContext, ctxReport: IBotContext): Promise<b
   const report = (msg: string) => {
     return ctxReport.sendMessage({
       text: `${user.toLink()} ${msg}`,
-      parse_mode: "HTML",
     });
   };
 
@@ -88,7 +87,7 @@ async function registerUser(ctx: IBotContext, ctxReport: IBotContext): Promise<b
   // wait for start
   await ctx.sendMessage({
     text: `На инструктаж отведено ~${regTimeoutMinutes}мин. Внимательно читайте всё по несколько раз!`,
-    parse_mode: "HTML",
+
     reply_markup: {
       inline_keyboard: [[{ text: `Начнём ${wasLockedUser ? "пере-" : ""}регистрацию`, callback_data: "OK" }]],
     },
@@ -103,7 +102,7 @@ async function registerUser(ctx: IBotContext, ctxReport: IBotContext): Promise<b
   const botName = CheckBot.service.botUserName;
   await ctx.sendMessage({
     text: getInstructionsText(botName),
-    parse_mode: "HTML",
+
     reply_markup: { inline_keyboard: getInstructionsMarkup() },
   });
   await ctx.onGotEvent(EventTypeEnum.gotUpdate);
@@ -112,7 +111,7 @@ async function registerUser(ctx: IBotContext, ctxReport: IBotContext): Promise<b
   await ctx.sendMessage(
     {
       text: `Ваш ключ:\n\n<b>"${declinateWord(user.validationKey)}"</b>\n\nЗапомните его.`,
-      parse_mode: "HTML",
+
       reply_markup: {
         inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
       },
@@ -151,7 +150,7 @@ async function registerUser(ctx: IBotContext, ctxReport: IBotContext): Promise<b
       text: isValid
         ? getFinishInstructions(wasLockedUser)
         : `Вы не прошли проверку. ${wasLockedUser ? "Пере-регистрация" : "Регистрация"} отклонена`,
-      parse_mode: "HTML",
+
       reply_markup: {
         inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
       },

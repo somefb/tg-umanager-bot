@@ -11,7 +11,7 @@ const TestCmd: MyBotCommand = {
   callback: async (ctx) => {
     await ctx.sendMessage({
       text: getFinishInstructions(),
-      parse_mode: "HTML",
+
       //reply_markup: { inline_keyboard: getInstructionsMarkup() },
     });
   },

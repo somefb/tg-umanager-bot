@@ -38,7 +38,7 @@ const UnlockUser: MyBotCommand = {
 
     await ctx.sendMessage({
       text: getInstructionsText(true, targetUser),
-      parse_mode: "HTML",
+
       reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: ctx.getCallbackCancel() }]] },
     });
 
@@ -91,7 +91,6 @@ const UnlockUser: MyBotCommand = {
         text: `В течение ${BotContext.defSessionTimeoutStr} ${targetUser.toLink()} может написать боту @${
           ctx.botUserName
         } /start и пройти пере-регистрацию.\nТакже вы можете продолжить посылать команды боту (я мультизадачный)"`,
-        parse_mode: "HTML",
       },
       { keepAfterSession: true }
     );
@@ -117,7 +116,6 @@ async function unlockTask(ctx: IBotContext, targetUser: UserItem, validationVoic
         });
         await ctx.sendMessage({
           text: `Сообщение отправлено ${targetUser.toLink()}. Ожидаю ответа...`,
-          parse_mode: "HTML",
         });
       } catch {}
       const msgRegUser = await ctx.service.onGotEvent(
@@ -145,7 +143,6 @@ async function unlockTask(ctx: IBotContext, targetUser: UserItem, validationVoic
       text: success
         ? `${targetUser.toLink()} снова в строю`
         : `${targetUser.toLink()} не прошёл пере-регистрацию. Чтобы разблокировать пользователя повторите команду снова`,
-      parse_mode: "HTML",
     },
     { removeTimeout: notifyTimeout, removeByUpdate: true, keepAfterSession: true }
   );

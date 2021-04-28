@@ -136,7 +136,7 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
         await ctx.sendMessage(
           {
             text: `Неправильно. Ожидаю '${nextObj.expected}'.\nПорядок сверху-вниз!\nНачнём заново!`,
-            parse_mode: "HTML",
+
             reply_markup: { inline_keyboard: [[{ callback_data: "Ok", text: "Ok" }]] },
           },
           { removeByUpdate: true, removeTimeout: validationTimeout }
@@ -209,7 +209,6 @@ export default async function playValidation(ctx: IBotContext): Promise<boolean 
 function sendMessage(ctx: IBotContext, text: string, words: string[] | null) {
   const args: Parameters<IBotContext["sendMessage"]>["0"] = {
     text,
-    parse_mode: "HTML",
   };
 
   if (words) {

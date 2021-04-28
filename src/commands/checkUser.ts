@@ -32,7 +32,7 @@ const CommandCheckUser: MyBotCommand = {
 
     const msg = await ctx.sendMessage({
       text: `Проверить ${ulink}?`,
-      parse_mode: "HTML",
+
       reply_markup: {
         inline_keyboard: [
           [
@@ -64,7 +64,7 @@ const CommandCheckUser: MyBotCommand = {
     //       const msg = await ctx.sendMessage(
     //         {
     //           text,
-    //           parse_mode: "HTML",
+    //
     //           reply_markup: ctx.chat.isGroup
     //             ? { inline_keyboard: [[{ text: "Удалить из группы", callback_data: "cuK" }]] }
     //             : undefined,

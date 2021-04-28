@@ -37,7 +37,7 @@ const CommandHelp: MyBotCommand = {
       {
         disable_notification: true,
         text: lines.join("\n"),
-        parse_mode: "HTML",
+
         //reply_markup: ""
       },
       { removeTimeout: validationExpiry, removeByUpdate: true, keepAfterSession: true }

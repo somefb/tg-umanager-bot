@@ -42,7 +42,7 @@ const ShareBot: MyBotCommand = {
 
     await ctx.sendMessage({
       text: getInstructionsText(),
-      parse_mode: "HTML",
+
       reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: ctx.getCallbackCancel() }]] },
     });
 
@@ -78,7 +78,6 @@ const ShareBot: MyBotCommand = {
         text: `В течение ${BotContext.defSessionTimeoutStr} пользователь может написать боту @${ctx.botUserName}${
           !regInfo.user ? " используя токен: <b>" + regInfo.token + "</b> как стартовое слово" : ""
         }\n`,
-        parse_mode: "HTML",
       },
       { keepAfterSession: true }
     );
@@ -141,7 +140,6 @@ async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
       text: regUser
         ? `${regUser?.toLink()} ${success ? "зарегистрирован" : "не прошёл регистрацию"}`
         : `Истекло время ожидания. Токен ${regInfo.token} не действителен`,
-      parse_mode: "HTML",
     },
     { removeTimeout: notifyTimeout, removeByUpdate: true, keepAfterSession: true }
   );

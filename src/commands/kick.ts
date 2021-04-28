@@ -13,7 +13,7 @@ export async function kickUser(ctx: IBotContext, delMember: IUser): Promise<bool
 
   const m = await ctx.sendMessage({
     text: `Удалить ${uRemovedLink} из группы?`,
-    parse_mode: "HTML",
+
     reply_markup: {
       inline_keyboard: [
         [
@@ -48,7 +48,7 @@ export async function kickUser(ctx: IBotContext, delMember: IUser): Promise<bool
     await ctx.sendMessage(
       {
         text: `${ctx.userLink} удалил ${uRemovedLink}`,
-        parse_mode: "HTML",
+
         disable_notification: false,
       },
       { keepAfterSession: true }
@@ -59,7 +59,7 @@ export async function kickUser(ctx: IBotContext, delMember: IUser): Promise<bool
     await ctx.sendMessage(
       {
         text: `Не могу удалить ${uRemovedLink}. Вероятно недостаточно прав`,
-        parse_mode: "HTML", //
+        //
       },
       { keepAfterSession: true, removeTimeout: 5000 }
     );

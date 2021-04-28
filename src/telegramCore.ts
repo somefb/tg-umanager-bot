@@ -161,6 +161,9 @@ export default class TelegramCore implements ITelegramCore {
   }
 
   sendMessage(args: Opts<"sendMessage">): P<ApiResponse<Message.TextMessage>> {
+    if (!args.parse_mode) {
+      args.parse_mode = "HTML";
+    }
     return this.httpPost("sendMessage", args);
   }
 

@@ -123,7 +123,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
       await ctx.sendMessage(
         {
           text,
-          parse_mode: "HTML",
+
           disable_notification: true,
         },
         {

@@ -65,7 +65,7 @@ async function countAll(ctx: IBotContext, partialWait: boolean) {
           "Я",
           ...names,
         ].join("\n"),
-        parse_mode: "HTML",
+
         disable_notification: true,
       });
     };
@@ -80,7 +80,7 @@ async function countAll(ctx: IBotContext, partialWait: boolean) {
         "\nЕсли среди участников есть другой бот (не администратор) и его нет в списке выше - удалите и добавьте его, или временно измените ему права...",
         "\nПомогите обнаружить вас...",
       ].join("\n"),
-      parse_mode: "HTML",
+
       reply_markup: {
         inline_keyboard: [[{ text: "Я здесь", callback_data: "im" }]],
       },
