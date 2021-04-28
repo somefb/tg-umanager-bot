@@ -3,7 +3,7 @@ import ErrorCancelled from "../errorCancelled";
 import arrayGetRandomItem from "../helpers/arrayGetRandomItem";
 import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
 import Repo from "../repo";
-import { EventTypeEnum, IBotContext, NewCallbackQuery } from "../types";
+import { EventTypeEnum, IBotContext, NewCallbackQuery, NewFileMessage } from "../types";
 import UserItem from "../userItem";
 import { generateWordPairs, generateWordPairsNext } from "./dictionary";
 
@@ -123,15 +123,21 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
           } else if (invalidTimes) {
             // 2step validation
             ctx.setTimeout(timeoutFile);
-            await ctx.sendMessage({ text: msgPrefix + ". " + askFile });
-            //todo lock if user sent not file by message
+            await ctx.sendMessage({ text: msgPrefix + " " + askFile });
             ctx.setTimeout(timeoutFile);
-            const res = await ctx.onGotEvent(EventTypeEnum.gotFile);
-            await ctx.deleteMessage(res.message_id);
 
-            if (!UserItem.isFilesEqual(ctx.user.validationFile, res.file)) {
+            let res: NewFileMessage | undefined;
+            // WARN: important not to wait event
+            ctx
+              .onGotEvent(EventTypeEnum.gotFile)
+              .then((v) => (res = v))
+              .catch();
+            await ctx.onGotEvent(EventTypeEnum.gotUpdate);
+            res && (await ctx.deleteMessage(res.message_id));
+
+            if (!res || !UserItem.isFilesEqual(ctx.user.validationFile, res.file)) {
               console.log(`User ${ctx.user.id} failed validation via file and locked`);
-              await cancelSession(ctx, false, isFirstTime, CancelReason.file);
+              await cancelSession(ctx, true, isFirstTime, CancelReason.file);
               return false;
             }
           }
