@@ -151,21 +151,9 @@ export class RepoClass {
     if (!user) {
       return;
     }
-    let updated = false;
-    if (user.firstName != from.first_name) {
-      user.firstName = from.first_name;
-      updated = true;
-    }
-    if (user.lastName != from.last_name) {
-      user.lastName = from.last_name;
-      updated = true;
-    }
-    if (user.userName != from.username) {
-      user.userName = from.username;
-      updated = true;
-    }
-
-    updated && this.commit();
+    user.firstName = from.first_name;
+    user.lastName = from.last_name;
+    user.userName = from.username;
   }
 
   getUser(id: number | undefined): UserItem | undefined {
