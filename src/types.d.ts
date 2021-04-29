@@ -41,6 +41,7 @@ export type ITelegramCore = Pick<
   | "getUpdates"
   | "setMyCommands"
   | "sendMessage"
+  | "sendVoice"
   | "deleteMessage"
   | "setWebhook"
   | "getWebhookInfo"
@@ -52,7 +53,7 @@ export type ITelegramCore = Pick<
   | "answerCallbackQuery"
   | "kickChatMember"
   | "unbanChatMember"
-  | "sendVoice"
+  | "createChatInviteLink"
 > & {
   //
   deleteMessageForce(args: Opts<"deleteMessage">): Promise<void>;

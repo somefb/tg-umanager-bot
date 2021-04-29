@@ -10,6 +10,7 @@ import { CommandRepeatBehavior } from "../types";
 import { MyBotCommandTypes } from "./botCommandTypes";
 import UnlockUser from "./unlockUser";
 import CommandCheckUser from "./checkUser";
+import CommandInvite from "./invite";
 
 const MyBotCommands = [
   CommandHelp,
@@ -20,6 +21,7 @@ const MyBotCommands = [
   CommandCheckUser,
   CommandKick,
   UnlockUser,
+  CommandInvite,
 ];
 
 if (process.env.DEV || process.env.NODE_ENV === "test") {

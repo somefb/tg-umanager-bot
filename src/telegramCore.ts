@@ -5,6 +5,7 @@ import https, { RequestOptions } from "https";
 import {
   ApiError,
   ApiResponse,
+  ChatInviteLink,
   ChatMember,
   Message,
   P,
@@ -292,6 +293,10 @@ export default class TelegramCore implements ITelegramCore {
 
   unbanChatMember(args: Opts<"unbanChatMember">): P<R<true>> {
     return this.httpPost("unbanChatMember", args);
+  }
+
+  createChatInviteLink(args: Opts<"createChatInviteLink">): P<R<ChatInviteLink>> {
+    return this.httpPost("createChatInviteLink", args);
   }
 }
 
