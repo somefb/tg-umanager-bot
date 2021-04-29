@@ -23,7 +23,6 @@ export function getUserStatus(user: UserItem | undefined, m: IUser, isAnonym: bo
     status = `проверен ${dateToPastTime(user.validationDate)}`;
   } else if (user.isCheckBotChatBlocked) {
     icon = "❗️";
-    // todo wait unblock ???
     status = `бот заблокирован. ${dateToPastTime(user.validationDate)}`;
   } else if (isFinished) {
     icon = "❗️";
@@ -100,10 +99,11 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
       });
     }
 
+    arr.push("");
     if (!isFinished) {
-      // todo remove and notify
+      // todo remove user and notify
       arr.push(
-        `\n▪️ Не начавших проверку, удалю из всех групп через <b>${dateDiffToTime(
+        `▪️ Не начавших проверку, удалю из всех групп через <b>${dateDiffToTime(
           Math.max(dtEnd - Date.now(), 1000)
         )}</b>`
       );
@@ -114,7 +114,6 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
     // todo implement return back
 
     hasLocked && arr.push("\n▪️ Для разблокирования - команда /unlock ('блокированный' не может общаться с ботом)");
-
     isFinished && arr.push("\nПроверка окончена");
 
     const text = arr.join("\n");
@@ -123,7 +122,6 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
       await ctx.sendMessage(
         {
           text,
-
           disable_notification: true,
         },
         {

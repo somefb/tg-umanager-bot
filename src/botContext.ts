@@ -308,14 +308,17 @@ export default class BotContext implements IBotContext {
   }
 
   private _askMsgId?: number;
-  async askForUser(text: string): Promise<UserItem | MyChatMember> {
+  async askForUser(text: string, onlyRegistered?: boolean, note?: string): Promise<UserItem>;
+  async askForUser(text: string, onlyRegistered?: boolean, note?: string): Promise<UserItem | MyChatMember> {
     if (!this._askMsgId) {
+      const arrText = [`${text} Укажите имя/@никнейм пользователя`];
+      if (note) {
+        arrText.push("\n" + note);
+      } else if (this.chat.isGroup) {
+        arrText.push("\nДля указания анонимных администраторов используйте функцию телеграмма 'ответить на сообщение'");
+      }
       const msg = await this.sendMessage({
-        text: `${text} Укажите имя/@никнейм пользователя${
-          this.chat.isGroup
-            ? "\n\nДля указания анонимных администраторов используйте функцию телеграмма 'ответить на сообщение'"
-            : ""
-        }`,
+        text: arrText.join("\n"),
         reply_markup: { inline_keyboard: [[{ text: "Отмена", callback_data: this.getCallbackCancel() }]] },
       });
       this._askMsgId = msg.message_id;
@@ -365,8 +368,14 @@ export default class BotContext implements IBotContext {
         } else if (found.id === this.initMessage.from.id || found.id === this.user.termyBotChatId) {
           reportText = "Вы не можете указать на себя или меня...";
           found = null;
-        } else {
-          return found;
+        }
+      }
+
+      if (found && onlyRegistered) {
+        const user = Repo.getUser(found.id);
+        if (!user) {
+          reportText = `${UserItem.ToLinkUser(found)} не зарегистрирован`;
+          found = null;
         }
       }
 

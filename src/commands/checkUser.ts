@@ -1,6 +1,5 @@
-import Repo from "../repo";
 import { CommandRepeatBehavior, MyBotCommand } from "../types";
-import UserItem, { IUser } from "../userItem";
+import UserItem from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
 import { reportValidation } from "./check";
 
@@ -16,22 +15,10 @@ const CommandCheckUser: MyBotCommand = {
     ctx.disableNotification = true;
     ctx.singleUserMode = true;
 
-    let targetMember: IUser | undefined;
-    let ulink = "";
-    while (!targetMember) {
-      targetMember = await ctx.askForUser("Кого проверяем?");
-      ulink = UserItem.ToLinkUser(targetMember);
-
-      if (!Repo.getUser(targetMember.id)) {
-        targetMember = undefined;
-        ctx.singleMessageMode = false;
-        await ctx.sendMessage({ text: `${ulink} не зарегистрирован` }, { removeTimeout: 5000 });
-        ctx.singleMessageMode = true;
-      }
-    }
+    const targetMember = await ctx.askForUser("Кого проверяем?", true);
 
     await ctx.sendAndWait({
-      text: `Проверить ${ulink}?`,
+      text: `Проверить ${UserItem.ToLinkUser(targetMember)}?`,
       reply_markup: {
         inline_keyboard: [
           [

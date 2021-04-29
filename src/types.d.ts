@@ -191,7 +191,8 @@ export interface IBotContext {
     opts?: IBotContextMsgOptions
   ): Promise<NewCallbackQuery>;
   deleteMessage(id: number): Promise<void>;
-  askForUser(text: string): Promise<UserItem | IUser>;
+  askForUser(text: string, onlyRegistered?: false, note?: string): Promise<UserItem | IUser>;
+  askForUser(text: string, onlyRegistered: true, note?: string): Promise<UserItem>;
 
   onGotEvent<E extends EventTypeEnum>(type: E): Promise<EventTypeReturnType[E]>;
   removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void;
