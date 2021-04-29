@@ -73,6 +73,17 @@ const CommandKick: MyBotCommand = {
     ctx.singleUserMode = true;
 
     const delMember = await ctx.askForUser("Кого удаляем?");
+    await ctx.sendAndWait({
+      text: `Удалить ${UserItem.ToLinkUser(delMember)} из группы?`,
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: "Да", callback_data: "kOk" },
+            { text: "Отмена", callback_data: ctx.getCallbackCancel() },
+          ],
+        ],
+      },
+    });
     await kickUser(ctx, delMember);
   },
 };
