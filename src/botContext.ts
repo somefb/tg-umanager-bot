@@ -251,7 +251,10 @@ export default class BotContext implements IBotContext {
           this.singleUserMode &&
           from &&
           from.id !== this.initMessage.from.id &&
-          !(this.chat.members[from.id]?.isAnonym && ChatItem.isAnonymGroupBot(this.initMessage.from))
+          !(this.chat.members[from.id]?.isAnonym && ChatItem.isAnonymGroupBot(this.initMessage.from)) &&
+          type !== EventTypeEnum.addedChatMembers &&
+          type !== EventTypeEnum.memberUpated &&
+          type !== EventTypeEnum.addedChatMembers
         ) {
           if (wasNotified) {
             return;
