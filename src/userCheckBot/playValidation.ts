@@ -225,48 +225,48 @@ async function cancelSession(ctx: IBotContext, isValid: boolean, isFirstTime: bo
 async function askForPlay(ctx: IBotContext) {
   let timer: NodeJS.Timeout | undefined;
   let removeMessageId: number | undefined;
-  try {
-    //todo what if user fired 'Go' without any command (because bot was reloaded)
-    const askForPlay = async (silent = false) => {
-      const m = ctx.sendMessage({
+
+  const sendQuestion = async (silent = false) => {
+    // notify to play after 1hour
+    timer = setTimeout(async () => {
+      removeMessageId && (await ctx.deleteMessage(removeMessageId));
+      removeMessageId = undefined;
+      timer = undefined;
+      await sendQuestion();
+    }, 59 * 60000); //ask every 59min
+
+    try {
+      const msg = await ctx.sendMessage({
         text: "Поиграем?",
         reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "/go" }]] },
         disable_notification: silent,
       });
-
-      // notify to play after 1hour
-      timer = setTimeout(async () => {
-        removeMessageId && (await ctx.deleteMessage(removeMessageId));
-        removeMessageId = undefined;
-        timer = undefined;
-        await askForPlay(); // todo maybe silent?
-      }, 59 * 60000); //ask every 59min
-
-      removeMessageId = (await m).message_id;
-    };
-
-    await askForPlay();
-
-    ctx.onCancelled().finally(() => timer && clearTimeout(timer));
-    // wait for any response because user can remove previous message by mistake
-    await ctx.onGotEvent(EventTypeEnum.gotUpdate);
-  } catch (error) {
-    if ((error as ApiError).error_code === 403) {
-      // error_code: 403, description: 'Forbidden: user is deactivated' when user is Deleted account
-      // error_code: 403, description: 'Forbidden: bot was blocked by the user'
+      removeMessageId = msg.message_id;
+    } catch (error) {
       const err = error as ApiError;
-      if (err.description.includes("deactivated")) {
-        console.log(`User ${ctx.user.toLink()} deleted account`);
-        Repo.removeUser(ctx.user.id);
-      } else if (err.description.includes("blocked")) {
-        ctx.user.isCheckBotChatBlocked = true;
-        //todo we should wait 10h timeout and remove
-      } else {
-        console.warn("got error", error);
+      if (err.error_code === 403) {
+        // error_code: 403, description: 'Forbidden: user is deactivated' when user is Deleted account
+        // error_code: 403, description: 'Forbidden: bot was blocked by the user'
+        if (err.description.includes("deactivated")) {
+          Repo.removeUser(ctx.user.id);
+          timer && clearTimeout(timer);
+          ctx.cancel(`User ${ctx.user.toLink()} deleted account`);
+        } else if (err.description.includes("blocked")) {
+          ctx.user.isCheckBotChatBlocked = true;
+          timer && clearTimeout(timer);
+        } else {
+          throw error;
+        }
       }
+      return null;
     }
-    return null;
-  }
+  };
+
+  await sendQuestion();
+  ctx.onCancelled().finally(() => timer && clearTimeout(timer));
+  // wait for any response because user can remove previous message by mistake
+  await ctx.onGotEvent(EventTypeEnum.gotUpdate);
+
   timer && clearTimeout(timer);
   timer = undefined;
 }

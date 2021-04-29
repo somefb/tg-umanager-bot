@@ -78,6 +78,7 @@ export default class ChatItem {
       this.removedMembers[userId] = this.members[userId];
     }
     delete this.members[userId];
+    !soft && delete this.removedMembers[userId];
     this.onChatMembersCountChanged?.call(this, -1);
   }
 
