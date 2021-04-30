@@ -379,6 +379,8 @@ export default class BotContext implements IBotContext {
         if (!user) {
           reportText = `${UserItem.ToLinkUser(found)} не зарегистрирован`;
           found = null;
+        } else {
+          found = user;
         }
       }
 
