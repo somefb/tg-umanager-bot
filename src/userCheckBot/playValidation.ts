@@ -49,7 +49,7 @@ const enum CancelReason {
 export const checkWaitResponseStr = "10ч";
 export const checkWaitResponse = 10 * 60 * 60000; //wait for 10 hours for the first response
 
-export default async function playValidation(ctx: IBotContext, skipAskForPlay = false): Promise<boolean | null> {
+export default async function playValidation(ctx: IBotContext, skipAskForPlay = false): Promise<void> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(checkWaitResponse);
   //todo we should remove by this timeout
@@ -81,7 +81,7 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
       const trueWordPair = gotWord && pairs.find((v) => v.one === gotWord);
       if (!trueWordPair) {
         await ctx.sendMessage({ text: "Упс, я поломался. Давайте ещё раз" });
-        return false;
+        return;
       }
 
       // second part
@@ -138,11 +138,11 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
             if (!res || !UserItem.isFilesEqual(ctx.user.validationFile, res.file)) {
               console.log(`User ${ctx.user.id} failed validation via file and locked`);
               await cancelSession(ctx, true, isFirstTime, CancelReason.file);
-              return false;
+              return;
             }
           }
           await cancelSession(ctx, true, isFirstTime, CancelReason.sucсess);
-          return true;
+          return;
         } else {
           msgPrefix = arrayGetRandomItem(answersExpected_1) + ". Давайте повторим. ";
         }
@@ -157,7 +157,7 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
         if (invalidTimes >= expectedInvalidTimes) {
           console.log(`User ${ctx.user.id} failed validation and locked: invalidTimes = ${invalidTimes}`);
           await cancelSession(ctx, false, isFirstTime, CancelReason.invalidTimes);
-          return false;
+          return;
         } else {
           msgPrefix += ". ";
         }
@@ -168,12 +168,9 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
     if ((err as ErrorCancelled).isCancelled) {
       console.log(`User ${ctx.user.id} failed validation and locked: timeout is over`);
       await cancelSession(ctx, false, isFirstTime, CancelReason.timeout);
-      return false;
     }
-    console.error("CheckBot error. " + err.message || err);
+    throw err;
   }
-
-  return null;
 }
 
 async function sendAndWait(
@@ -220,6 +217,7 @@ async function cancelSession(ctx: IBotContext, isValid: boolean, isFirstTime: bo
     text = isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом \n" : "Спасибо за игру";
   }
   await ctx.sendMessage({ text }, { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 });
+  Repo.commit();
 }
 
 async function askForPlay(ctx: IBotContext) {

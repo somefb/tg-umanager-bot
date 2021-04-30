@@ -1,5 +1,4 @@
 import ErrorCancelled from "../errorCancelled";
-import Repo from "../repo";
 import { CommandRepeatBehavior, IBotContext, ITelegramService, MyBotCommand } from "../types";
 import UserItem from "../userItem";
 import { generateUserKey } from "./dictionary";
@@ -49,7 +48,6 @@ const CheckBotCommands: MyBotCommand[] = [
     },
     callback: async (ctx) => {
       await playValidation(ctx);
-      ctx.onCancelled().finally(() => Repo.commit());
     },
   } as MyBotCommand,
   {
@@ -60,7 +58,6 @@ const CheckBotCommands: MyBotCommand[] = [
     allowCommand: (user) => !user?.isLocked,
     callback: async (ctx) => {
       await playValidation(ctx, true);
-      ctx.onCancelled().finally(() => Repo.commit());
     },
   } as MyBotCommand,
 ];
