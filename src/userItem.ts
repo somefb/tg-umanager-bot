@@ -58,6 +58,7 @@ export default class UserItem implements IUser {
       if (a[key] !== b[key]) {
         // @ts-ignore
         console.log(`File validation is wrong. a.${key} (${a[key]}) !== b.${key} (${b[key]})`);
+        return true;
       }
       return;
     });
