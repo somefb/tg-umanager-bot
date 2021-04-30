@@ -108,8 +108,9 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
         )}</b>`
       );
       arr.push("Такие смогут вернуться по прохождению проверки");
+      arr.push("▪️ Проваливших проверку, удалю из всех групп немедленно");
     }
-    arr.push("▪️ Проваливших проверку, удалю из всех групп немедленно");
+
     // todo button kickAllNow
     // todo implement return back
 
@@ -119,7 +120,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
     const text = arr.join("\n");
     if (prevText !== text) {
       prevText = text;
-      await ctx.sendMessage(
+      const msg = await ctx.sendMessage(
         {
           text,
           disable_notification: true,
@@ -130,6 +131,18 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
           removeTimeout: ctx.chat.isGroup ? undefined : 5 * 60000,
         }
       );
+      if (ctx.chat.isGroup && isFinished) {
+        ctx.singleMessageMode = false;
+        await ctx.sendMessage(
+          {
+            text: "Проверка окончена",
+            disable_notification: false,
+            reply_to_message_id: msg.message_id,
+          },
+          { keepAfterSession: true }
+        );
+        ctx.singleMessageMode = true;
+      }
     }
   }; // end: report()
 
