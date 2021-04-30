@@ -1,5 +1,5 @@
 import CommandClear from "./clear";
-import CommandClearDisableUntilHere from "./clearDisableUntilHere";
+import CommandClearDisableHere from "./clearDisableHere";
 import Check from "./check";
 import CommandHelp from "./help";
 import ShareBot from "./shareBot";
@@ -15,7 +15,7 @@ import CommandInvite from "./invite";
 const MyBotCommands = [
   CommandHelp,
   CommandClear,
-  CommandClearDisableUntilHere,
+  CommandClearDisableHere,
   ShareBot,
   Check,
   CommandCheckUser,
