@@ -20,6 +20,10 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
       if (from && from.username !== this.botUserName) {
         Repo.getСhat(chatId)?.addOrUpdateMember(from, isAnonym);
         Repo.updateUser(from);
+        const usr = Repo.getUser(from.id);
+        if (usr) {
+          usr.declinedChats.delete(chatId);
+        }
       }
     };
 

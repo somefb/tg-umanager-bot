@@ -6,9 +6,15 @@ import { MyBotCommandTypes } from "./botCommandTypes";
 
 let BotService: ITelegramService;
 
-export function sendInviteLinkTask(target: UserItem, inviteToChatId: number): Promise<void | null> {
+/** Invite user to chat if it's possible */
+export async function sendInviteLinkTask(target: UserItem, inviteToChatId: number): Promise<void | null> {
+  // decline invitation if user rejected it previously
+  if (target.declinedChats.has(inviteToChatId)) {
+    return;
+  }
   const ctxReport = BotService.initContext(inviteToChatId, "_inviteTask", null, target);
-  return ctxReport.callCommand((ctx) => sendInviteLink(ctx, target, null));
+  const r = await ctxReport.callCommand((ctx) => sendInviteLink(ctx, target, null));
+  return r;
 }
 
 async function sendInviteLink(ctxReport: IBotContext, target: UserItem, whoInviteLink: string | null) {
@@ -18,7 +24,7 @@ async function sendInviteLink(ctxReport: IBotContext, target: UserItem, whoInvit
   ctxReport.removeAllByCancel = true;
 
   try {
-    let valid: boolean | null = target.isValid || true;
+    let valid: boolean | null = target.isValid;
     let wasChecked = false;
     if (!valid) {
       await ctxReport.sendMessage({ text: `Проверяю ${target.toLink()} прежде, чем дать ссылку...` });
@@ -43,7 +49,14 @@ async function sendInviteLink(ctxReport: IBotContext, target: UserItem, whoInvit
     if (!res.ok) {
       return;
     }
+
     const link = res.result.invite_link;
+
+    await ctxReport.service.core.unbanChatMember({
+      chat_id: ctxReport.chatId,
+      user_id: target.id,
+      only_if_banned: true,
+    });
 
     const ctxInvite = CheckBot.service.initContext(target.checkBotChatId, "_inviteLink", null, target);
     ctxInvite.setTimeout();
@@ -52,19 +65,28 @@ async function sendInviteLink(ctxReport: IBotContext, target: UserItem, whoInvit
     ctxReport.setTimeout(waitMs);
     ctxReport.onCancelled().finally(() => ctxInvite.cancel("end"));
 
-    const callbackCancel = ctxInvite.getCallbackCancel(async () => {
-      await ctxReport.sendMessage(
-        { text: `${target.toLink()} отказалася`, disable_notification: false },
-        { keepAfterSession: true, removeTimeout: 60000 }
-      );
-      ctxReport.cancel("user cancelled");
-    });
+    const callbackCancel = (isForever: boolean) => {
+      if (isForever) {
+        target.declinedChats.add(ctxReport.chatId);
+      }
+      return ctxInvite.getCallbackCancel(async () => {
+        await ctxReport.sendMessage(
+          { text: `${target.toLink()} отказалася`, disable_notification: false },
+          { keepAfterSession: true, removeTimeout: 60000 }
+        );
+        ctxReport.cancel("user cancelled");
+      });
+    };
 
     await ctxInvite.sendMessage({
       // todo groupName here
       text: "Вас приглашают в группу\n" + link,
-      // todo decline forever
-      reply_markup: { inline_keyboard: [[{ text: "Отказаться", callback_data: callbackCancel }]] },
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "Отказаться", callback_data: callbackCancel(false) }],
+          [{ text: "Отказаться навсегда", callback_data: callbackCancel(true) }],
+        ],
+      },
     });
 
     let text = `${target.toLink()} получил ссылку на эту группу`;
@@ -131,6 +153,14 @@ const CommandInvite: MyBotCommand = {
     if (ctx.chat.members[target.id]) {
       await ctx.sendMessage(
         { text: `${target.toLink()} уже в этой группе` },
+        { keepAfterSession: true, removeTimeout: 10000 }
+      );
+      return;
+    }
+
+    if (target.declinedChats.has(ctx.chat.id)) {
+      await ctx.sendMessage(
+        { text: `${target.toLink()} навсегда отказался вступать в группу` },
         { keepAfterSession: true, removeTimeout: 10000 }
       );
       return;

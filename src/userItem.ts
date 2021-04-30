@@ -87,6 +87,8 @@ export default class UserItem implements IUser {
   /** Date in ms when the last validation is done/failed */
   validationDate = 0;
 
+  declinedChats = new Set<number>();
+
   get isValid(): boolean {
     if (!this._isValid) {
       return false;

@@ -10,3 +10,7 @@ type ObjectKeys<T> =
 interface ObjectConstructor {
   keys<T>(o: T): ObjectKeys<T>;
 }
+
+interface Set<T> {
+  toJSON(): Array<T>;
+}

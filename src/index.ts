@@ -7,6 +7,7 @@ import Repo from "./repo";
 import CheckBotCommands from "./userCheckBot";
 import cfg from "./appSettingsGet";
 import onExit from "./onExit";
+import "./global.ext";
 
 console.clear();
 

@@ -39,14 +39,23 @@ export class RepoClass {
     Object.keys(v.chats).forEach(
       (k) => (this.chats[k as number] = Object.assign(new ChatItem(v.chats[k].id), v.chats[k], this.chats[k as number]))
     );
-    Object.keys(v.users).forEach(
-      (k) =>
-        (this.users[k] = Object.assign(
-          new UserItem(v.users[k].id, v.users[k].validationKey),
-          v.users[k],
-          this.users[k]
-        ))
-    );
+    Object.keys(v.users).forEach((k) => {
+      const saved = v.users[k] as UserItem;
+      const was = this.users[k];
+      this.users[k] = was || new UserItem(saved.id, saved.validationKey);
+      const wasDeclinedChats = this.users[k].declinedChats;
+
+      Object.assign(this.users[k], saved, was);
+
+      if (wasDeclinedChats) {
+        this.users[k].declinedChats = wasDeclinedChats;
+      } else {
+        this.users[k].declinedChats = new Set();
+      }
+      if (saved.declinedChats) {
+        saved.declinedChats.forEach((id) => this.users[k].declinedChats.add(id));
+      }
+    });
   }
 
   async init(filePath: string): Promise<void> {
