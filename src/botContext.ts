@@ -246,7 +246,7 @@ export default class BotContext implements IBotContext {
     let isHandled = false;
     let wasNotified = false;
 
-    this.eventListeners.forEach((e, ref) => {
+    this.eventListeners.forEach(async (e, ref) => {
       if (e.type == type || e.type === EventTypeEnum.gotUpdate) {
         isHandled = true;
 
@@ -254,23 +254,12 @@ export default class BotContext implements IBotContext {
         if (
           this.chat.isGroup &&
           this.singleUserMode &&
-          from &&
-          from.id !== this.initMessage.from.id &&
-          !(this.chat.members[from.id]?.isAnonym && ChatItem.isAnonymGroupBot(this.initMessage.from)) &&
           type !== EventTypeEnum.addedChatMembers &&
           type !== EventTypeEnum.memberUpated &&
-          type !== EventTypeEnum.addedChatMembers
+          type !== EventTypeEnum.addedChatMembers &&
+          (await this.isSameUser(from, wasNotified))
         ) {
-          if (wasNotified) {
-            return;
-          }
           wasNotified = true;
-          const was = this.singleMessageMode;
-          this.singleMessageMode = false;
-          this.sendMessage(
-            { text: "Жду ответа от того, кто вызвал команду..." },
-            { removeTimeout: 5000 } //
-          ).then(() => (this.singleMessageMode = was));
           return;
         }
 
@@ -283,6 +272,39 @@ export default class BotContext implements IBotContext {
       }
     });
     return isHandled;
+  }
+
+  async isSameUser(from: User | undefined, notify: boolean): Promise<boolean> {
+    let isSame = !!(
+      from &&
+      from.id !== this.initMessage.from.id &&
+      !(this.chat.members[from.id]?.isAnonym && ChatItem.isAnonymGroupBot(this.initMessage.from))
+    );
+
+    if (isSame && from) {
+      if (ChatItem.isAnonymGroupBot(this.initMessage.from)) {
+        const r = await this.service.core.getChatAdministrators({ chat_id: this.chatId });
+        if (r.ok) {
+          r.result.forEach((admin) => {
+            this.chat.addOrUpdateMember(admin.user, admin.is_anonymous);
+          });
+          const isAnonym = r.result.some((admin) => admin.user.id === from.id && admin.is_anonymous);
+          isSame = isAnonym;
+        }
+      }
+    }
+
+    if (isSame && notify) {
+      const was = this.singleMessageMode;
+      this.singleMessageMode = false;
+      await this.sendMessage(
+        { text: "Жду ответа от того, кто вызвал команду..." },
+        { removeTimeout: 5000 } //
+      );
+      this.singleMessageMode = was;
+    }
+
+    return isSame;
   }
 
   getListener<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>): IEventListener<E> | undefined {
