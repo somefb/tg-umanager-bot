@@ -144,9 +144,7 @@ export default class TelegramService implements ITelegramService {
       if (timeout) {
         const timer = setTimeout(() => {
           this.removeEvent(ref);
-          reject(
-            Object.assign(new ErrorCancelled(`Waiting is cancelled via timeout(${timeout})`), { isCancelled: true })
-          );
+          reject(new ErrorCancelled(`Waiting is cancelled via timeout(${timeout})`));
         }, timeout);
         fn = (e, chatId) => {
           const ok = predicate(e, chatId);

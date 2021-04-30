@@ -63,12 +63,12 @@ export default class BotContext implements IBotContext {
     this._timer && clearTimeout(this._timer);
     if (ms) {
       this._timer = setTimeout(() => {
-        this.cancel("timeout " + ms);
+        this._cancel("timeout " + ms, true);
       }, ms);
     }
   }
 
-  cancel(reason: string): void {
+  private _cancel(reason: string, isTimeout = false): void {
     let lastMessage;
     if (!this.removeAllByCancel && this.singleMessageMode) {
       lastMessage = this._updateMessage;
@@ -97,9 +97,14 @@ export default class BotContext implements IBotContext {
     const logMsg = `Context '${this.name || ""}' is cancelled. Reason: ${reason}`;
     process.env.DEBUG && console.log(logMsg);
     const err = new ErrorCancelled(logMsg);
+    err.isTimeout = isTimeout;
     this.eventListeners.forEach((e) => e.reject(err));
 
     this.onCancelledListeners?.forEach((resolve) => resolve());
+  }
+
+  cancel(reason: string): void {
+    this._cancel(reason, false);
   }
 
   deleteMessage(id: number): Promise<void> {

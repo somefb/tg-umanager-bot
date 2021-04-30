@@ -165,7 +165,7 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
       ++repeatCnt;
     } // while(1)
   } catch (err) {
-    if ((err as ErrorCancelled).isCancelled) {
+    if ((err as ErrorCancelled).isTimeout) {
       console.log(`User ${ctx.user.id} failed validation and locked: timeout is over`);
       await cancelSession(ctx, false, isFirstTime, CancelReason.timeout);
     }
