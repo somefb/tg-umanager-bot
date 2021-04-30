@@ -52,8 +52,20 @@ async function sendInviteLink(ctxReport: IBotContext, target: UserItem, whoInvit
     ctxReport.setTimeout(waitMs);
     ctxReport.onCancelled().finally(() => ctxInvite.cancel("end"));
 
-    //todo decline button here
-    await ctxInvite.sendMessage({ text: "Вас приглашают в группу\n" + link });
+    const callbackCancel = ctxInvite.getCallbackCancel(async () => {
+      await ctxReport.sendMessage(
+        { text: `${target.toLink()} отказалася`, disable_notification: false },
+        { keepAfterSession: true, removeTimeout: 60000 }
+      );
+      ctxReport.cancel("user cancelled");
+    });
+
+    await ctxInvite.sendMessage({
+      // todo groupName here
+      text: "Вас приглашают в группу\n" + link,
+      // todo decline forever
+      reply_markup: { inline_keyboard: [[{ text: "Отказаться", callback_data: callbackCancel }]] },
+    });
 
     let text = `${target.toLink()} получил ссылку на эту группу`;
     if (whoInviteLink) {
@@ -75,23 +87,23 @@ async function sendInviteLink(ctxReport: IBotContext, target: UserItem, whoInvit
       text = `${target.toLink()} вернулся в группу`;
     }
 
-    ctxReport.disableNotification = false;
-    await ctxReport.sendMessage({ text }, { keepAfterSession: true });
-  } catch (err) {
-    // because timeout
-    if ((err as ErrorCancelled).isCancelled) {
+    await ctxReport.sendMessage({ text, disable_notification: false }, { keepAfterSession: true });
+  } catch (error) {
+    const err = error as ErrorCancelled;
+    if (err.isTimeout) {
       await ctxReport.sendMessage(
         {
           text: [
             `Истекло время ожидания. Ссылка для пользователя ${target.toLink()} удалена`,
             `Вы можете поделиться ссылкой на группу используя комманду ${CommandInvite.command}`,
           ].join(". "),
+          disable_notification: false,
         },
         { keepAfterSession: true, removeTimeout: 60000 }
       );
     }
 
-    throw err;
+    throw error;
   }
 }
 

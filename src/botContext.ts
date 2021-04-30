@@ -401,7 +401,7 @@ export default class BotContext implements IBotContext {
   }
 
   private callbackData?: string;
-  getCallbackCancel(): string {
+  getCallbackCancel(callback?: () => Promise<unknown> | void): string {
     if (!this.callbackData) {
       this.callbackData = "_bc" + getNextUniqueId().toString();
       const applyEvent = () => {
@@ -409,7 +409,11 @@ export default class BotContext implements IBotContext {
           .then((e) => {
             if (e.data === this.callbackData) {
               this.callbackData = undefined;
-              this.cancel("user cancelled");
+              if (callback) {
+                callback();
+              } else {
+                this.cancel("user cancelled");
+              }
             } else {
               applyEvent();
             }

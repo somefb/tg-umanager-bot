@@ -181,7 +181,7 @@ export interface IBotContext {
   cancel(reason: string): void;
   onCancelled: () => Promise<void>;
   /** returns unique callback_data: string that user can click for cancelling  */
-  getCallbackCancel: () => string;
+  getCallbackCancel: (callback?: () => Promise<unknown> | void) => string;
   /** use this method to call context-dependant function properly */
   callCommand<T extends IBotContext, U>(fn: (ctx: T) => Promise<U>): Promise<U | null>;
 
