@@ -133,8 +133,9 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
           };
         } else if ((m as Message.LeftChatMemberMessage).left_chat_member) {
           const member = (m as Message.LeftChatMemberMessage).left_chat_member;
-          // member leaved the chat
+          // member left the chat
           removeMember(chatId, member);
+          defFn = () => true;
         }
       } else if ((upd as Update.EditedMessageUpdate).edited_message) {
         const m = (upd as Update.EditedMessageUpdate).edited_message;
