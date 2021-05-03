@@ -207,7 +207,7 @@ export default class TelegramCore implements ITelegramCore {
   static webHookServer?: http.Server;
 
   async setWebhook(args: Opts<"setWebhook">): P<ApiResponse<true>> {
-    args.url += this.botToken;
+    args.url += "/" + this.botToken;
     const v = await this.httpPost("setWebhook", args, { filePathKey: "certificate" });
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     TelegramCore.webHooks.push({ ref: this, callback: () => {}, port: 0 });
