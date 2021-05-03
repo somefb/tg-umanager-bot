@@ -77,9 +77,11 @@ async function registerUser(ctx: IBotContext, ctxReport: IBotContext): Promise<b
   user.termyBotChatId = ctx.chatId;
 
   const report = (msg: string) => {
-    return ctxReport.sendMessage({
-      text: `${user.toLink()} ${msg}`,
-    });
+    return ctxReport
+      .sendMessage({
+        text: `${user.toLink()} ${msg}`,
+      })
+      .catch((err) => console.error(err));
   };
 
   const wasLockedUser = user.isLocked;
@@ -87,7 +89,6 @@ async function registerUser(ctx: IBotContext, ctxReport: IBotContext): Promise<b
   // wait for start
   await ctx.sendMessage({
     text: `На инструктаж отведено ~${regTimeoutMinutes}мин. Внимательно читайте всё по несколько раз!`,
-
     reply_markup: {
       inline_keyboard: [[{ text: `Начнём ${wasLockedUser ? "пере-" : ""}регистрацию`, callback_data: "OK" }]],
     },
@@ -102,7 +103,6 @@ async function registerUser(ctx: IBotContext, ctxReport: IBotContext): Promise<b
   const botName = CheckBot.service.botUserName;
   await ctx.sendMessage({
     text: getInstructionsText(botName),
-
     reply_markup: { inline_keyboard: getInstructionsMarkup() },
   });
   await ctx.onGotEvent(EventTypeEnum.gotUpdate);
@@ -111,7 +111,6 @@ async function registerUser(ctx: IBotContext, ctxReport: IBotContext): Promise<b
   await ctx.sendMessage(
     {
       text: `Ваш ключ:\n\n<b>"${declinateWord(user.validationKey)}"</b>\n\nЗапомните его.`,
-
       reply_markup: {
         inline_keyboard: [[{ text: "ОК", callback_data: "OK" }]],
       },
