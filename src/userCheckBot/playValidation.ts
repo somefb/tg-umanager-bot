@@ -225,6 +225,7 @@ async function cancelSession(ctx: IBotContext, isValid: boolean, isFirstTime: bo
   }
   const msg = await ctx.sendMessage({ text }, { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 });
   Repo.commit();
+  await ctx.clearChat(msg.message_id - 1);
 }
 
 async function askForPlay(ctx: IBotContext) {
