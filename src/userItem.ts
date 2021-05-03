@@ -86,6 +86,7 @@ export default class UserItem implements IUser {
   _isValid = true;
   /** Date in ms when the last validation is done/failed */
   validationDate = 0;
+  validationFileDate = 0;
 
   declinedChats = new Set<number>();
 

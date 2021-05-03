@@ -48,11 +48,13 @@ const enum CancelReason {
 
 export const checkWaitResponseStr = "10ч";
 export const checkWaitResponse = 10 * 60 * 60000; //wait for 10 hours for the first response
+const checkFilePeriodic = 2 * 24 * 60 * 60000;
 
 export default async function playValidation(ctx: IBotContext, skipAskForPlay = false): Promise<void> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(checkWaitResponse);
   //todo we should remove by this timeout
+  // todo force validation via file for specific commands
 
   const isFirstTime = !ctx.user.validationDate;
 
@@ -127,7 +129,7 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
             const res = await ctx.onGotEvent(EventTypeEnum.gotFile);
             await ctx.deleteMessage(res.message_id);
             ctx.user.validationFile = res.file;
-          } else if (invalidTimes) {
+          } else if (invalidTimes || ctx.user.validationFileDate + checkFilePeriodic <= Date.now()) {
             // 2step validation
             ctx.setTimeout(timeoutFile);
             await ctx.sendMessage({ text: msgPrefix + " " + askFile });
@@ -141,6 +143,8 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
               .catch();
             await ctx.onGotEvent(EventTypeEnum.gotUpdate);
             res && (await ctx.deleteMessage(res.message_id));
+
+            ctx.user.validationFileDate = Date.now();
 
             if (!res || !UserItem.isFilesEqual(ctx.user.validationFile, res.file)) {
               console.log(`User ${ctx.user.id} failed validation via file and locked`);
