@@ -69,7 +69,8 @@ export default class TelegramCore implements ITelegramCore {
         //"Content-Length": data.length,
       };
     }
-    process.env.VERBOSE && !url.endsWith("getUpdates") && console.warn("\nsent " + url + "\n" + data + "\n");
+    process.env.VERBOSE === "true" && !url.endsWith("getUpdates") && console.warn("\nsent " + url + "\n" + data + "\n");
+    let repeatCount = 0;
     const makeRequest = () => {
       return new Promise<T>((resolve, reject) => {
         const req = https.request(
