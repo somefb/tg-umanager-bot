@@ -5,7 +5,7 @@ import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
 import Repo from "../repo";
 import { EventTypeEnum, IBotContext, NewCallbackQuery, NewFileMessage } from "../types";
 import UserItem from "../userItem";
-import { generateWordPairs, generateWordPairsNext } from "./dictionary";
+import { generateWordPairs, generateWordPairsNext, WordPair } from "./dictionary";
 
 // WARN: rows*columns > max ukey.num (defined in dictionary.ts)
 const rows = 4;
@@ -50,6 +50,8 @@ export const checkWaitResponseStr = "10ч";
 export const checkWaitResponse = 10 * 60 * 60000; //wait for 10 hours for the first response
 const checkFilePeriodic = 2 * 24 * 60 * 60000;
 
+const cacheTimeCounts = new Map<number, number>();
+
 export default async function playValidation(ctx: IBotContext, skipAskForPlay = false): Promise<void> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(checkWaitResponse);
@@ -73,36 +75,39 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
     while (1) {
       // first part
       const pairs = generateWordPairs(ctx.user.validationKey, rows * collumns);
-      let gotWord = await sendAndWait(
-        ctx,
-        msgPrefix + (isFirstTime ? "Выберите любое слово" : repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
-        pairs.map((v) => v.one),
-        isFirstTime ? validationTimeout * 5 : validationTimeout
-      );
+      let trueWordPair: WordPair | undefined;
+      while (!trueWordPair) {
+        const gotWord = await sendAndWait(
+          ctx,
+          msgPrefix +
+            (isFirstTime ? "Выберите любое слово" : repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
+          pairs.map((v) => v.one),
+          isFirstTime ? validationTimeout * 5 : validationTimeout
+        );
 
-      const trueWordPair = gotWord && pairs.find((v) => v.one === gotWord);
-      if (!trueWordPair) {
-        await ctx.sendMessage({ text: "Упс... Давайте ещё раз" });
-        return;
+        trueWordPair = gotWord ? pairs.find((v) => v.one === gotWord) : undefined;
+        if (!trueWordPair) {
+          msgPrefix += ".";
+        }
       }
 
       // second part
       const nextObj = generateWordPairsNext(ctx.user.validationKey, trueWordPair, pairs, true);
-      gotWord = "";
-      while (!gotWord) {
-        gotWord = await sendAndWait(
+      trueWordPair = undefined;
+      while (!trueWordPair) {
+        const gotWord = await sendAndWait(
           ctx,
           isFirstTime ? "Выберите вашу ассоциацию❗️❗️❗️" : "Выберите ассоциацию❗️",
           nextObj.pairs.map((v) => v.two),
           null
         );
-        if (!nextObj.pairs.find((v) => v.two === gotWord)) {
-          await ctx.sendMessage({ text: "Упс... Давайте ещё раз" });
-          return;
+        trueWordPair = nextObj.pairs.find((v) => v.two === gotWord);
+        if (!trueWordPair) {
+          msgPrefix += ".";
         }
       }
 
-      if (isFirstTime && gotWord !== nextObj.expected) {
+      if (isFirstTime && trueWordPair.two !== nextObj.expected) {
         ctx.singleMessageMode = false;
         ctx.setTimeout(validationTimeout * 5);
         await ctx.sendAndWait(
@@ -117,13 +122,14 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
         validTimes = 0;
         continue;
       }
-      if (gotWord === nextObj.expected) {
+      if (trueWordPair.two === nextObj.expected) {
         ++validTimes;
         if (validTimes >= expectedValidTimes) {
           msgPrefix = arrayGetRandomItem(answersExpected_2);
+
+          ctx.setTimeout(0);
           if (!ctx.user.validationFile) {
             // init 2step validation
-            ctx.setTimeout(timeoutFirstFile);
             await ctx.sendMessage({ text: msgPrefix + uploadFileInstructions });
             ctx.setTimeout(timeoutFirstFile);
             const res = await ctx.onGotEvent(EventTypeEnum.gotFile);
@@ -131,12 +137,11 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
             ctx.user.validationFile = res.file;
           } else if (invalidTimes || ctx.user.validationFileDate + checkFilePeriodic <= Date.now()) {
             // 2step validation
-            ctx.setTimeout(timeoutFile);
             await ctx.sendMessage({ text: msgPrefix + " " + askFile });
             ctx.setTimeout(timeoutFile);
 
             let res: NewFileMessage | undefined;
-            // WARN: important not to wait event
+            // WARN: important not to wait for event
             ctx
               .onGotEvent(EventTypeEnum.gotFile)
               .then((v) => (res = v))
@@ -160,7 +165,7 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
       } else {
         validTimes = 0;
         ++invalidTimes;
-        if (gotWord === nextObj.truthy) {
+        if (trueWordPair.two === nextObj.truthy) {
           msgPrefix = arrayGetRandomItem(answersTrue);
         } else {
           msgPrefix = arrayGetRandomItem(answersFalse);
@@ -177,8 +182,24 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
     } // while(1)
   } catch (err) {
     if ((err as ErrorCancelled).isTimeout) {
-      console.log(`User ${ctx.user.id} failed validation and locked: timeout is over`);
-      await cancelSession(ctx, false, isFirstTime, CancelReason.timeout);
+      const cnt = cacheTimeCounts.get(ctx.user.id) || 0;
+      !cnt && ctx.onCancelled().then(() => cacheTimeCounts.delete(ctx.user.id));
+
+      if (cnt < 5) {
+        cacheTimeCounts.set(ctx.user.id, cnt + 1);
+        ctx.user.isValid = false;
+
+        console.log(`User ${ctx.user.id} failed validation: timeout is over. Lets retry`);
+        await ctx.sendMessage({ text: "Плохой интернет? Давайте попробуем заново через 10 секунд..." });
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            playValidation(ctx).then(resolve).catch(reject);
+          }, 10000);
+        });
+      } else {
+        console.log(`User ${ctx.user.id} failed validation and locked: timeout is over`);
+        await cancelSession(ctx, false, isFirstTime, CancelReason.timeout);
+      }
     }
     throw err;
   }
@@ -219,7 +240,6 @@ async function cancelSession(ctx: IBotContext, isValid: boolean, isFirstTime: bo
   let text: string;
   if (!isValid) {
     ctx.user.isLocked = true;
-    // todo such timeouts is not ideal because 1) poor internet connection 2) bad proxy 3) ETIMEDOUT
     // for timeoutError we can allow user to recover via file
     text = isFirstTime
       ? `${reason === CancelReason.timeout ? "Время истекло. " : ""}Вы не прошли игру! \n`
