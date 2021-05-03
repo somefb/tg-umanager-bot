@@ -40,12 +40,12 @@ async function countAll(ctx: IBotContext, partialWait: boolean) {
     let definedCnt = ctx.chat.calcVisibleMembersCount() + 1;
 
     if (membersCnt == definedCnt) {
-      process.env.DEBUG && console.log("Count of members is correct. Nothing to report");
+      global.DEBUG && console.log("Count of members is correct. Nothing to report");
       resolve();
       return;
     }
     if (definedCnt > membersCnt) {
-      process.env.DEBUG && console.log("Warning in countAll. definedCnt > membersCnt for chat: " + ctx.chatId);
+      global.DEBUG && console.log("Warning in countAll. definedCnt > membersCnt for chat: " + ctx.chatId);
       resolve();
       return;
     }

@@ -43,14 +43,14 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
     const user = Repo.getUser(msg.from.id);
 
     if (!isGroupChat && !user) {
-      process.env.DEBUG && console.log(`Decline command. User ${msg.from.id} is not registered`);
+      global.DEBUG && console.log(`Decline command. User ${msg.from.id} is not registered`);
     } else {
       this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
 
       if (!isGroupChat && user && !user.isValid && !cmd.allowCommand?.call(cmd, user)) {
         // todo we should skip a lot of commands
         CheckBot.validateUser(user); //.then((v) => v && gotBotCommand.call(this, msg, chat_id));
-        process.env.DEBUG &&
+        global.DEBUG &&
           console.log(`Decline private command. User ${msg.from.id} is invalid. Auto-allow after validation`);
         return true;
       }
@@ -76,7 +76,7 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
           const c = this.getContexts(chat_id);
           if (c) {
             if (cmd.repeatBehavior === CommandRepeatBehavior.skip) {
-              process.env.DEBUG && console.log("Command declined by rule: CommandRepeatBehavior.skip");
+              global.DEBUG && console.log("Command declined by rule: CommandRepeatBehavior.skip");
               return true;
             } else if (cmd.repeatBehavior === CommandRepeatBehavior.restart) {
               for (const ctx of c?.values()) {

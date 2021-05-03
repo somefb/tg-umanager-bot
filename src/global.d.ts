@@ -1,3 +1,12 @@
+declare module NodeJS {
+  interface Global {
+    DEBUG: boolean;
+    DEV: boolean;
+    VERBOSE: boolean;
+    isWebpackBuild?: boolean;
+  }
+}
+
 // global fix for object keys
 
 type ObjectKeys<T> =

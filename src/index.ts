@@ -1,3 +1,9 @@
+if (!global.isWebpackBuild) {
+  global.DEBUG = process.argv.includes("--debug");
+  global.DEV = process.argv.includes("--dev");
+  global.VERBOSE = process.argv.includes("--verbose");
+}
+
 import http from "http";
 import path from "path";
 import MyBotCommands from "./commands";

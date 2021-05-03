@@ -95,7 +95,7 @@ export default class BotContext implements IBotContext {
     }
 
     const logMsg = `Context '${this.name || ""}' is cancelled. Reason: ${reason}`;
-    process.env.DEBUG && console.log(logMsg);
+    global.DEBUG && console.log(logMsg);
     const err = new ErrorCancelled(logMsg);
     err.isTimeout = isTimeout;
     this.eventListeners.forEach((e) => e.reject(err));

@@ -13,6 +13,7 @@ export function getUserStatus(user: UserItem | undefined, m: IUser, isAnonym: bo
   let status: string;
   let icon: string;
   if (!user) {
+    //todo report removedAccount
     icon = "❗️";
     status = "не зарегистрирован";
   } else if (user.isLocked) {

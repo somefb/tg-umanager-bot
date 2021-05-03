@@ -47,7 +47,7 @@ export default class TelegramService implements ITelegramService {
   updateOffset?: number;
   async getUpdates(): Promise<void> {
     try {
-      process.env.DEBUG &&
+      global.DEBUG &&
         // console.warn(
         //   `The script uses approximately ${Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 100) / 100} MB`
         // );
@@ -62,7 +62,7 @@ export default class TelegramService implements ITelegramService {
         });
       }
     } catch (err) {
-      process.env.DEBUG && process.stdout.write("\n");
+      global.DEBUG && process.stdout.write("\n");
       console.log(`TelegramService '${this.cfg.name}'. Error in getUpdates()\n` + err);
     }
   }

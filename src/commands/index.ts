@@ -24,7 +24,7 @@ const MyBotCommands = [
   CommandInvite,
 ];
 
-if (process.env.DEV || process.env.NODE_ENV === "test") {
+if (global.DEV || process.env.NODE_ENV === "test") {
   MyBotCommands.push(TestValidateMe);
   MyBotCommands.push({
     command: "count_all",

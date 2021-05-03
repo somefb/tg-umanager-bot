@@ -7,7 +7,7 @@ import gotBotCommand from "./gotBotCommand";
 import onMeAdded from "./onMeAdded";
 
 export default function gotUpdate(this: TelegramService, upd: Update): void {
-  //process.env.VERBOSE &&
+  //global.VERBOSE &&
   console.log("got update", "\n" + JSON.stringify(upd) + "\n");
   try {
     let defFn: null | (() => boolean) = null;
@@ -217,7 +217,7 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
     isHandled = (defFn && defFn()) || isHandled;
 
     if (!isHandled) {
-      process.env.DEBUG && console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, upd);
+      global.DEV && console.log(`TelegramService '${this.cfg.name}'. Got unhandled update\n`, upd);
     }
   } catch (err) {
     console.error(`TelegramService '${this.cfg.name}'. Error in gotUpdate\n`, err);
