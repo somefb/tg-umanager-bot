@@ -28,7 +28,7 @@ export default async function onMeAdded(
   const user = Repo.getUser(msg.from?.id);
   const isAnonym = ChatItem.isAnonymGroupBot(msg.from);
   if (user?.isLocked && !isAnonym) {
-    console.warn(`Leave chat. Reason: user ${user?.id} is locked`);
+    console.warn(`I'm leaving chat. Reason: user ${user?.id} is locked`);
     await this.core.leaveChat({ chat_id });
     return;
   }

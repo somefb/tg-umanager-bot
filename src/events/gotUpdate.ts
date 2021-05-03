@@ -7,8 +7,7 @@ import gotBotCommand from "./gotBotCommand";
 import onMeAdded from "./onMeAdded";
 
 export default function gotUpdate(this: TelegramService, upd: Update): void {
-  //global.VERBOSE &&
-  console.log("got update", "\n" + JSON.stringify(upd) + "\n");
+  global.VERBOSE && console.log("got update", "\n" + JSON.stringify(upd) + "\n");
   try {
     let defFn: null | (() => boolean) = null;
     let chatId: number | undefined;

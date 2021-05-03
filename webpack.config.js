@@ -46,7 +46,7 @@ module.exports = {
           },
           keep_classnames: true,
           keep_fnames: true,
-          compress: { pure_funcs: ["console.info", "console.log"] }, // remove this functions when their return values are not used
+          compress: { pure_funcs: ["console.info"] }, // remove this functions when their return values are not used
         },
       }),
     ],
