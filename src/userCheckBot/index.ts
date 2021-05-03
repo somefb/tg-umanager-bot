@@ -1,4 +1,3 @@
-import ErrorCancelled from "../errorCancelled";
 import { CommandRepeatBehavior, IBotContext, ITelegramService, MyBotCommand } from "../types";
 import UserItem from "../userItem";
 import { generateUserKey } from "./dictionary";
@@ -24,14 +23,11 @@ export const CheckBot = {
         const ctx = this.service.initContext(user.checkBotChatId, cmd.command, null, user);
         await ctx.callCommand(cmd.callback);
       }
-      return user._isValid;
+      return user.isValid;
     } catch (err) {
-      if (!(err as ErrorCancelled).isCancelled) {
-        console.error(err);
-        return null;
-      }
+      console.error(err);
+      return null;
     }
-    return false;
   },
   generateUserKey,
 };

@@ -80,18 +80,25 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
 
       const trueWordPair = gotWord && pairs.find((v) => v.one === gotWord);
       if (!trueWordPair) {
-        await ctx.sendMessage({ text: "Упс, я поломался. Давайте ещё раз" });
+        await ctx.sendMessage({ text: "Упс... Давайте ещё раз" });
         return;
       }
 
       // second part
       const nextObj = generateWordPairsNext(ctx.user.validationKey, trueWordPair, pairs, true);
-      gotWord = await sendAndWait(
-        ctx,
-        isFirstTime ? "Выберите вашу ассоциацию❗️❗️❗️" : "Выберите ассоциацию❗️",
-        nextObj.pairs.map((v) => v.two),
-        null
-      );
+      gotWord = "";
+      while (!gotWord) {
+        gotWord = await sendAndWait(
+          ctx,
+          isFirstTime ? "Выберите вашу ассоциацию❗️❗️❗️" : "Выберите ассоциацию❗️",
+          nextObj.pairs.map((v) => v.two),
+          null
+        );
+        if (!nextObj.pairs.find((v) => v.two === gotWord)) {
+          await ctx.sendMessage({ text: "Упс... Давайте ещё раз" });
+          return;
+        }
+      }
 
       if (isFirstTime && gotWord !== nextObj.expected) {
         ctx.singleMessageMode = false;
@@ -216,7 +223,7 @@ async function cancelSession(ctx: IBotContext, isValid: boolean, isFirstTime: bo
   } else {
     text = isFirstTime ? "Спасибо. Можете вернуться в предыдущий чат с ботом \n" : "Спасибо за игру";
   }
-  await ctx.sendMessage({ text }, { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 });
+  const msg = await ctx.sendMessage({ text }, { removeMinTimeout: notifyDeleteLastTimeout, removeTimeout: 30 * 1000 });
   Repo.commit();
 }
 
