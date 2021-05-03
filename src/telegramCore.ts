@@ -107,18 +107,27 @@ export default class TelegramCore implements ITelegramCore {
                 });
               }
         );
+        let timeourErr = false;
         req
-          .on("timeout", () => req.destroy())
+          .on("timeout", () => {
+            timeourErr = true;
+            req.destroy();
+          })
           .on("error", (err: ErrnoException) => {
-            if (req.connection?.destroyed) {
-              console.warn(`TelegramCore. Got timeout ${options.timeout}. Will retry response`);
+            if (timeourErr) {
+              console.log(`TelegramCore. Got timeout ${options.timeout}. Will retry request`);
               setTimeout(() => resolve(makeRequest()), 50);
             } else if (err.code === "ETIMEDOUT") {
-              console.warn("TelegramCore. Got ETIMEDOUT. Will retry response");
+              console.log("TelegramCore. Got ETIMEDOUT. Will retry request");
               setTimeout(() => resolve(makeRequest()), 50);
             } else {
-              console.error("TelegramCore. HTTP error: \n" + err.message, err);
-              reject(err);
+              ++repeatCount;
+              if (repeatCount >= 5) {
+                reject(err);
+              } else {
+                console.error("TelegramCore. HTTP error: \n" + err.message + ". Will retry request", err);
+                setTimeout(() => resolve(makeRequest()), 5000);
+              }
             }
           });
 
