@@ -16,8 +16,9 @@
     "build-dev": "./node_modules/.bin/webpack --mode production --env dev",
     "build-prod": "./node_modules/.bin/webpack --mode production",
     "certificate": "node ssl/generateCert.js",
-    "deploy": "npm run build-prod && eb deploy",
-    "logs": "eb logs Tgbotumanager-env --all",
+    "deploy-prod": "npm run build-prod && eb deploy",
+    "deploy-dev": "npm run build-dev && eb deploy",
+    "logs": "eb logs --all",
     "postinstall": "husky install && shx rm -rf .git/hooks && shx ln -s ../.husky .git/hooks"
   },
   "repository": {

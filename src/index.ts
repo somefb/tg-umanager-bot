@@ -56,6 +56,7 @@ async function runApp() {
         });
       }
     }
+    console.log("Defined domainURL: " + domainURL);
 
     //http server for checking status via browser
     console.log("Running ordinary web server...");

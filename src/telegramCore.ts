@@ -98,7 +98,8 @@ export default class TelegramCore implements ITelegramCore {
                       setTimeout(() => resolve(makeRequest()), t);
                     } else {
                       const emptyUrl = this.getUrl("" as keyof TelegramPR);
-                      console.error(`TelegramCore. API error ${url.replace(emptyUrl, "")} \n` + txt);
+                      console.error(`TelegramCore. API error /${url.replace(emptyUrl, "")} \n` + txt);
+                      console.error(JSON.stringify(obj));
                       reject({ ...result, data });
                     }
                   } else {
