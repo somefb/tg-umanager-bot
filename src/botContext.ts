@@ -286,7 +286,8 @@ export default class BotContext implements IBotContext {
         const r = await this.service.core.getChatAdministrators({ chat_id: this.chatId });
         if (r.ok) {
           r.result.forEach((admin) => {
-            this.chat.addOrUpdateMember(admin.user, admin.is_anonymous);
+            const isMe = admin.user.is_bot && admin.user.username === this.botUserName;
+            !isMe && this.chat.addOrUpdateMember(admin.user, admin.is_anonymous);
           });
           const isAnonym = r.result.some((admin) => admin.user.id === from.id && admin.is_anonymous);
           isSame = isAnonym;
@@ -460,6 +461,15 @@ export default class BotContext implements IBotContext {
       }
     }
     return q;
+  }
+
+  async clearChat(fromMessageId: number): Promise<void> {
+    const endIndex = this.chat.lastDeleteIndex || 1;
+    for (let i = fromMessageId; i >= endIndex; --i) {
+      await this.service.core.deleteMessageForce({ chat_id: this.chatId, message_id: i });
+    }
+
+    this.chat.lastDeleteIndex = fromMessageId + 1;
   }
 }
 

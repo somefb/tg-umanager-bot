@@ -17,9 +17,7 @@ const CommandClear: MyBotCommand = {
     );
 
     //await service.core.unpinAllChatMessages({ chat_id: msg.chat.id });
-    for (let i = ctx.initMessageId - 1; i >= ctx.chat.lastDeleteIndex; --i) {
-      await ctx.service.core.deleteMessageForce({ chat_id: ctx.chatId, message_id: i });
-    }
+    ctx.clearChat(ctx.initMessageId - 1);
     await ctx.deleteMessage(resMsg.message_id);
 
     ctx.chat.lastDeleteIndex = resMsg.message_id + 1;

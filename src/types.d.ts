@@ -194,6 +194,7 @@ export interface IBotContext {
   deleteMessage(id: number): Promise<void>;
   askForUser(text: string, onlyRegistered?: false, note?: string): Promise<UserItem | IUser>;
   askForUser(text: string, onlyRegistered: true, note?: string): Promise<UserItem>;
+  clearChat(fromMessageId: number): Promise<void>;
 
   onGotEvent<E extends EventTypeEnum>(type: E): Promise<EventTypeReturnType[E]>;
   removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void;
