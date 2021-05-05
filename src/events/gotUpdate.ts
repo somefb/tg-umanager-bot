@@ -49,7 +49,7 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
                   from: q.from,
                   chat: q.message?.chat as Chat.PrivateChat,
                 } as Partial<NewTextMessage>) as NewTextMessage;
-                return !isHandled && gotBotCommand.call(this, msg, q.message?.chat.id || 0);
+                return !isHandled && gotBotCommand.call(this, msg, q.message?.chat.id || 0, true);
               }
               return false;
             };

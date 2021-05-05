@@ -8,12 +8,12 @@ import { checkWaitResponse } from "../userCheckBot/playValidation";
 import UserItem, { IUser } from "../userItem";
 import { MyBotCommandTypes } from "./botCommandTypes";
 import countAllTask from "./countAllTask";
+import CommandKickInvalid from "./kickInvalid";
 
 export function getUserStatus(user: UserItem | undefined, m: IUser, isAnonym: boolean, isFinished: boolean): string {
   let status: string;
   let icon: string;
   if (!user) {
-    //todo report removedAccount
     icon = "❗️";
     status = "не зарегистрирован";
   } else if (user.isLocked) {
@@ -102,7 +102,6 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
 
     arr.push("");
     if (!isFinished) {
-      // todo remove user and notify
       arr.push(
         `▪️ Не начавших проверку, удалю из всех групп через <b>${dateDiffToTime(
           Math.max(dtEnd - Date.now(), 1000)
@@ -112,19 +111,26 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
       arr.push("▪️ Проваливших проверку, удалю из всех групп немедленно");
     }
 
-    // todo button kickAllNow
-    // todo implement return back
-
     hasLocked && arr.push("\n▪️ Для разблокирования - команда /unlock ('блокированный' не может общаться с ботом)");
     isFinished && arr.push("\nПроверка окончена");
 
     const text = arr.join("\n");
     if (prevText !== text) {
       prevText = text;
+
       const msg = await ctx.sendMessage(
         {
           text,
-          disable_notification: true,
+          // notify user in private chat by finish
+          disable_notification: !(!ctx.chat.isGroup && isFinished),
+          reply_markup:
+            !isFinished && ctx.chat.isGroup
+              ? {
+                  inline_keyboard: [
+                    [{ text: "Удалить тех, кто не отвечает", callback_data: CommandKickInvalid.command }],
+                  ],
+                }
+              : undefined,
         },
         {
           keepAfterSession: true,
@@ -132,6 +138,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
           removeTimeout: ctx.chat.isGroup ? undefined : 5 * 60000,
         }
       );
+
       if (ctx.chat.isGroup && isFinished) {
         ctx.singleMessageMode = false;
         await ctx.sendMessage(
@@ -185,7 +192,6 @@ const Check: MyBotCommand = {
     await countAllTask(ctx, true);
     //wait for previous partial report from task
     await new Promise((resolve) => setTimeout(resolve, 1000));
-
     await reportValidation(ctx, null);
   },
 };

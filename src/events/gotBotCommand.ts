@@ -6,7 +6,12 @@ import { CommandRepeatBehavior, NewTextMessage } from "../types";
 import { CheckBot } from "../userCheckBot";
 import UserItem from "../userItem";
 
-export default function gotBotCommand(this: TelegramService, msg: NewTextMessage, chat_id: number): boolean {
+export default function gotBotCommand(
+  this: TelegramService,
+  msg: NewTextMessage,
+  chat_id: number,
+  skipRemovingInitMsg = false
+): boolean {
   const text = msg.text;
   let end: number | undefined = text.indexOf(" ", 1);
   if (end === -1) {
@@ -45,7 +50,7 @@ export default function gotBotCommand(this: TelegramService, msg: NewTextMessage
     if (!isGroupChat && !user) {
       global.DEBUG && console.log(`Decline command. User ${msg.from.id} is not registered`);
     } else {
-      this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
+      !skipRemovingInitMsg && this.core.deleteMessage({ chat_id, message_id: msg.message_id });
 
       if (!isGroupChat && user && !user.isValid && !cmd.allowCommand?.call(cmd, user)) {
         // todo we should skip a lot of commands

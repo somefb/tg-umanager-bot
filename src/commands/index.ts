@@ -11,6 +11,7 @@ import { MyBotCommandTypes } from "./botCommandTypes";
 import UnlockUser from "./unlockUser";
 import CommandCheckUser from "./checkUser";
 import CommandInvite from "./invite";
+import CommandKickInvalid from "./kickInvalid";
 
 const MyBotCommands = [
   CommandHelp,
@@ -20,6 +21,7 @@ const MyBotCommands = [
   Check,
   CommandCheckUser,
   CommandKick,
+  CommandKickInvalid,
   UnlockUser,
   CommandInvite,
 ];
