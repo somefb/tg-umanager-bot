@@ -110,7 +110,7 @@ async function registrationTask(ctx: IBotContext, regInfo: RegInfo) {
         (v) => v.text === regInfo.token,
         BotContext.defSessionTimeout
       );
-      await ctx.service.core.deleteMessageForce({ chat_id: msgRegUser.chat.id, message_id: msgRegUser.message_id });
+      await ctx.service.core.deleteMessage({ chat_id: msgRegUser.chat.id, message_id: msgRegUser.message_id });
       //don't allow register again
       const u = Repo.getUser(msgRegUser.from.id);
       if (!u) {

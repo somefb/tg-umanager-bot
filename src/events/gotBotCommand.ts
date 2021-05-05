@@ -22,7 +22,7 @@ export default function gotBotCommand(
   //all chats must be groupChat beside privateChats assigned to
   const isGroupChat = chat?.isGroup || msg.chat.type !== "private";
   if (isGroupChat && !chat) {
-    this.core.deleteMessageForce({ chat_id, message_id: msg.message_id });
+    this.core.deleteMessage({ chat_id, message_id: msg.message_id });
     console.log(`Decline command. Chat is not registered`);
     return true;
   }
@@ -73,7 +73,7 @@ export default function gotBotCommand(
       if (notifyText) {
         this.core.sendMessage({ chat_id, text: notifyText, disable_notification: true }).then((v) => {
           setTimeout(() => {
-            v.ok && this.core.deleteMessageForce({ chat_id, message_id: v.result.message_id });
+            v.ok && this.core.deleteMessage({ chat_id, message_id: v.result.message_id });
           }, 5000);
         });
       } else {
