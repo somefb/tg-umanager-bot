@@ -40,7 +40,7 @@ const CommandHelp: MyBotCommand = {
 
         //reply_markup: ""
       },
-      { removeTimeout: validationExpiry, removeByUpdate: true, keepAfterSession: true }
+      { removeTimeout: validationExpiry, removeByUpdate: !ctx.chat.isGroup, keepAfterSession: true }
     );
   },
 };
