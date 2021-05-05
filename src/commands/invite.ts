@@ -79,7 +79,6 @@ async function sendInviteLink(ctxReport: IBotContext, target: UserItem, whoInvit
     };
 
     await ctxInvite.sendMessage({
-      // todo groupName here
       text: "Вас приглашают в группу\n" + link,
       reply_markup: {
         inline_keyboard: [

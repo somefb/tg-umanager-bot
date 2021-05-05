@@ -1,4 +1,5 @@
 import { ApiError } from "typegram/api";
+import { sendInviteLinkTask } from "../commands/invite";
 import ErrorCancelled from "../errorCancelled";
 import arrayGetRandomItem from "../helpers/arrayGetRandomItem";
 import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
@@ -48,14 +49,41 @@ const enum CancelReason {
 
 export const checkWaitResponseStr = "10ч";
 export const checkWaitResponse = 10 * 60 * 60000; //wait for 10 hours for the first response
-const checkFilePeriodic = 2 * 24 * 60 * 60000;
+const checkFilePeriodic = 3 * 24 * 60 * 60000;
 
 const cacheTimeCounts = new Map<number, number>();
 
 export default async function playValidation(ctx: IBotContext, skipAskForPlay = false): Promise<void> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(checkWaitResponse);
-  //todo we should remove by this timeout
+
+  ctx.onCancelled().then(async () => {
+    if (!ctx.user.isValid) {
+      //remove user from all chats
+      //todo check if works for chats
+      const mainBot = ctx.service.services[0];
+      for (const key in Repo.chats) {
+        if (Repo.chats[key].members[ctx.user.id]) {
+          const me = new UserItem(0, { num: 0, word: "" });
+          me.firstName = "Я";
+          const ctxKick = mainBot.initContext(Repo.chats[key].id, "_kickUser", null, me);
+          await ctxKick.kickUser(
+            ctx.user,
+            `Причина: пользователь ${ctx.user.isLocked ? "заблокирован❌" : "не отвечает"}`
+          );
+          ctxKick.cancel("end");
+        }
+      }
+    } else if (ctx.user.isValid) {
+      //return user back to chats
+      for (const key in Repo.chats) {
+        if (Repo.chats[key].removedMembers[ctx.user.id]) {
+          sendInviteLinkTask(ctx.user, Repo.chats[key].id);
+        }
+      }
+    }
+    //todo if user locked - send notifier for specific users
+  });
   // todo force validation via file for specific commands
 
   const isFirstTime = !ctx.user.validationDate;
@@ -68,6 +96,8 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
   if (!skipAskForPlay) {
     await askForPlay(ctx);
   }
+  // it's not good enough because doesn't remove the last messages that can be after!
+  await ctx.clearChat(ctx.initMessageId);
   delete ctx.user.isCheckBotChatBlocked;
 
   // play game block
@@ -137,6 +167,7 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
             ctx.user.validationFile = res.file;
           } else if (invalidTimes || ctx.user.validationFileDate + checkFilePeriodic <= Date.now()) {
             // 2step validation
+            ctx.setTimeout();
             await ctx.sendMessage({ text: msgPrefix + " " + askFile });
             ctx.setTimeout(timeoutFile);
 
@@ -145,7 +176,8 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
             ctx
               .onGotEvent(EventTypeEnum.gotFile)
               .then((v) => (res = v))
-              .catch();
+              .catch((v) => v);
+            // todo we need to decline if got ordinary textMessage but not callbackQuery
             await ctx.onGotEvent(EventTypeEnum.gotUpdate);
             res && (await ctx.deleteMessage(res.message_id));
 
@@ -187,7 +219,7 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
 
       if (cnt < 5) {
         cacheTimeCounts.set(ctx.user.id, cnt + 1);
-        ctx.user.isValid = false;
+        ctx.user._isValid = false;
 
         console.log(`User ${ctx.user.id} failed validation: timeout is over. Lets retry`);
         await ctx.sendMessage({ text: "Плохой интернет? Давайте попробуем заново через 10 секунд..." });
@@ -256,7 +288,7 @@ async function askForPlay(ctx: IBotContext) {
   let timer: NodeJS.Timeout | undefined;
   let removeMessageId: number | undefined;
 
-  const sendQuestion = async (silent = false) => {
+  const sendQuestion = async () => {
     // notify to play after 1hour
     timer = setTimeout(async () => {
       removeMessageId && (await ctx.deleteMessage(removeMessageId));
@@ -269,7 +301,6 @@ async function askForPlay(ctx: IBotContext) {
       const msg = await ctx.sendMessage({
         text: "Поиграем?",
         reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "/go" }]] },
-        disable_notification: silent,
       });
       removeMessageId = msg.message_id;
     } catch (error) {

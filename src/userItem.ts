@@ -27,7 +27,7 @@ export default class UserItem implements IUser {
 
   static ToLink(
     userId: number,
-    _userName: string | undefined,
+    userName: string | undefined,
     firstName: string,
     lastName: string | undefined,
     isAnonym = false
@@ -42,18 +42,22 @@ export default class UserItem implements IUser {
       }
       return `анон.админ (${firstLetter}..${lastLetter})`;
     }
-    // if (userName) {
-    //   return "@" + userName;
-    // }
+    if (!userId && userName) {
+      return "@" + userName;
+    }
     return `<a href="tg://user?id=${userId}">${[firstName, lastName].filter((v) => v).join(" ")}</a>`;
   }
 
   static isFilesEqual(a: FileInfo, b: FileInfo): boolean {
+    if (a.file_unique_id === b.file_unique_id) {
+      return true;
+    }
     const someDifferent = Object.keys(a).some((key: string | keyof typeof a) => {
-      if (key === "file_id" || key === "file_name" || key === "thumb") {
+      if (key === "file_id" || key === "file_name" || key === "thumb" || key === "file_unique_id") {
         //we can't compare by file_id and lets skip fileName
         return false;
       }
+
       // @ts-ignore
       if (a[key] !== b[key]) {
         // @ts-ignore
