@@ -68,6 +68,7 @@ export default class BotContext implements IBotContext {
     }
   }
 
+  cancelObj?: ErrorCancelled;
   private _cancel(reason: string, isTimeout = false): void {
     let lastMessage;
     if (!this.removeAllByCancel && this.singleMessageMode) {
@@ -98,6 +99,7 @@ export default class BotContext implements IBotContext {
     global.DEBUG && console.log(logMsg);
     const err = new ErrorCancelled(logMsg);
     err.isTimeout = isTimeout;
+    this.cancelObj = err;
     this.eventListeners.forEach((e) => e.reject(err));
 
     this.onCancelledListeners?.forEach((resolve) => resolve());
@@ -454,11 +456,16 @@ export default class BotContext implements IBotContext {
   ): Promise<NewCallbackQuery> {
     const msg = await this.sendMessage(args, opts);
     let q: NewCallbackQuery | null = null;
+    const wasCancel = this.cancelObj;
     while (!q) {
       q = await this.onGotEvent(EventTypeEnum.gotCallbackQuery);
       if (q.message?.message_id !== msg.message_id) {
         q = null;
       }
+    }
+    // if ctx isCancelled we need reject it (case when cancelEvent and thisEvent fires in a row)
+    if (wasCancel !== this.cancelObj) {
+      throw this.cancelObj;
     }
     return q;
   }
