@@ -107,7 +107,7 @@ export default class BotContext implements IBotContext {
     this._cancel(reason, false);
   }
 
-  deleteMessage(id: number): Promise<void> {
+  async deleteMessage(id: number): Promise<void> {
     if (this._updateMessage?.id === id) {
       delete this._updateMessage;
       //ignore this because message can be removed by timeout
@@ -122,13 +122,13 @@ export default class BotContext implements IBotContext {
         const waitMs = msg.expiryTime - processNow();
         if (waitMs > 0) {
           setTimeout(() => {
-            this.service.core.deleteMessageForce({ chat_id: this.chatId, message_id: id });
+            this.service.core.deleteMessage({ chat_id: this.chatId, message_id: id });
           }, waitMs);
           return Promise.resolve();
         }
       }
     }
-    return this.service.core.deleteMessageForce({ chat_id: this.chatId, message_id: id });
+    await this.service.core.deleteMessage({ chat_id: this.chatId, message_id: id });
   }
 
   private _updateMessage?: { id: number; data: Message.TextMessage };

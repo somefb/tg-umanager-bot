@@ -191,7 +191,7 @@ export default class TelegramCore implements ITelegramCore {
   }
 
   deleteMessage(args: Opts<"deleteMessage">): P<ApiResponse<true>> {
-    return this.httpPost("deleteMessage", args);
+    return this.httpPost("deleteMessage", args).catch((v) => v);
   }
 
   /** Removing message without getting response and errors */
