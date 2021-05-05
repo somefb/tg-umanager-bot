@@ -14,7 +14,7 @@ import {
   NewTextMessage,
   Opts,
 } from "./types";
-import UserItem, { searchByName } from "./userItem";
+import UserItem, { IUser, searchByName } from "./userItem";
 
 /**
  * Default rules:
@@ -477,6 +477,35 @@ export default class BotContext implements IBotContext {
     }
 
     this.chat.lastDeleteIndex = fromMessageId + 1;
+  }
+
+  async kickUser(user: IUser, note?: string): Promise<void> {
+    try {
+      await this.service.core.kickChatMember({
+        chat_id: this.chatId,
+        user_id: user.id,
+        revoke_messages: true,
+      });
+      await this.service.core.unbanChatMember({
+        chat_id: this.chatId,
+        user_id: user.id,
+        only_if_banned: true,
+      });
+      this.chat.removeMember(user.id, true);
+
+      await this.sendMessage(
+        { text: `${this.userLink} удалил ${UserItem.ToLinkUser(user)}${note ? ". " + note : ""}` },
+        { keepAfterSession: true }
+      );
+    } catch (err) {
+      if (!err.error_code) {
+        console.error(err);
+      }
+      await this.sendMessage(
+        { text: `Не могу удалить ${UserItem.ToLinkUser(user)}. Вероятно недостаточно прав` },
+        { keepAfterSession: true }
+      );
+    }
   }
 }
 

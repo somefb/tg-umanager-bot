@@ -86,6 +86,7 @@ export interface ITelegramService {
   botUserName: string;
   core: ITelegramCore;
   cfg: BotConfig;
+  services: ITelegramService[];
 
   onGotEvent<E extends EventTypeEnum>(
     type: E,
@@ -195,6 +196,7 @@ export interface IBotContext {
   askForUser(text: string, onlyRegistered?: false, note?: string): Promise<UserItem | IUser>;
   askForUser(text: string, onlyRegistered: true, note?: string): Promise<UserItem>;
   clearChat(fromMessageId: number): Promise<void>;
+  kickUser(user: IUser, note?: string): Promise<void>;
 
   onGotEvent<E extends EventTypeEnum>(type: E): Promise<EventTypeReturnType[E]>;
   removeEvent<E extends EventTypeEnum>(ref: Promise<EventTypeReturnType[E]>, needReject?: boolean): void;
