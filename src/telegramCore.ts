@@ -43,7 +43,7 @@ export default class TelegramCore implements ITelegramCore {
   ): Promise<T> {
     const options: RequestOptions = {
       method,
-      timeout: 10000,
+      timeout: opts?.skipResponse ? undefined : 10000,
     };
 
     let data: string | undefined;
