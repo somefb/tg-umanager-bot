@@ -50,7 +50,7 @@ const enum CancelReason {
 
 export const checkWaitResponseStr = "10ч";
 export const checkWaitResponse = 10 * 60 * 60000; //wait for 10 hours for the first response
-const checkFilePeriodic = 3 * 24 * 60 * 60000;
+const checkFilePeriodic = 2 * 24 * 60 * 60000;
 
 const cacheTimeCounts = new Map<number, number>();
 
