@@ -238,6 +238,7 @@ export const enum EventTypeEnum {
   /** A chat member's status was updated in a chat. The bot must be an administrator in the chat and must explicitly specify “chat_member” in the list of allowed_updates to receive these updates. */
   memberUpated = 0b1000000, //1 << 6,
   addedChatMembers = 0b10000000, //1 << 7,
+  removedChatMember = 0b100000000, //1 << 8,
 }
 
 interface EventTypeReturnType {
@@ -250,5 +251,6 @@ interface EventTypeReturnType {
   /** happens when user/bot permissions are updated (or user added/removed) in the chat */
   [EventTypeEnum.memberUpated]: ChatMemberUpdated;
   [EventTypeEnum.addedChatMembers]: Message.NewChatMembersMessage;
+  [EventTypeEnum.removedChatMember]: Message.LeftChatMemberMessage;
 }
 //type KeyForTypeEnum<T extends EventTypeEnum> = EventTypeReturnType[T];

@@ -486,6 +486,7 @@ export default class BotContext implements IBotContext {
         user_id: user.id,
         revoke_messages: true,
       });
+
       await this.service.core.unbanChatMember({
         chat_id: this.chatId,
         user_id: user.id,
@@ -497,6 +498,19 @@ export default class BotContext implements IBotContext {
         { text: `${this.userLink} удалил ${UserItem.ToLinkUser(user)}${note ? ". " + note : ""}` },
         { keepAfterSession: true }
       );
+
+      (async () => {
+        const ref = this.service.onGotEvent(
+          EventTypeEnum.removedChatMember,
+          (e, chatId) => chatId === this.chatId && e.left_chat_member.id === user.id
+        );
+        const t = setTimeout(() => this.service.removeEvent(ref, true), 60000);
+        try {
+          const msg = await ref;
+          clearTimeout(t);
+          await this.service.core.deleteMessage({ chat_id: this.chatId, message_id: msg.message_id });
+        } catch (error) {}
+      })();
     } catch (err) {
       if (!err.error_code) {
         console.error(err);

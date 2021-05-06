@@ -139,6 +139,10 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
           // member left the chat
           removeMember(chatId, member);
           defFn = () => true;
+          return {
+            type: EventTypeEnum.removedChatMember,
+            value: m as EventTypeReturnType[EventTypeEnum.removedChatMember],
+          };
         }
       } else if ((upd as Update.EditedMessageUpdate).edited_message) {
         const m = (upd as Update.EditedMessageUpdate).edited_message;
