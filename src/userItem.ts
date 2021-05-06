@@ -52,21 +52,22 @@ export default class UserItem implements IUser {
     if (a.file_unique_id === b.file_unique_id) {
       return true;
     }
-    const someDifferent = Object.keys(a).some((key: string | keyof typeof a) => {
+
+    for (const key in a) {
       if (key === "file_id" || key === "file_name" || key === "thumb" || key === "file_unique_id") {
         //we can't compare by file_id and lets skip fileName
-        return false;
+        continue;
       }
 
       // @ts-ignore
       if (a[key] !== b[key]) {
         // @ts-ignore
         console.log(`File validation is wrong. a.${key} (${a[key]}) !== b.${key} (${b[key]})`);
-        return true;
+        return false;
       }
-      return;
-    });
-    return !someDifferent;
+    }
+
+    return true;
   }
 
   id: number;
@@ -123,8 +124,6 @@ export default class UserItem implements IUser {
 }
 
 export function searchByName<T extends IUser>(arrSet: Record<number, T>, searchText: string): T | null {
-  const ids = Object.keys(arrSet);
-
   let predicate: (user: T) => boolean;
   if (searchText.startsWith("@")) {
     searchText = searchText.replace("@", "");
@@ -133,6 +132,11 @@ export function searchByName<T extends IUser>(arrSet: Record<number, T>, searchT
     predicate = (u: T) => `${u.firstName}${u.lastName ? " " + u.lastName : ""}` === searchText;
   }
 
-  const id = ids.find((id) => predicate(arrSet[id]));
-  return id ? arrSet[id] : null;
+  for (const id in arrSet) {
+    if (predicate(arrSet[id])) {
+      return arrSet[id];
+    }
+  }
+
+  return null;
 }

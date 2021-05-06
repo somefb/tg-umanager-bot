@@ -23,9 +23,9 @@ export default class RepoGoogleDrive implements IRepository {
     if (fs.existsSync(CACHE_PATH)) {
       try {
         const v = JSON.parse(fs.readFileSync(CACHE_PATH, { encoding: "utf-8" }));
-        Object.keys(v).forEach((key) => {
+        for (const key in v) {
           this.cache.set(key as string, v[key]);
-        });
+        }
       } catch (err) {
         console.error(`GoogleDrive. Error. Can't parse cache-file ${CACHE_PATH} /n`, err);
       }

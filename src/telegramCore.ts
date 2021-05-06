@@ -54,13 +54,13 @@ export default class TelegramCore implements ITelegramCore {
       form = new FormData();
       if (obj) {
         const f = form;
-        Object.keys(obj).forEach((key) => {
+        for (const key in obj) {
           if (key === opts.filePathKey) {
             f.append(key, createReadStream(obj[key] as string));
           } else {
             f.append(key, obj[key]);
           }
-        });
+        }
       }
       options.headers = form.getHeaders();
     } else if (obj !== undefined) {

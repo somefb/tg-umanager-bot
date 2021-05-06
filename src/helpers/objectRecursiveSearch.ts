@@ -11,11 +11,10 @@ export default function objectRecursiveSearch(
     return (obj as any[]).some((v) => objectRecursiveSearch(v, predicate));
   }
 
-  return Object.keys(obj).some((key: string) => {
-    if (predicate(key, obj) === true) {
+  for (const key in obj) {
+    if (predicate(key, obj) === true || objectRecursiveSearch(obj[key], predicate) === true) {
       return true;
-    } else {
-      return objectRecursiveSearch(obj[key], predicate);
     }
-  });
+  }
+  return false;
 }

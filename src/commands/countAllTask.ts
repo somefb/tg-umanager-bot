@@ -1,3 +1,4 @@
+import ChatItem from "../chatItem";
 import Repo from "../repo";
 import { EventTypeEnum, IBotContext, NewCallbackQuery } from "../types";
 
@@ -29,12 +30,12 @@ async function countAll(ctx: IBotContext, partialWait: boolean) {
     }
   });
 
-  Object.keys(ctx.chat.members).forEach((key) => {
+  for (const key in ctx.chat.members) {
     const v = ctx.chat.members[key];
     if (v.isAnonym && !arrAnonym.has(v.id)) {
       v.isAnonym = false;
     }
-  });
+  }
 
   const promise = new Promise<void>(async (resolve) => {
     let definedCnt = ctx.chat.calcVisibleMembersCount() + 1;
@@ -53,11 +54,9 @@ async function countAll(ctx: IBotContext, partialWait: boolean) {
     // membersCnt > definedCnt
 
     const sendCount = (cnt: number) => {
-      const names = Object.keys(ctx.chat.members)
-        .map((k) => ctx.chat.members[k])
-        .filter((v) => !v.isAnonym)
-        .map((v) => (v.lastName ? v.firstName + " " + v.lastName : v.firstName))
-        .sort();
+      const names = ChatItem.getSortedMembers(ctx.chat.members, (v) => !v.isAnonym).map((v) =>
+        v.lastName ? v.firstName + " " + v.lastName : v.firstName
+      );
 
       return ctx.sendMessage({
         text: [

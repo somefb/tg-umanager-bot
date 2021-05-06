@@ -109,7 +109,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
     }
 
     // show instructions
-    arr.push("");
+    (hasLocked || !isFinished) && arr.push("");
     if (!isFinished) {
       arr.push(
         `▪️ Не начавших проверку, удалю из всех групп через <b>${dateDiffToTime(
@@ -166,8 +166,9 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
   const arr: Promise<unknown>[] = [];
   const marr = getMembers();
   if (!specificUsers) {
-    const mr = Object.keys(ctx.chat.removedMembers).map((id) => ctx.chat.removedMembers[id]);
-    marr.push(...mr);
+    for (const id in ctx.chat.removedMembers) {
+      marr.push(ctx.chat.removedMembers[id]);
+    }
   }
   marr.forEach((m) => {
     const user = Repo.getUser(m.id);
@@ -191,7 +192,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
   await report(true);
 }
 
-const Check: MyBotCommand = {
+const CommandCheck: MyBotCommand = {
   command: "check",
   type: MyBotCommandTypes.group,
   isHidden: true,
@@ -205,4 +206,4 @@ const Check: MyBotCommand = {
   },
 };
 
-export default Check;
+export default CommandCheck;

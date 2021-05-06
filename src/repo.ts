@@ -36,10 +36,12 @@ export class RepoClass {
     if (!v) {
       return;
     }
-    Object.keys(v.chats).forEach(
-      (k) => (this.chats[k as number] = Object.assign(new ChatItem(v.chats[k].id), v.chats[k], this.chats[k as number]))
-    );
-    Object.keys(v.users).forEach((k) => {
+    for (const key in v.chats) {
+      const k = (key as unknown) as number;
+      this.chats[k] = Object.assign(new ChatItem(v.chats[k].id), v.chats[k], this.chats[k]);
+    }
+    for (const key in v.users) {
+      const k = (key as unknown) as number;
       const saved = v.users[k] as UserItem;
       const was = this.users[k];
       this.users[k] = was || new UserItem(saved.id, saved.validationKey);
@@ -55,7 +57,7 @@ export class RepoClass {
       if (saved.declinedChats) {
         saved.declinedChats.forEach((id) => this.users[k].declinedChats.add(id));
       }
-    });
+    }
   }
 
   async init(filePath: string): Promise<void> {
@@ -170,7 +172,10 @@ export class RepoClass {
   }
 
   get hasAnyUser(): boolean {
-    return !!Object.keys(this.users).length;
+    for (const _key in this.users) {
+      return true;
+    }
+    return false;
   }
 
   /** Remove user if such user account is removed */

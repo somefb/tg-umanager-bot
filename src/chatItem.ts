@@ -28,10 +28,17 @@ export default class ChatItem {
     members: Record<number, MyChatMember>,
     filter?: (v: MyChatMember) => boolean
   ): MyChatMember[] {
-    let arr = Object.keys(members).map((key) => members[key]);
+    const arr: MyChatMember[] = [];
     if (filter) {
-      arr = arr.filter(filter);
+      for (const key in members) {
+        filter(members[key]) && arr.push(members[key]);
+      }
+    } else {
+      for (const key in members) {
+        arr.push(members[key]);
+      }
     }
+
     return arr.sort((a, b) => {
       if (a.isAnonym && b.isAnonym) {
         return a.firstName.localeCompare(b.firstName);
@@ -83,10 +90,13 @@ export default class ChatItem {
   }
 
   calcVisibleMembersCount(): number {
-    return Object.keys(this.members).reduce(
-      (cnt, key) => (cnt as number) + (this.members[key].isAnonym ? 0 : 1),
-      0
-    ) as number;
+    let cnt = 0;
+    for (const key in this.members) {
+      if (!this.members[key].isAnonym) {
+        ++cnt;
+      }
+    }
+    return cnt;
   }
 
   /** Fires only when we need to update count of chat members (when member added/removed in the group-chat) */

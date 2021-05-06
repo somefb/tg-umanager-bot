@@ -1,6 +1,6 @@
 import CommandClear from "./clear";
 import CommandClearDisableHere from "./clearDisableHere";
-import Check from "./check";
+import CommandCheck from "./check";
 import CommandHelp from "./help";
 import ShareBot from "./shareBot";
 import TestValidateMe from "./testCmd";
@@ -18,7 +18,7 @@ const MyBotCommands = [
   CommandClear,
   CommandClearDisableHere,
   ShareBot,
-  Check,
+  CommandCheck,
   CommandCheckUser,
   CommandKick,
   CommandKickInvalid,
