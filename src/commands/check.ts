@@ -81,25 +81,34 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
       ? [`${initUserLink} запросил cтатус ${specificUsers ? "определенных " : ""}пользователей❗️\n`]
       : [];
 
+    // show status of users
     let hasLocked = false;
+    let hasInvalidNotLocked = false;
     getMembers().forEach((m) => {
       const user = Repo.getUser(m.id);
       if (user?.isLocked) {
         hasLocked = true;
+      } else if (user?._isValid) {
+        hasInvalidNotLocked = true;
       }
       const str = getUserStatus(user, m, m.isAnonym, isFinished);
       arr.push(str);
     });
 
-    if (ctx.chat.isGroup && !specificUsers && Object.keys(ctx.chat.removedMembers).length) {
-      arr.push("\nУдалённые из группы");
-      ChatItem.getSortedMembers(ctx.chat.removedMembers).forEach((m) => {
-        const user = Repo.getUser(m.id);
-        const str = getUserStatus(user, m, m.isAnonym, isFinished);
-        arr.push(str);
-      });
+    // show removed users in group
+    if (ctx.chat.isGroup && !specificUsers) {
+      const removed = ChatItem.getSortedMembers(ctx.chat.removedMembers);
+      if (removed.length) {
+        arr.push("\nУдалённые из группы");
+        removed.forEach((m) => {
+          const user = Repo.getUser(m.id);
+          const str = getUserStatus(user, m, m.isAnonym, isFinished);
+          arr.push(str);
+        });
+      }
     }
 
+    // show instructions
     arr.push("");
     if (!isFinished) {
       arr.push(
@@ -124,7 +133,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
           // notify user in private chat by finish
           disable_notification: !(!ctx.chat.isGroup && isFinished),
           reply_markup:
-            !isFinished && ctx.chat.isGroup
+            !isFinished && ctx.chat.isGroup && hasInvalidNotLocked
               ? {
                   inline_keyboard: [
                     [{ text: "Удалить тех, кто не отвечает", callback_data: CommandKickInvalid.command }],
