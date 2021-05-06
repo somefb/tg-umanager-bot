@@ -106,4 +106,13 @@ async function runApp() {
   }
 }
 
+// (() => {
+//   const P = ["\\", "|", "/", "-"];
+//   let x = 0;
+//   setInterval(function () {
+//     process.stdout.write("\r" + P[x++]);
+//     x &= 3;
+//   }, 250);
+// })();
+
 runApp();

@@ -91,6 +91,9 @@ export default class UserItem implements IUser {
   /** Date in ms when the last validation is done/failed */
   validationDate = 0;
   validationFileDate = 0;
+  /** Time when need to checkUser in minutes from 00:00 */
+  validationScheduledTime = 21 * 60; // default is 21:00
+  validationNextDate = 0;
 
   declinedChats = new Set<number>();
 
