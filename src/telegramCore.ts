@@ -129,6 +129,9 @@ export default class TelegramCore implements ITelegramCore {
             if (timeourErr) {
               reportError(`Got timeout ${options.timeout}. Will retry request`);
               setTimeout(() => resolve(makeRequest()), 50);
+            } else if (err.code === "ETIMEDOUT") {
+              reportError("Got ETIMEDOUT. Will retry request");
+              setTimeout(() => resolve(makeRequest()), 50);
             } else {
               ++repeatCount;
               if (repeatCount >= 5) {
