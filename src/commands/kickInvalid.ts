@@ -9,7 +9,7 @@ const CommandKickInvalid: MyBotCommand = {
   command: "kick_invalid",
   type: MyBotCommandTypes.group,
   isHidden: true,
-  description: "удалить тех, кто ещё прошёл проверку (не отвечает)",
+  description: "удалить тех, кто ещё не прошёл проверку (не отвечает)",
   repeatBehavior: CommandRepeatBehavior.restart,
   callback: async (ctx) => {
     ctx.disableNotification = true;
@@ -20,7 +20,7 @@ const CommandKickInvalid: MyBotCommand = {
     if (!arr.length) {
       await ctx.sendMessage(
         {
-          text: `Не кого удалять. Вы можете обновить статус (команда ${CommandCheck}) и повторить снова...`,
+          text: `Некого удалять. Вы можете обновить статус (команда ${CommandCheck}) и повторить снова...`,
         },
         { keepAfterSession: true, removeTimeout: 10000 }
       );

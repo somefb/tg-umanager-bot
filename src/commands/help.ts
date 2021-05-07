@@ -33,6 +33,11 @@ const CommandHelp: MyBotCommand = {
       lines.push("");
     });
 
+    lines.push(
+      "▪️ <b>aaa...</b> - отправьте сообщение, которое начинается минимум с 3х 'а' (регистр/язык не важен - ааа/ААА/Ааа/aaaaaa), в любой чат со мной и я удалю вас из всех чатов немедленно❗️"
+    );
+    lines.push("После проверки я верну вас обратно");
+
     await ctx.sendMessage(
       {
         disable_notification: true,

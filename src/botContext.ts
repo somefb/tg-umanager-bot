@@ -487,11 +487,15 @@ export default class BotContext implements IBotContext {
         revoke_messages: true,
       });
 
-      await this.service.core.unbanChatMember({
-        chat_id: this.chatId,
-        user_id: user.id,
-        only_if_banned: true,
-      });
+      // some mistake in tg: ,"error_code":400,"description":"Bad Request: method is available for supergroup and channel chats only"
+      try {
+        await this.service.core.unbanChatMember({
+          chat_id: this.chatId,
+          user_id: user.id,
+          only_if_banned: true,
+        });
+      } catch {}
+
       this.chat.removeMember(user.id, true);
 
       await this.sendMessage(

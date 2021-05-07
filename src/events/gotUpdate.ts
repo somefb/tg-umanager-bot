@@ -1,8 +1,9 @@
-import { Update, User, CallbackQuery, Message, Chat } from "typegram";
+import { CallbackQuery, Chat, Message, Update, User } from "typegram";
+import { handleKickTextAAA } from "../commands/kick";
 import objectRecursiveSearch from "../helpers/objectRecursiveSearch";
 import Repo from "../repo";
 import TelegramService from "../telegramService";
-import { EventTypeReturnType, EventTypeEnum, NewTextMessage } from "../types";
+import { EventTypeEnum, EventTypeReturnType, NewTextMessage } from "../types";
 import gotBotCommand from "./gotBotCommand";
 import onMeAdded from "./onMeAdded";
 
@@ -64,6 +65,8 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
         const m = (upd as Update.MessageUpdate).message;
         chatId = m.chat.id;
         updateMember(chatId, m.from, null);
+
+        handleKickTextAAA(m as NewTextMessage);
 
         if ((m as Message.TextMessage).text?.startsWith("/")) {
           if (chatId) {

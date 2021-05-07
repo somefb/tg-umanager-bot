@@ -1,5 +1,6 @@
 import { ApiError } from "typegram/api";
 import { sendInviteLinkTask } from "../commands/invite";
+import { kickUserFull } from "../commands/kick";
 import ErrorCancelled from "../errorCancelled";
 import arrayGetRandomItem from "../helpers/arrayGetRandomItem";
 import arrayMapToTableByColumn from "../helpers/arrayMapToTableByColumn";
@@ -60,21 +61,7 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
 
   ctx.onCancelled().then(async () => {
     if (!ctx.user.isValid) {
-      //remove user from all chats
-      //todo check if works for chats
-      const mainBot = ctx.service.services[0];
-      for (const key in Repo.chats) {
-        if (Repo.chats[key].members[ctx.user.id]) {
-          const me = new UserItem(0, { num: 0, word: "" });
-          me.firstName = "Я";
-          const ctxKick = mainBot.initContext(Repo.chats[key].id, "_kickUser", null, me);
-          await ctxKick.kickUser(
-            ctx.user,
-            `Причина: пользователь ${ctx.user.isLocked ? "заблокирован❌" : "не отвечает"}`
-          );
-          ctxKick.cancel("end");
-        }
-      }
+      await kickUserFull(ctx.user, ctx.user.isLocked ? "заблокирован❌" : "не отвечает");
     } else if (ctx.user.isValid) {
       //return user back to chats
       for (const key in Repo.chats) {
