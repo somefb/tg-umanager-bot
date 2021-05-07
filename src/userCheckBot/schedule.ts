@@ -1,4 +1,5 @@
 import { MyBotCommandTypes } from "../commands/botCommandTypes";
+import { setNextDate } from "../helpers/setNextDate";
 import { CommandRepeatBehavior, EventTypeEnum, MyBotCommand } from "../types";
 import UserItem from "../userItem";
 import validateUserTask from "./validateUserTask";
@@ -14,13 +15,7 @@ function timeToString(v: number): string {
 }
 
 export function setNextValidationDate(user: UserItem): void {
-  const now = new Date();
-  now.setSeconds(0, 0);
-  const nowUtc = now.getTime();
-  user.validationNextDate = now.setMinutes(user.validationScheduledTime - (now.getTimezoneOffset() + 180)); //MinskTime to UTC;
-  if (user.validationNextDate <= nowUtc) {
-    user.validationNextDate += 1 * 24 * 60000;
-  }
+  user.validationNextDate = setNextDate(user.validationScheduledTime);
 }
 
 const CommandSchedule: MyBotCommand = {
@@ -45,8 +40,8 @@ const CommandSchedule: MyBotCommand = {
 
     await ctx.sendAndWait({
       text: [
-        `Игра запланирована в ${timeToString(ctx.user.validationScheduledTime)}.Желаете поменять?`,
-        "▪️ Eсли играли в 20:20, а запланировано на 20:50, то партию на 20:50 мы пропустим из-за ненадобности (допускается 30мин интервал)",
+        `Игра запланирована в ${timeToString(ctx.user.validationScheduledTime)}. Желаете поменять?`,
+        "\n▪️ Eсли играли в 20:20, а запланировано на 20:50, то партию на 20:50 мы пропустим из-за ненадобности (допускается 30мин интервал)",
         "▪️ Игра может начаться с отклонением от заданного времени (из-за плохого интернета, к примеру)",
       ].join("\n"),
       reply_markup: {
