@@ -31,10 +31,10 @@ const answersExpected_2 = ["Ладно-ладно!", "А вы настойчив
 const askFile = "Понравилась игра?";
 
 const uploadFileInstructions = [
-  ".\nИ напоследок передайте мне любой уникальный файл (картинка/фото, аудио/голосовое, текстовый - абсолютно любой).",
+  "\nИ напоследок передайте мне любой уникальный файл (картинка/фото, аудио/голосовое, текстовый - абсолютно любой)",
   "▪️ файл должен быть уникальным для вас, но бесполезным и бесмысленным для остальных",
   "▪️ сохраните его в доступном для вас месте и не теряйте никогда",
-  "▪️ при загрузке картинки для моих проверок отключайте сжатие файла (если телеграмм предлагает такую опцию)",
+  "⚠️ при загрузке картинки <b>отключайте сжатие файла</b> (если телеграмм предлагает такую опцию)❗️",
   "\nВсякий раз, как вы проходите игру с ошибкой, а также с некоторой периодичностью, я буду выдавать сообщение:",
   `\n<b>${askFile}</b>\n`,
   "Запомните этот вопрос❗️",
@@ -173,7 +173,7 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
 
             if (!res || !UserItem.isFilesEqual(ctx.user.validationFile, res.file)) {
               console.log(`User ${ctx.user.id} failed validation via file and locked`);
-              await cancelSession(ctx, true, isFirstTime, CancelReason.file);
+              await cancelSession(ctx, false, isFirstTime, CancelReason.file);
               return;
             }
           }
