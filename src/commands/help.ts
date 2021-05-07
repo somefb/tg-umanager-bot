@@ -37,8 +37,6 @@ const CommandHelp: MyBotCommand = {
       {
         disable_notification: true,
         text: lines.join("\n"),
-
-        //reply_markup: ""
       },
       { removeTimeout: validationExpiry, removeByUpdate: !ctx.chat.isGroup, keepAfterSession: true }
     );

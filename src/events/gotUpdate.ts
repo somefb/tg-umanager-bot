@@ -155,7 +155,6 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
           };
         }
       } else if ((upd as Update.ChatMemberUpdate).chat_member || (upd as Update.MyChatMemberUpdate).my_chat_member) {
-        // todo we can detect blocked/unblocked for private chat here
         const m = (upd as Update.MyChatMemberUpdate).my_chat_member || (upd as Update.ChatMemberUpdate).chat_member;
         chatId = m.chat.id;
         const mbot = m.new_chat_member;

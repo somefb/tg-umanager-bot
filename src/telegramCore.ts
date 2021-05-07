@@ -11,6 +11,7 @@ import {
   Message,
   P,
   R,
+  ResponseParameters,
   TelegramPR,
   Update,
   UserFromGetMe,
@@ -71,7 +72,19 @@ export default class TelegramCore implements ITelegramCore {
       };
     }
     global.VERBOSE && !url.endsWith("getUpdates") && console.warn("\nsent " + url + "\n" + data + "\n");
+
+    const reportError = (details: string, err?: ErrnoException | string) => {
+      const method = url.replace(this.getUrl("" as keyof TelegramPR), "");
+      const errMsg = `\nTelegramCore. Error for ${method}() ${new Date().toISOString()}.`;
+      console.error(errMsg, details);
+      if (global.DEBUG) {
+        console.log("err:", JSON.stringify(err));
+        console.log("obj:", JSON.stringify(obj));
+      }
+    };
+
     let repeatCount = 0;
+
     const makeRequest = () => {
       return new Promise<T>((resolve, reject) => {
         // handle response
@@ -86,19 +99,15 @@ export default class TelegramCore implements ITelegramCore {
                 const result = JSON.parse(txt) as T;
                 if (!opts?.skipApiErrors && (!result || !((result as unknown) as ApiResponse<unknown>).ok)) {
                   const rErr = (result as unknown) as ApiError | undefined;
+
                   if (rErr?.error_code === 429) {
                     // limits 30 usersOrMessages/sec and 20 messagesToSameGroup/minute === error_code 429
-                    // todo theoreticaly possible: Maximum call stack size exceeded
-
-                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                    // @ts-ignore
-                    const t = (rErr.parameters?.retry_after || 1) * 1000;
-                    console.warn(`TelegramCore. Got 429 error. Will retry response after ${t} sec`);
+                    const t =
+                      ((rErr as ApiError & { parameters?: ResponseParameters }).parameters?.retry_after || 1) * 1000;
+                    reportError(`Got 429 error. Will retry response after ${t} sec`);
                     setTimeout(() => resolve(makeRequest()), t);
                   } else {
-                    const emptyUrl = this.getUrl("" as keyof TelegramPR);
-                    console.error(`TelegramCore. API error /${url.replace(emptyUrl, "")} \n` + txt);
-                    console.error(JSON.stringify(obj));
+                    reportError("API error. " + txt);
                     reject({ ...result, data });
                   }
                 } else {
@@ -118,22 +127,14 @@ export default class TelegramCore implements ITelegramCore {
           })
           .on("error", (err: ErrnoException) => {
             if (timeourErr) {
-              const emptyUrl = this.getUrl("" as keyof TelegramPR);
-              console.log(
-                `\nTelegramCore. Got timeout ${options.timeout}. Will retry request. ${url.replace(
-                  emptyUrl,
-                  ""
-                )}(). ${new Date().toISOString()}`
-              );
-              console.log("err:", JSON.stringify(err));
-              console.log("obj:", JSON.stringify(obj));
+              reportError(`Got timeout ${options.timeout}. Will retry request`);
               setTimeout(() => resolve(makeRequest()), 50);
             } else {
               ++repeatCount;
               if (repeatCount >= 5) {
                 reject(err);
               } else {
-                console.error("TelegramCore. HTTP error: \n" + err.message + ". Will retry request", err);
+                reportError(`HTTP error => ${err.message}. Will retry request"`, err);
                 setTimeout(() => resolve(makeRequest()), 5000);
               }
             }
