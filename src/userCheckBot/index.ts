@@ -21,15 +21,15 @@ function checkSchedulerTask() {
     for (const key in Repo.users) {
       const user = Repo.users[key];
       if (now >= user.validationNextDate) {
-        //allow user skip scheduled time if was validation 30 minutes before
         if (user.validationNextDate === 0) {
           setNextValidationDate(user);
         }
-        if (user.validationDate + 30 * 60000 > user.validationNextDate) {
+        //allow user skip scheduled time if was validation 30 minutes before
+        if (user.validationDate + 30 * 60000 < user.validationNextDate) {
           global.DEBUG && console.log(`Checking user ${user.id} in ${now} (scheduled ${user.validationScheduledTime})`);
           CheckBot.validateUser(user);
+          setNextValidationDate(user);
         }
-        user.validationNextDate += 1 * 24 * 60000;
       }
     }
   }, 60000);

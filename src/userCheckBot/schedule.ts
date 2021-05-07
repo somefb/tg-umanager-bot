@@ -15,6 +15,7 @@ function timeToString(v: number): string {
 
 export function setNextValidationDate(user: UserItem): void {
   const now = new Date();
+  now.setSeconds(0, 0);
   const nowUtc = now.getTime();
   user.validationNextDate = now.setMinutes(user.validationScheduledTime - (now.getTimezoneOffset() + 180)); //MinskTime to UTC;
   if (user.validationNextDate <= nowUtc) {
