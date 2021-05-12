@@ -26,7 +26,7 @@ const CommandHelp: MyBotCommand = {
       const cType = MyBotCommandTypes[key];
       lines.push(`<b>${MyBotCommandTypesDescription[key]}</b>`);
       ctx.service.cfg.commands.forEach((c) => {
-        if (cType === c.type) {
+        if (cType === c.type && !c.isHiddenHelp) {
           lines.push(`${c.command} - ${c.description}`);
         }
       });

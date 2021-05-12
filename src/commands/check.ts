@@ -1,3 +1,4 @@
+import { InlineKeyboardButton } from "typegram";
 import ChatItem, { MyChatMember } from "../chatItem";
 import dateToPastTime, { dateDiffToTime } from "../helpers/dateToPastTime";
 import processNow from "../helpers/processNow";
@@ -10,7 +11,13 @@ import { MyBotCommandTypes } from "./botCommandTypes";
 import countAllTask from "./countAllTask";
 import CommandKickInvalid from "./kickInvalid";
 
-export function getUserStatus(user: UserItem | undefined, m: IUser, isAnonym: boolean, isFinished: boolean): string {
+export function getUserStatus(
+  user: UserItem | undefined,
+  m: IUser,
+  isAnonym: boolean,
+  isFinished: boolean,
+  isStarted: boolean
+): string {
   let status: string;
   let icon: string;
   if (!user) {
@@ -28,17 +35,24 @@ export function getUserStatus(user: UserItem | undefined, m: IUser, isAnonym: bo
   } else if (isFinished) {
     icon = "❗️";
     status = `не отвечает. ${dateToPastTime(user.validationDate)}`;
-  } else {
+  } else if (isStarted) {
     icon = "⏳";
     //case when user re-register
     status = `ожидаю... ${user.validationDate ? dateToPastTime(user.validationDate) : ""}`;
+  } else {
+    icon = "✔";
+    status = `посл.раз ${user.validationDate ? dateToPastTime(user.validationDate) : ""}`;
   }
 
   const uLink = UserItem.ToLink(m.id, m.userName, m.firstName, m.lastName, isAnonym);
   return `${icon} ${uLink} - ${status}`;
 }
 
-export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] | null): Promise<void> {
+export async function reportValidation(
+  ctx: IBotContext,
+  specificUsers: IUser[] | null,
+  startChecking = true
+): Promise<void> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(0);
   const dtEnd = Date.now() + checkWaitResponse;
@@ -47,6 +61,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
   let nextTask: NodeJS.Timeout | undefined;
   const initUserLink = ctx.userLink;
   let prevText: string;
+  let wasInvalidNotLocked = false;
 
   let getMembers: () => MyChatMember[];
   if (specificUsers) {
@@ -58,7 +73,6 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
 
   const report = async (isFinished = false) => {
     //wait for 5 sec between each report
-    // todo throttle requires testing
     const now = processNow();
     if (nextTime && now < nextTime) {
       if (!nextTask) {
@@ -84,14 +98,15 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
     // show status of users
     let hasLocked = false;
     let hasInvalidNotLocked = false;
+
     getMembers().forEach((m) => {
       const user = Repo.getUser(m.id);
       if (user?.isLocked) {
         hasLocked = true;
-      } else if (user?._isValid) {
+      } else if (!user?._isValid) {
         hasInvalidNotLocked = true;
       }
-      const str = getUserStatus(user, m, m.isAnonym, isFinished);
+      const str = getUserStatus(user, m, m.isAnonym, isFinished, startChecking);
       arr.push(str);
     });
 
@@ -102,7 +117,7 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
         arr.push("\nУдалённые из группы");
         removed.forEach((m) => {
           const user = Repo.getUser(m.id);
-          const str = getUserStatus(user, m, m.isAnonym, isFinished);
+          const str = getUserStatus(user, m, m.isAnonym, isFinished, startChecking);
           arr.push(str);
         });
       }
@@ -124,22 +139,23 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
     isFinished && arr.push("\nПроверка окончена");
 
     const text = arr.join("\n");
-    if (prevText !== text) {
+    if (prevText !== text || wasInvalidNotLocked !== hasInvalidNotLocked) {
       prevText = text;
+      wasInvalidNotLocked = hasInvalidNotLocked;
 
       const msg = await ctx.sendMessage(
         {
           text,
           // notify user in private chat by finish
           disable_notification: !(!ctx.chat.isGroup && isFinished),
-          reply_markup:
-            !isFinished && ctx.chat.isGroup && hasInvalidNotLocked
-              ? {
-                  inline_keyboard: [
-                    [{ text: "Удалить тех, кто не отвечает", callback_data: CommandKickInvalid.command }],
-                  ],
-                }
-              : undefined,
+          reply_markup: {
+            inline_keyboard: [
+              !startChecking ? [{ text: "Начать проверку", callback_data: CommandCheckStart.command }] : undefined,
+              !isFinished && ctx.chat.isGroup && hasInvalidNotLocked
+                ? [{ text: "Удалить тех, кто не отвечает", callback_data: CommandKickInvalid.command }]
+                : undefined,
+            ].filter((v) => v) as InlineKeyboardButton[][],
+          },
         },
         {
           keepAfterSession: true,
@@ -170,26 +186,31 @@ export async function reportValidation(ctx: IBotContext, specificUsers: IUser[] 
       marr.push(ctx.chat.removedMembers[id]);
     }
   }
-  marr.forEach((m) => {
-    const user = Repo.getUser(m.id);
-    if (user) {
-      // reset validation state because isValid related to expiryDate
-      user._isValid = user.isValid;
-      if (!user._isValid) {
-        arr.push(CheckBot.validateUser(user).then(() => report()));
+
+  if (startChecking) {
+    // update report every minute
+    const timer = setInterval(() => report(), 60000);
+    ctx.onCancelled().then(() => clearInterval(timer));
+
+    marr.forEach((m) => {
+      const user = Repo.getUser(m.id);
+      if (user) {
+        // reset validation state because isValid related to expiryDate
+        user._isValid = user.isValid;
+        if (!user._isValid) {
+          arr.push(CheckBot.validateUser(user).then(() => report()));
+        }
       }
-    }
-  });
+    });
 
-  await report();
+    await report();
 
-  // update report every minute
-  const timer = setInterval(() => report(), 60000);
-  ctx.onCancelled().then(() => clearInterval(timer));
-
-  // todo such promises can't be destroyed
-  await Promise.all(arr);
-  await report(true);
+    // todo such promises can't be destroyed
+    await Promise.all(arr);
+    await report(true);
+  } else {
+    await report();
+  }
 }
 
 const CommandCheck: MyBotCommand = {
@@ -200,8 +221,19 @@ const CommandCheck: MyBotCommand = {
   repeatBehavior: CommandRepeatBehavior.restart,
   callback: async (ctx) => {
     await countAllTask(ctx, true);
-    //wait for previous partial report from task
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await reportValidation(ctx, null, false);
+  },
+};
+
+export const CommandCheckStart: MyBotCommand = {
+  command: "check_start",
+  type: MyBotCommandTypes.group,
+  isHidden: true,
+  isHiddenHelp: true,
+  description: "проверить участников (старт)",
+  repeatBehavior: CommandRepeatBehavior.restart,
+  callback: async (ctx) => {
+    await ctx.deleteMessage(ctx.initMessageId);
     await reportValidation(ctx, null);
   },
 };
