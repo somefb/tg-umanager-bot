@@ -51,7 +51,7 @@ export function getUserStatus(
 export async function reportValidation(
   ctx: IBotContext,
   specificUsers: IUser[] | null,
-  startChecking = true
+  isStartChecking = true
 ): Promise<void> {
   ctx.singleMessageMode = true;
   ctx.setTimeout(0);
@@ -92,7 +92,11 @@ export async function reportValidation(
     nextTime = now + 5000;
 
     const arr: string[] = ctx.chat.isGroup
-      ? [`${initUserLink} запросил cтатус ${specificUsers ? "определенных " : ""}пользователей❗️\n`]
+      ? [
+          `${initUserLink} запросил ${isStartChecking ? "проверку" : "cтатус"} ${
+            specificUsers ? "определенных " : ""
+          }пользователей❗️\n`,
+        ]
       : [];
 
     // show status of users
@@ -106,7 +110,7 @@ export async function reportValidation(
       } else if (!user?._isValid) {
         hasInvalidNotLocked = true;
       }
-      const str = getUserStatus(user, m, m.isAnonym, isFinished, startChecking);
+      const str = getUserStatus(user, m, m.isAnonym, isFinished, isStartChecking);
       arr.push(str);
     });
 
@@ -117,7 +121,7 @@ export async function reportValidation(
         arr.push("\nУдалённые из группы");
         removed.forEach((m) => {
           const user = Repo.getUser(m.id);
-          const str = getUserStatus(user, m, m.isAnonym, isFinished, startChecking);
+          const str = getUserStatus(user, m, m.isAnonym, isFinished, isStartChecking);
           arr.push(str);
         });
       }
@@ -125,11 +129,9 @@ export async function reportValidation(
 
     // show instructions
     (hasLocked || !isFinished) && arr.push("");
-    if (!isFinished) {
+    if (!isFinished && isStartChecking) {
       arr.push(
-        `▪️ Не начавших проверку, удалю из всех групп через <b>${dateDiffToTime(
-          Math.max(dtEnd - Date.now(), 1000)
-        )}</b>`
+        `▪️ Не начавших проверку удалю из всех групп через <b>${dateDiffToTime(Math.max(dtEnd - Date.now(), 1000))}</b>`
       );
       arr.push("Такие смогут вернуться по прохождению проверки");
       arr.push("▪️ Проваливших проверку, удалю из всех групп немедленно");
@@ -150,7 +152,15 @@ export async function reportValidation(
           disable_notification: !(!ctx.chat.isGroup && isFinished),
           reply_markup: {
             inline_keyboard: [
-              !startChecking ? [{ text: "Начать проверку", callback_data: CommandCheckStart.command }] : undefined,
+              !isStartChecking
+                ? [
+                    {
+                      text: "Начать проверку",
+                      // todo max 64 bytes
+                      callback_data: CommandCheckStart.command + " " + specificUsers?.map((v) => v.id).join(",") || "",
+                    },
+                  ]
+                : undefined,
               !isFinished && ctx.chat.isGroup && hasInvalidNotLocked
                 ? [{ text: "Удалить тех, кто не отвечает", callback_data: CommandKickInvalid.command }]
                 : undefined,
@@ -187,7 +197,7 @@ export async function reportValidation(
     }
   }
 
-  if (startChecking) {
+  if (isStartChecking) {
     // update report every minute
     const timer = setInterval(() => report(), 60000);
     ctx.onCancelled().then(() => clearInterval(timer));
@@ -234,7 +244,16 @@ export const CommandCheckStart: MyBotCommand = {
   repeatBehavior: CommandRepeatBehavior.restart,
   callback: async (ctx) => {
     await ctx.deleteMessage(ctx.initMessageId);
-    await reportValidation(ctx, null);
+    // parsing 'go_check userId1,userId2'
+    const pointedUsers: IUser[] = ctx.initMessage.text
+      .split(" ")[1]
+      ?.split(/,/g)
+      .map((v) => {
+        const id = Number.parseInt(v, 10);
+        return id ? Repo.getUser(id) || ctx.chat.members[id] : undefined;
+      })
+      .filter((v) => v) as IUser[];
+    await reportValidation(ctx, pointedUsers?.length ? pointedUsers : null);
   },
 };
 

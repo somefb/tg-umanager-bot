@@ -35,7 +35,7 @@ export default function gotBotCommand(
         break;
       }
     }
-    const toBotName = text.substring(i + 1, end);
+    const toBotName = i > end ? text.substring(i + 1, end) : "";
     if (toBotName && toBotName !== this.botUserName) {
       return true;
     }
