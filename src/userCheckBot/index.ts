@@ -4,6 +4,7 @@ import UserItem from "../userItem";
 import { generateUserKey } from "./dictionary";
 import playValidation from "./playValidation";
 import CommandSchedule, { setNextValidationDate } from "./schedule";
+import CommandSwitchMode from "./switchMode";
 import validateUserTask from "./validateUserTask";
 
 export const CheckBot = {
@@ -61,5 +62,6 @@ const CheckBotCommands: MyBotCommand[] = [
     },
   } as MyBotCommand,
   CommandSchedule,
+  CommandSwitchMode,
 ];
 export default CheckBotCommands;

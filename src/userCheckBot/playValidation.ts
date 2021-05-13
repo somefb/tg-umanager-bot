@@ -99,11 +99,15 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
           ctx,
           msgPrefix +
             (isFirstTime ? "Выберите любое слово" : repeatCnt > 0 ? "Выберите новое слово" : "Выберите слово"),
-          pairs.map((v) => v.one),
+          ctx.user.isGameModeEnglish ? pairs.map((v) => v.oneEng) : pairs.map((v) => v.one),
           isFirstTime ? validationTimeout * 5 : validationTimeout
         );
 
-        trueWordPair = gotWord ? pairs.find((v) => v.one === gotWord) : undefined;
+        trueWordPair = gotWord
+          ? ctx.user.isGameModeEnglish
+            ? pairs.find((v) => v.oneEng === gotWord)
+            : pairs.find((v) => v.one === gotWord)
+          : undefined;
         if (!trueWordPair) {
           msgPrefix += ".";
         }
@@ -115,7 +119,9 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
       while (!trueWordPair) {
         const gotWord = await sendAndWait(
           ctx,
-          isFirstTime ? "Выберите вашу ассоциацию❗️❗️❗️" : "Выберите ассоциацию❗️",
+          isFirstTime
+            ? "Выберите вашу ассоциацию❗️❗️❗️"
+            : `Выберите ${ctx.user.isGameModeEnglish ? "перевод" : "ассоциацию"}❗️`,
           nextObj.pairs.map((v) => v.two),
           null
         );

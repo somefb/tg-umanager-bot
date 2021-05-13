@@ -96,6 +96,9 @@ export default class UserItem implements IUser {
   validationScheduledTime = 21 * 60; // default is 21:00
   validationNextDate = 0;
 
+  /** Is use has english mode for game */
+  isGameModeEnglish?: boolean;
+
   declinedChats = new Set<number>();
 
   get isValid(): boolean {

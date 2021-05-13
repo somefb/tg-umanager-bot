@@ -9,7 +9,7 @@ import dictionary, {
   generateWordPairsNext,
   WordPair,
   declinateWord,
-  dictDeclinedWords,
+  dictDeclinatedWords,
 } from "./dictionary";
 
 const checkUnique = <T>(arr: T[]): boolean => {
@@ -103,12 +103,11 @@ describe("dictionary functions", () => {
   test("generateWordPairsNext()", () => {
     // preparing mock data
     const word = "волк";
-    const myPair = { one: "d1", two: "весна" };
+    const myPair = { one: "d1", two: "весна", oneEng: "dd" };
     const pairs = [
-      //
-      { one: "a1", two: "a2" },
-      { one: "b1", two: "b2" },
-      { one: "c1", two: "c2" },
+      { one: "a1", two: "a2", oneEng: "aa" },
+      { one: "b1", two: "b2", oneEng: "bb" },
+      { one: "c1", two: "c2", oneEng: "cc" },
       myPair,
     ];
     const keyPairIndex = pairs.findIndex((v) => v == myPair);
@@ -162,7 +161,7 @@ describe("dictionary functions", () => {
   test("all words have declination", () => {
     dictionary.forEach((dict) => {
       dict.keyWords.forEach((w) =>
-        expect(dictDeclinedWords.has(w), `word '${w}' doesn't exists in dictDeclinedWords`).toBeTruthy()
+        expect(dictDeclinatedWords.has(w), `word '${w}' doesn't exists in dictDeclinedWords`).toBeTruthy()
       );
     });
   });

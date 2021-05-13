@@ -1,6 +1,6 @@
 import MyBotCommands from ".";
 
-describe("botCommands", () => {
+describe("botCommands (CheckBot)", () => {
   // validate commands according to tg-spec: https://core.telegram.org/bots/api#botcommand
   MyBotCommands.forEach((v) => {
     describe(v.command, () => {
@@ -12,9 +12,6 @@ describe("botCommands", () => {
       });
       test("description length (3..256)", () => {
         expect(v.isHidden || (v.description.length >= 3 && v.description.length <= 256)).toBeTruthy();
-      });
-      test("command type is defined", () => {
-        expect(v.type).toBeDefined();
       });
     });
   });

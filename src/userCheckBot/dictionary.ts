@@ -7,127 +7,127 @@ const dictionary = [
   {
     keyWords: ["волк", "варан", "вагон"],
     replacers: [
-      { one: "ожидание", two: "время" },
-      { one: "ёмкость", two: "ведро" },
-      { one: "везение", two: "вероятность" },
-      { one: "блендер", two: "венчик" },
-      { one: "низко", two: "высоко" },
+      { one: "ожидание", two: "время", oneEng: "time" },
+      { one: "ёмкость", two: "ведро", oneEng: "bucket" },
+      { one: "везение", two: "вероятность", oneEng: "probability" },
+      { one: "блендер", two: "венчик", oneEng: "whisk" },
+      { one: "низко", two: "высоко", oneEng: "high" },
     ],
   },
   {
     keyWords: ["черепаха", "червь", "чародей"],
     replacers: [
-      { one: "лес", two: "чаща" },
-      { one: "правда", two: "честность" },
-      { one: "блеск", two: "чистота" },
-      { one: "книга", two: "чтиво" },
-      { one: "низко", two: "черенок" },
+      { one: "лес", two: "чаща", oneEng: "forest" },
+      { one: "правда", two: "честность", oneEng: "honesty" },
+      { one: "блеск", two: "чистота", oneEng: "purity" },
+      { one: "книга", two: "чтиво", oneEng: "reading" },
+      { one: "рукоять", two: "черенок", oneEng: "stem" },
     ],
   },
   {
     keyWords: ["травинка", "терем", "танк"],
     replacers: [
-      { one: "хруст", two: "треск" },
-      { one: "мотоблок", two: "трактор" },
-      { one: "спорт", two: "тренировка" },
-      { one: "покос", two: "триммер" },
-      { one: "мгла", two: "тень" },
+      { one: "хруст", two: "треск", oneEng: "crunch" },
+      { one: "мотоблок", two: "трактор", oneEng: "tractor" },
+      { one: "спорт", two: "тренировка", oneEng: "sport" },
+      { one: "покос", two: "триммер", oneEng: "mowing" },
+      { one: "мгла", two: "тень", oneEng: "mist" },
     ],
   },
   {
     keyWords: ["палец", "поцелуй", "призрак"],
     replacers: [
-      { one: "русло", two: "приток" },
-      { one: "солидарность", two: "помощь" },
-      { one: "зелень", two: "природа" },
-      { one: "развилка", two: "перекрёсток" },
-      { one: "дорога", two: "путь" },
+      { one: "русло", two: "приток", oneEng: "riverbed" },
+      { one: "солидарность", two: "помощь", oneEng: "solidarity" },
+      { one: "зелень", two: "природа", oneEng: "green" },
+      { one: "развилка", two: "перекрёсток", oneEng: "fork" },
+      { one: "дорога", two: "путь", oneEng: "road" },
     ],
   },
   {
     keyWords: ["жизнь", "желание", "жаба"],
     replacers: [
-      { one: "скупость", two: "жадность" },
-      { one: "грязь", two: "жижа" },
-      { one: "мука", two: "жернова" },
-      { one: "претензия", two: "жалоба" },
-      { one: "холод", two: "жара" },
+      { one: "скупость", two: "жадность", oneEng: "cheapness" },
+      { one: "грязь", two: "жижа", oneEng: "mud" },
+      { one: "мука", two: "жернова", oneEng: "flour" },
+      { one: "претензия", two: "жалоба", oneEng: "complaint" },
+      { one: "холод", two: "жара", oneEng: "cold" },
     ],
   },
   {
     keyWords: ["камень", "канистра", "кит"],
     replacers: [
-      { one: "стул", two: "кресло" },
-      { one: "дьякон", two: "ксёнз" },
-      { one: "ушу", two: "карате" },
-      { one: "блокбастер", two: "кино" },
-      { one: "творчество", two: "креатив" },
+      { one: "стул", two: "кресло", oneEng: "chair" },
+      { one: "дьякон", two: "ксёнз", oneEng: "deacon" },
+      { one: "ушу", two: "карате", oneEng: "wushu" },
+      { one: "блокбастер", two: "кино", oneEng: "blockbuster" },
+      { one: "творчество", two: "креатив", oneEng: "creativity" },
     ],
   },
   {
     keyWords: ["луч", "луна", "лиса"],
     replacers: [
-      { one: "сундучок", two: "ларец" },
-      { one: "крючок", two: "леска" },
-      { one: "страсть", two: "либидо" },
-      { one: "блокбастер", two: "лень" },
-      { one: "хорёк", two: "ласка" },
+      { one: "сундучок", two: "ларец", oneEng: "box" },
+      { one: "крючок", two: "леска", oneEng: "hook" },
+      { one: "страсть", two: "либидо", oneEng: "passion" },
+      { one: "вялость", two: "лень", oneEng: "laziness" },
+      { one: "хорёк", two: "ласка", oneEng: "weasel" },
     ],
   },
   {
     keyWords: ["струна", "сова", "слон"],
     replacers: [
-      { one: "мясо", two: "струганина" },
-      { one: "белое", two: "сало" },
-      { one: "радио", two: "сарафанное" },
-      { one: "быки", two: "стадо" },
-      { one: "дырявое", two: "сито" },
+      { one: "мясо", two: "струганина", oneEng: "meat" },
+      { one: "белое", two: "сало", oneEng: "white" },
+      { one: "радио", two: "сарафанное", oneEng: "radio" },
+      { one: "быки", two: "стадо", oneEng: "bulls" },
+      { one: "дырявое", two: "сито", oneEng: "leaky" },
     ],
   },
   {
     keyWords: ["апельсин", "ананас", "антилопа"],
     replacers: [
-      { one: "качели", two: "аттракцион" },
-      { one: "шутка", two: "анекдот" },
-      { one: "обозначение", two: "артикул" },
-      { one: "глобус", two: "атлас" },
-      { one: "лук", two: "арбалет" },
+      { one: "качели", two: "аттракцион", oneEng: "swing" },
+      { one: "шутка", two: "анекдот", oneEng: "joke" },
+      { one: "обозначение", two: "артикул", oneEng: "designation" },
+      { one: "глобус", two: "атлас", oneEng: "globe" },
+      { one: "лук", two: "арбалет", oneEng: "bow" },
     ],
   },
 ];
-export const dictDeclinedWords = new Map<string, Record<number, string>>();
-dictDeclinedWords.set("волк", ["волка", "волков"]);
-dictDeclinedWords.set("варан", ["варана", "варанов"]);
-dictDeclinedWords.set("вагон", ["вагона", "вагонов"]);
-dictDeclinedWords.set("черепаха", ["черепахи", "черепах"]);
-dictDeclinedWords.set("червь", ["червя", "червей"]);
-dictDeclinedWords.set("чародей", ["чародея", "чародеев"]);
-dictDeclinedWords.set("травинка", ["травинки", "травинок"]);
-dictDeclinedWords.set("терем", ["терема", "теремов"]);
-dictDeclinedWords.set("танк", ["танка", "танков"]);
-dictDeclinedWords.set("палец", ["пальца", "пальцев"]);
-dictDeclinedWords.set("поцелуй", ["поцелуя", "поцелуев"]);
-dictDeclinedWords.set("призрак", ["призрака", "призраков"]);
-dictDeclinedWords.set("жизнь", ["жизни", "жизней"]);
-dictDeclinedWords.set("желание", ["желания", "желаний"]);
-dictDeclinedWords.set("жаба", ["жабы", "жаб"]);
-dictDeclinedWords.set("камень", ["камня", "камней"]);
-dictDeclinedWords.set("канистра", ["канистры", "канистр"]);
-dictDeclinedWords.set("кит", ["кита", "китов"]);
-dictDeclinedWords.set("луч", ["луча", "лучей"]);
-dictDeclinedWords.set("луна", ["луны", "лун"]);
-dictDeclinedWords.set("лиса", ["лисы", "лис"]);
-dictDeclinedWords.set("струна", ["струны", "струн"]);
-dictDeclinedWords.set("сова", ["совы", "сов"]);
-dictDeclinedWords.set("слон", ["слона", "слонов"]);
-dictDeclinedWords.set("апельсин", ["апельсина", "апельсинов"]);
-dictDeclinedWords.set("ананас", ["ананаса", "ананасов"]);
-dictDeclinedWords.set("антилопа", ["антилопы", "антилоп"]);
+export const dictDeclinatedWords = new Map<string, Record<number, string>>();
+dictDeclinatedWords.set("волк", ["волка", "волков"]);
+dictDeclinatedWords.set("варан", ["варана", "варанов"]);
+dictDeclinatedWords.set("вагон", ["вагона", "вагонов"]);
+dictDeclinatedWords.set("черепаха", ["черепахи", "черепах"]);
+dictDeclinatedWords.set("червь", ["червя", "червей"]);
+dictDeclinatedWords.set("чародей", ["чародея", "чародеев"]);
+dictDeclinatedWords.set("травинка", ["травинки", "травинок"]);
+dictDeclinatedWords.set("терем", ["терема", "теремов"]);
+dictDeclinatedWords.set("танк", ["танка", "танков"]);
+dictDeclinatedWords.set("палец", ["пальца", "пальцев"]);
+dictDeclinatedWords.set("поцелуй", ["поцелуя", "поцелуев"]);
+dictDeclinatedWords.set("призрак", ["призрака", "призраков"]);
+dictDeclinatedWords.set("жизнь", ["жизни", "жизней"]);
+dictDeclinatedWords.set("желание", ["желания", "желаний"]);
+dictDeclinatedWords.set("жаба", ["жабы", "жаб"]);
+dictDeclinatedWords.set("камень", ["камня", "камней"]);
+dictDeclinatedWords.set("канистра", ["канистры", "канистр"]);
+dictDeclinatedWords.set("кит", ["кита", "китов"]);
+dictDeclinatedWords.set("луч", ["луча", "лучей"]);
+dictDeclinatedWords.set("луна", ["луны", "лун"]);
+dictDeclinatedWords.set("лиса", ["лисы", "лис"]);
+dictDeclinatedWords.set("струна", ["струны", "струн"]);
+dictDeclinatedWords.set("сова", ["совы", "сов"]);
+dictDeclinatedWords.set("слон", ["слона", "слонов"]);
+dictDeclinatedWords.set("апельсин", ["апельсина", "апельсинов"]);
+dictDeclinatedWords.set("ананас", ["ананаса", "ананасов"]);
+dictDeclinatedWords.set("антилопа", ["антилопы", "антилоп"]);
 
 export function declinateWord(str: { num: number; word: string }): string {
   let w = str.word;
   if (str.num !== 1) {
-    const set = dictDeclinedWords.get(str.word);
+    const set = dictDeclinatedWords.get(str.word);
     if (set) {
       w = str.num >= 5 ? set[1] : set[0];
     }
@@ -202,6 +202,7 @@ export function generateWordPairsNext(
 
 export interface WordPair {
   one: string;
+  oneEng: string;
   two: string;
 }
 
