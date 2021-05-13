@@ -487,6 +487,19 @@ export default class BotContext implements IBotContext {
         revoke_messages: true,
       });
 
+      (async () => {
+        const ref = this.service.onGotEvent(
+          EventTypeEnum.removedChatMember,
+          (e, chatId) => chatId === this.chatId && e.left_chat_member.id === user.id
+        );
+        const t = setTimeout(() => this.service.removeEvent(ref, true), 60000);
+        try {
+          const msg = await ref;
+          clearTimeout(t);
+          await this.service.core.deleteMessage({ chat_id: this.chatId, message_id: msg.message_id });
+        } catch (error) {}
+      })();
+
       // some mistake in tg: ,"error_code":400,"description":"Bad Request: method is available for supergroup and channel chats only"
       try {
         await this.service.core.unbanChatMember({
@@ -502,19 +515,6 @@ export default class BotContext implements IBotContext {
         { text: `${this.userLink} удалил ${UserItem.ToLinkUser(user)}${note ? ". " + note : ""}` },
         { keepAfterSession: true }
       );
-
-      (async () => {
-        const ref = this.service.onGotEvent(
-          EventTypeEnum.removedChatMember,
-          (e, chatId) => chatId === this.chatId && e.left_chat_member.id === user.id
-        );
-        const t = setTimeout(() => this.service.removeEvent(ref, true), 60000);
-        try {
-          const msg = await ref;
-          clearTimeout(t);
-          await this.service.core.deleteMessage({ chat_id: this.chatId, message_id: msg.message_id });
-        } catch (error) {}
-      })();
     } catch (err) {
       if (!err.error_code) {
         console.error(err);
