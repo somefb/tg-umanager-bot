@@ -63,7 +63,7 @@ async function sendInviteLink(ctxReport: IBotContext, target: UserItem, whoInvit
     ctxInvite.removeAllByCancel = true;
 
     ctxReport.setTimeout(waitMs);
-    ctxReport.onCancelled().finally(() => ctxInvite.cancel("end"));
+    ctxReport.onCancelled().then(() => ctxInvite.cancel("end"));
 
     const callbackCancel = (isForever: boolean) => {
       if (isForever) {

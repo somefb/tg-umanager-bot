@@ -277,15 +277,10 @@ async function askForPlay(ctx: IBotContext) {
   let removeMessageId: number | undefined;
 
   const sendQuestion = async () => {
-    // notify to play after 1hour
-    timer = setTimeout(async () => {
+    try {
       removeMessageId && (await ctx.deleteMessage(removeMessageId));
       removeMessageId = undefined;
-      timer = undefined;
-      await sendQuestion();
-    }, 59 * 60000); //ask every 59min
 
-    try {
       const msg = await ctx.sendMessage({
         text: "Поиграем?",
         reply_markup: { inline_keyboard: [[{ text: "Да", callback_data: "/go" }]] },
@@ -298,11 +293,9 @@ async function askForPlay(ctx: IBotContext) {
         // error_code: 403, description: 'Forbidden: bot was blocked by the user'
         if (err.description.includes("deactivated")) {
           Repo.removeUser(ctx.user.id);
-          timer && clearTimeout(timer);
           ctx.cancel(`User ${ctx.user.toLink()} deleted account`);
         } else if (err.description.includes("blocked")) {
           ctx.user.isCheckBotChatBlocked = true;
-          timer && clearTimeout(timer);
         } else {
           throw error;
         }
@@ -312,10 +305,14 @@ async function askForPlay(ctx: IBotContext) {
   };
 
   await sendQuestion();
-  ctx.onCancelled().finally(() => timer && clearTimeout(timer));
-  // wait for any response because user can remove previous message by mistake
-  await ctx.onGotEvent(EventTypeEnum.gotUpdate);
 
-  timer && clearTimeout(timer);
+  // notify to play every 1hour
+  timer = setInterval(sendQuestion, 60 * 60000);
+  ctx.onCancelled().then(() => timer && clearInterval(timer));
+
+  // wait for any response because user can remove previous message by mistake
+  await ctx.service.onGotEvent(EventTypeEnum.gotUpdate, (_e, chatId) => chatId === ctx.chatId);
+
+  timer && clearInterval(timer);
   timer = undefined;
 }

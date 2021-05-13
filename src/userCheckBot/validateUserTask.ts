@@ -13,7 +13,8 @@ export default async function validateUserTask(service: ITelegramService, user: 
     const c = service.getContexts(user.checkBotChatId);
     if (c) {
       for (const ctx of c.values()) {
-        if (ctx.name === CheckBotCommands[0].command) {
+        // if command === 'start' or 'go'
+        if (ctx.name === CheckBotCommands[0].command || ctx.name === CheckBotCommands[1].command) {
           await ctx.onCancelled();
           return user.isValid;
         }
