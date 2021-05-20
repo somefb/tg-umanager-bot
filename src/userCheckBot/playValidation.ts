@@ -151,7 +151,7 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
         if (validTimes >= expectedValidTimes) {
           msgPrefix = arrayGetRandomItem(answersExpected_2);
 
-          ctx.setTimeout(0);
+          ctx.setTimeout();
           if (!ctx.user.validationFile) {
             // init 2step validation
             await ctx.sendMessage({ text: msgPrefix + uploadFileInstructions });
@@ -161,7 +161,6 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
             ctx.user.validationFile = res.file;
           } else if (invalidTimes || ctx.user.validationFileDate + checkFilePeriodic <= Date.now()) {
             // 2step validation
-            ctx.setTimeout();
             await ctx.sendMessage({ text: msgPrefix + " " + askFile });
             ctx.setTimeout(timeoutFile);
 
@@ -218,6 +217,7 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
         console.log(`User ${ctx.user.id} failed validation: timeout is over. Lets retry`);
         await ctx.sendMessage({ text: "Плохой интернет? Давайте попробуем заново через 10 секунд..." });
         return new Promise((resolve, reject) => {
+          ctx.setTimeout(0);
           setTimeout(() => {
             playValidation(ctx).then(resolve).catch(reject);
           }, 10000);
