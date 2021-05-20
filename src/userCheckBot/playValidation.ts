@@ -317,7 +317,7 @@ async function askForPlay(ctx: IBotContext) {
   ctx.onCancelled().then(() => timer && clearInterval(timer));
 
   // wait for any response because user can remove previous message by mistake
-  await ctx.service.onGotEvent(EventTypeEnum.gotUpdate, (_e, chatId) => chatId === ctx.chatId);
+  await ctx.onGotEvent(EventTypeEnum.gotUpdate);
 
   timer && clearInterval(timer);
   timer = undefined;
