@@ -97,7 +97,7 @@ export async function reportValidation(
             specificUsers ? "определенных " : ""
           }пользователей❗️\n`,
         ]
-      : [];
+      : ["Статус пользователей\n"];
 
     // show status of users
     let hasLocked = false;
@@ -237,7 +237,7 @@ const CommandCheck: MyBotCommand = {
 
 export const CommandCheckStart: MyBotCommand = {
   command: "check_start",
-  type: MyBotCommandTypes.group,
+  type: MyBotCommandTypes.common,
   isHidden: true,
   isHiddenHelp: true,
   description: "проверить участников (старт)",
@@ -253,7 +253,7 @@ export const CommandCheckStart: MyBotCommand = {
         return id ? Repo.getUser(id) || ctx.chat.members[id] : undefined;
       })
       .filter((v) => v) as IUser[];
-    await reportValidation(ctx, pointedUsers?.length ? pointedUsers : null);
+    await reportValidation(ctx, pointedUsers?.length ? pointedUsers : null, true);
   },
 };
 

@@ -44,15 +44,12 @@ export default function gotUpdate(this: TelegramService, upd: Update): void {
           updateMember(chatId, q.from, null);
           if (q.data?.startsWith("/")) {
             defFn = () => {
-              if (!isHandled) {
-                const msg = Object.assign({}, q.message, {
-                  text: q.data,
-                  from: q.from,
-                  chat: q.message?.chat as Chat.PrivateChat,
-                } as Partial<NewTextMessage>) as NewTextMessage;
-                return !isHandled && gotBotCommand.call(this, msg, q.message?.chat.id || 0, true);
-              }
-              return false;
+              const msg = Object.assign({}, q.message, {
+                text: q.data,
+                from: q.from,
+                chat: q.message?.chat as Chat.PrivateChat,
+              } as Partial<NewTextMessage>) as NewTextMessage;
+              return gotBotCommand.call(this, msg, q.message?.chat.id || 0, true);
             };
           }
         }
