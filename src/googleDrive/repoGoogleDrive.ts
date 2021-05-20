@@ -7,6 +7,21 @@ import readline from "readline";
 import { IRepository } from "../types";
 import myGoogleCredentials from "./googleCredentials.json";
 
+/*
+  expected googleCredentials.json > you can get from googleApi-console
+  {
+      "installed": {
+        "client_id": "",
+        "project_id": "",
+        "auth_uri": "",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_secret": "",
+        "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob", "http://localhost"]
+      }
+  }
+ */
+
 //example here https://developers.google.com/drive/api/v3/quickstart/nodejs
 
 const SCOPES = ["https://www.googleapis.com/auth/drive.appdata"];
