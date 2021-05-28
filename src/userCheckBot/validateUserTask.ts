@@ -15,6 +15,8 @@ export default async function validateUserTask(service: ITelegramService, user: 
       for (const ctx of c.values()) {
         // if command === 'start' or 'go'
         if (ctx.name === CheckBotCommands[0].command || ctx.name === CheckBotCommands[1].command) {
+          console.log(`validateUserTask. Waiting for taskCancell for ${user.toLink()}`);
+
           await ctx.onCancelled();
           return user.isValid;
         }
@@ -23,6 +25,7 @@ export default async function validateUserTask(service: ITelegramService, user: 
 
     const cmd = CheckBotCommands[0];
     const ctx = service.initContext(user.checkBotChatId, cmd.command, null, user);
+    console.log(`validateUserTask. callCommand for ${user.toLink()}`);
     await ctx.callCommand(cmd.callback);
     return user.isValid;
   } catch (err) {

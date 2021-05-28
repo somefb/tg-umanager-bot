@@ -26,8 +26,16 @@ function checkSchedulerTask() {
           setNextValidationDate(user);
         }
         //allow user skip scheduled time if was validation 30 minutes before
-        if (user.validationDate + 30 * 60000 < user.validationNextDate) {
-          global.DEBUG && console.log(`Checking user ${user.id} in ${now} (scheduled ${user.validationScheduledTime})`);
+        const skipChecking = user.validationDate + 30 * 60000 >= user.validationNextDate;
+
+        console.log(
+          `checkSchedulerTask. Checking user ${user.toLink()} in ${now} (scheduled ${
+            user.validationScheduledTime
+          }). SkipChecking: ${skipChecking}`
+        );
+
+        if (!skipChecking) {
+          //global.DEBUG &&
           CheckBot.validateUser(user);
           setNextValidationDate(user);
         }
