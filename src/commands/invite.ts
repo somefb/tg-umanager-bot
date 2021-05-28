@@ -51,12 +51,14 @@ async function sendInviteLink(ctxReport: IBotContext, target: UserItem, whoInvit
     }
 
     const link = res.result.invite_link;
-
-    await ctxReport.service.core.unbanChatMember({
-      chat_id: ctxReport.chatId,
-      user_id: target.id,
-      only_if_banned: true,
-    });
+    // some mistake in tg: ,"error_code":400,"description":"Bad Request: method is available for supergroup and channel chats only"
+    try {
+      await ctxReport.service.core.unbanChatMember({
+        chat_id: ctxReport.chatId,
+        user_id: target.id,
+        only_if_banned: true,
+      });
+    } catch {}
 
     const ctxInvite = CheckBot.service.initContext(target.checkBotChatId, "_inviteLink", null, target);
     ctxInvite.setTimeout();
@@ -157,13 +159,14 @@ const CommandInvite: MyBotCommand = {
       return;
     }
 
-    if (target.declinedChats.has(ctx.chat.id)) {
-      await ctx.sendMessage(
-        { text: `${target.toLink()} навсегда отказался вступать в группу` },
-        { keepAfterSession: true, removeTimeout: 10000 }
-      );
-      return;
-    }
+    // WARN: this is not required anymore
+    // if (target.declinedChats.has(ctx.chat.id)) {
+    //   await ctx.sendMessage(
+    //     { text: `${target.toLink()} навсегда отказался вступать в группу` },
+    //     { keepAfterSession: true, removeTimeout: 10000 }
+    //   );
+    //   return;
+    // }
 
     await sendInviteLink(ctx, target, ctx.userLink);
   },
