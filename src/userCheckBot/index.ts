@@ -29,16 +29,16 @@ function checkSchedulerTask() {
         const skipChecking = user.validationDate + 30 * 60000 >= user.validationNextDate && user._isValid;
 
         console.log(
-          `checkSchedulerTask. Checking user ${user.toLink()} in ${now} (scheduled ${
-            user.validationScheduledTime
+          `checkSchedulerTask. Checking user ${user.toLink()} in ${now} (scheduled ${user.validationScheduledTime} => ${
+            user.validationNextDate
           }). SkipChecking: ${skipChecking}`
         );
 
         if (!skipChecking) {
           //global.DEBUG &&
           CheckBot.validateUser(user);
-          setNextValidationDate(user);
         }
+        setNextValidationDate(user);
       }
     }
   }, 60000);
