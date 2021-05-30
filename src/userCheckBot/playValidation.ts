@@ -177,9 +177,10 @@ export default async function playValidation(ctx: IBotContext, skipAskForPlay = 
             ctx.user.validationFileDate = Date.now();
 
             if (!res || !UserItem.isFilesEqual(ctx.user.validationFile, res.file)) {
-              console.log(`User ${ctx.user.id} failed validation via file and locked`);
-              await cancelSession(ctx, false, isFirstTime, CancelReason.file);
-              return;
+              // todo uncomment when image-comparison is resolved
+              // console.log(`User ${ctx.user.id} failed validation via file and locked`);
+              // await cancelSession(ctx, false, isFirstTime, CancelReason.file);
+              // return;
             }
           }
           await cancelSession(ctx, true, isFirstTime, CancelReason.sucсess);
