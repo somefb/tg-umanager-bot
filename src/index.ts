@@ -91,9 +91,10 @@ async function runApp() {
     // await tg.get<BotCommand[]>("getMyCommands").then((v) => console.warn(v));
     const options: TelegramListenOptions = {
       interval: 1000,
-      ownDomainURL: domainURL,
-      keyPath: certKeyPath,
-      certPath,
+      // todo uncomment: somehow telegram stopped working with webhook
+      // ownDomainURL: domainURL,
+      // keyPath: certKeyPath,
+      // certPath,
     };
 
     for (let i = 0; i < bots.length; ++i) {
