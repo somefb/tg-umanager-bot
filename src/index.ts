@@ -91,15 +91,15 @@ async function runApp() {
     // await tg.get<BotCommand[]>("getMyCommands").then((v) => console.warn(v));
     const options: TelegramListenOptions = {
       interval: 1000,
-      // todo uncomment: somehow telegram stopped working with webhook
-      // ownDomainURL: domainURL,
-      // keyPath: certKeyPath,
-      // certPath,
+      ownDomainURL: domainURL,
+      keyPath: certKeyPath,
+      certPath,
     };
 
     for (let i = 0; i < bots.length; ++i) {
       const tg = new TelegramService(bots[i]);
-      await tg.listen(options);
+      // todo uncomment when it will be resolved: somehow telegram stopped working with webhook
+      await tg.listen({ interval: 1000 } || options);
     }
   } catch (err) {
     console.error("Error in the main module\n" + err);
