@@ -30,7 +30,7 @@ const isTsNode = process.argv.some((arg) => arg.includes("ts-node"));
 function start() {
   console.log("Running the process");
 
-  pr = fork(path.resolve(__dirname + "/start.here"), process.argv, {
+  pr = fork(path.resolve(__dirname + "/index.main"), process.argv, {
     cwd: process.cwd(),
     env: process.env,
     detached: false,

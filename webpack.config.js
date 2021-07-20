@@ -12,7 +12,7 @@ const isDevEnv = process.argv[process.argv.indexOf("--env") + 1] === "dev";
 module.exports = {
   entry: {
     index: "./src/index.ts",
-    "start.here": "./src/start.here.ts",
+    "index.main": "./src/index.main.ts",
   },
   target: "node",
   module: {
