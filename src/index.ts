@@ -35,13 +35,12 @@ function start() {
     env: process.env,
     detached: false,
     stdio: "inherit", //"pipe"
-    execArgv: isTsNode ? undefined : ["-r", "ts-node/register"], // required for local-start
+    execArgv: isTsNode ? ["-r", "ts-node/register"] : undefined, // required for local-start
   })
     .on("error", (err) => {
       console.error("Got error in child-process:\n", err);
     })
-    .on("close", start);
-
+    .on("close", () => setTimeout(start, 1000));
   // pr.stdout?.pipe(process.stdout);
   // pr.stderr?.pipe(process.stderr);
   // pr.stdin?.pipe(process.stdin);
