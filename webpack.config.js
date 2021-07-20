@@ -10,7 +10,10 @@ const isDevEnv = process.argv[process.argv.indexOf("--env") + 1] === "dev";
 
 /** @type {import('webpack').Configuration} */
 module.exports = {
-  entry: "./src/index.ts",
+  entry: {
+    index: "./src/index.ts",
+    "start.here": "./src/start.here.ts",
+  },
   target: "node",
   module: {
     rules: [
@@ -25,7 +28,7 @@ module.exports = {
     extensions: [".ts", ".js", ".json"],
   },
   output: {
-    filename: "index.js",
+    filename: "[name].js",
     path: path.resolve(__dirname, "build"),
   },
   node: {

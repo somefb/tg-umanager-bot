@@ -19,10 +19,15 @@ process.on("unhandledRejection", (err) => {
 });
 
 process.on("SIGINT", () => {
+  console.warn("child got SIGINT");
   process.emit("beforeExit", 0);
 });
 
-process.on("SITERM", () => {
+process.on("SIGTERM", () => {
+  process.emit("beforeExit", 0);
+});
+
+process.on("SIGHUP", () => {
   process.emit("beforeExit", 0);
 });
 

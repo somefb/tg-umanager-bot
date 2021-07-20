@@ -7,6 +7,7 @@
     "start": "node build/index.js --https",
     "test": "jest",
     "serve": "./node_modules/.bin/ts-node src/index.ts --inspect --debug --dev --verbose",
+    "serve-direct": "./node_modules/.bin/ts-node src/start.here.ts --inspect --debug --dev --verbose",
     "serve-prod": "./node_modules/.bin/ts-node src/index.ts --debug",
     "test-google": "./node_modules/.bin/ts-node src/googleDrive/check.ts",
     "lint": "npm run lint-es && npm run lint-ts",
