@@ -25,34 +25,32 @@ signals.forEach((s) => {
   });
 });
 
+const isTsNode = process.argv.some((arg) => arg.includes("ts-node"));
+
 function start() {
+  console.log("Running the process");
+
   pr = fork(path.resolve(__dirname + "/start.here"), process.argv, {
     cwd: process.cwd(),
     env: process.env,
     detached: false,
     stdio: "inherit", //"pipe"
-    // todo check for prod:build
-    execArgv: ["-r", "ts-node/register"],
+    execArgv: isTsNode ? undefined : ["-r", "ts-node/register"], // required for local-start
   })
     .on("error", (err) => {
-      console.log("Got error in spawn-proccess:\n", err);
+      console.error("Got error in child-process:\n", err);
     })
-    .on("close", () => {
-      console.log("Closing proccess");
-      setTimeout(() => start(), 2000);
-    });
+    .on("close", start);
 
   // pr.stdout?.pipe(process.stdout);
   // pr.stderr?.pipe(process.stderr);
   // pr.stdin?.pipe(process.stdin);
-
-  console.log("Proccess is started");
 }
 
 start();
 
 setInterval(() => {
-  console.log("Closing the server");
+  console.log("Closing the process");
   pr?.kill();
   pr = null;
 }, 100000); //todo implement checking time

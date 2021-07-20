@@ -4,8 +4,6 @@ if (!global.isWebpackBuild) {
   global.VERBOSE = process.argv.includes("--verbose");
 }
 
-console.log("get args", process.argv);
-
 import http from "http";
 import path from "path";
 import MyBotCommands from "./commands";
