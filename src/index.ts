@@ -1,6 +1,7 @@
 import { fork } from "child_process";
 import { ChildProcess } from "node:child_process";
 import path from "path";
+import { setNextDate } from "./helpers/setNextDate";
 
 let pr: ChildProcess | null = null;
 
@@ -48,8 +49,15 @@ function start() {
 
 start();
 
+const reloadTime = 4 * 60; // reload in 04:00
+let reloadTimestamp = setNextDate(reloadTime);
 setInterval(() => {
-  console.log("Closing the process");
-  pr?.kill();
-  pr = null;
-}, 100000); //todo implement checking time
+  const now = Date.now();
+
+  if (now >= reloadTimestamp) {
+    reloadTimestamp = setNextDate(reloadTime);
+    console.log("Closing the process");
+    pr?.kill();
+    pr = null;
+  }
+}, 10000);

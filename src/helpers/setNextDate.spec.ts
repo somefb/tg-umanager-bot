@@ -63,7 +63,7 @@ describe("setNextDate()", () => {
     jest.restoreAllMocks();
     expect(toTestString(dtNext)).toBe(`01 21:00`); //02 05:00 target
   });
-  test("1st jan 11:00 => 13:00 tz1:-5, tz2:+3 (target 21:00; tzTimeDiff >= 24)", () => {
+  test("1st jan 11:00 => 13:00 tz1:-5, tz2:+2 (target 21:00; tzTimeDiff >= 24)", () => {
     const localTz = 5 * 60;
     const targetTz = -2 * 60;
     Date.prototype.getTimezoneOffset = jest.fn(() => -localTz);
