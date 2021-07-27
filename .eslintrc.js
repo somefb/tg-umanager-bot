@@ -31,6 +31,7 @@ module.exports = {
     },
   },
   rules: {
+    "require-await": "error",
     "@typescript-eslint/explicit-module-boundary-types": ["error", { allowDirectConstAssertionInArrowFunctions: true }],
     "prettier/prettier": ["error"],
     "no-underscore-dangle": 0,

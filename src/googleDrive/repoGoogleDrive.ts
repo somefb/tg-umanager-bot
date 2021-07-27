@@ -1,11 +1,26 @@
 import fs from "fs";
-import path from "path";
 import { OAuth2Client } from "google-auth-library";
 //todo optimize import to drive only
 import { drive_v3, google } from "googleapis";
+import path from "path";
 import readline from "readline";
 import { IRepository } from "../types";
 import myGoogleCredentials from "./googleCredentials.json";
+
+/*
+  expected googleCredentials.json > you can get from googleApi-console
+  {
+      "installed": {
+        "client_id": "",
+        "project_id": "",
+        "auth_uri": "",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_secret": "",
+        "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob", "http://localhost"]
+      }
+  }
+ */
 
 //example here https://developers.google.com/drive/api/v3/quickstart/nodejs
 
@@ -23,24 +38,21 @@ export default class RepoGoogleDrive implements IRepository {
     if (fs.existsSync(CACHE_PATH)) {
       try {
         const v = JSON.parse(fs.readFileSync(CACHE_PATH, { encoding: "utf-8" }));
-        Object.keys(v).forEach((key) => {
-          this.cache.set(key, v[key]);
-        });
+        for (const key in v) {
+          this.cache.set(key as string, v[key]);
+        }
       } catch (err) {
         console.error(`GoogleDrive. Error. Can't parse cache-file ${CACHE_PATH} /n`, err);
       }
     }
-    const saveCache = () => {
-      const obj: Record<string, string | null> = {};
-      this.cache.forEach((v, key) => {
-        obj[key] = v;
-      });
-      fs.writeFileSync(CACHE_PATH, JSON.stringify(obj), { encoding: "utf-8" });
-    };
-    process.on("beforeExit", () => {
-      console.log("Exit detected: GoogleDrive. Saving cache by exit");
-      saveCache();
+  }
+
+  saveCache(): void {
+    const obj: Record<string, string | null> = {};
+    this.cache.forEach((v, key) => {
+      obj[key] = v;
     });
+    fs.writeFileSync(CACHE_PATH, JSON.stringify(obj), { encoding: "utf-8" });
   }
 
   async get<T>(pathName: string): Promise<T | null> {
@@ -53,6 +65,9 @@ export default class RepoGoogleDrive implements IRepository {
         return null;
       }
       this.cache.set(fname, fileId);
+    }
+    if (!fileId) {
+      return null;
     }
     const f = await this.getFile(fileId as string);
     return (f as unknown) as T;
@@ -68,6 +83,7 @@ export default class RepoGoogleDrive implements IRepository {
     if (!fileId) {
       fileId = await this.createFile(fname, item);
       this.cache.set(fname, fileId);
+      this.saveCache();
     } else {
       await this.updateFile(fileId, item);
     }
@@ -102,7 +118,6 @@ export default class RepoGoogleDrive implements IRepository {
       });
     }
 
-    // todo check refreshToken logic
     oAuth2Client.setCredentials(token);
     this._client = oAuth2Client;
     return oAuth2Client;
@@ -173,7 +188,7 @@ export default class RepoGoogleDrive implements IRepository {
       fileId,
       media: {
         mimeType: "application/json",
-        body: JSON.stringify(content),
+        body: JSON.stringify(content, (_key, value) => (value == null ? undefined : value)),
       },
     });
   }

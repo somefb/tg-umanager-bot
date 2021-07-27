@@ -10,6 +10,7 @@ NodeJS version: 12+
 
 - Use `npm install`
 - Create `./src/appSettings.private.json` with your [bot-token](https://core.telegram.org/bots/api#authorizing-your-bot) like ordinary string kinda `"333111100:Asdfn_FZD123sd3-gw-SKWhgffNAEcQPqE"`
+- Create `./src/googleDrive/googleCredentials.json` with setting from googleApi-console
 
 ## How to run locally
 

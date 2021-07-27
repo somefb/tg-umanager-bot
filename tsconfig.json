@@ -9,9 +9,16 @@
     "removeComments": true,
     "esModuleInterop": true,
     "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "allowJs": true,
     "resolveJsonModule": true
   },
+  "ts-node": {
+    "files": true
+  },
+  "files": ["src/index.ts", "src/index.main.ts", "src/global.d.ts"],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "build", ".*"]
 }

@@ -2,7 +2,22 @@ import FormData from "form-data";
 import { createReadStream } from "fs";
 import http from "http";
 import https, { RequestOptions } from "https";
-import { ApiError, ApiResponse, Message, P, TelegramPR, Update, WebhookInfo } from "typegram";
+import { IncomingMessage } from "node:http";
+import {
+  ApiError,
+  ApiResponse,
+  ChatInviteLink,
+  ChatMember,
+  Message,
+  P,
+  R,
+  ResponseParameters,
+  TelegramPR,
+  Update,
+  UserFromGetMe,
+  WebhookInfo,
+} from "typegram";
+import onExit from "./onExit";
 import { ITelegramCore, Opts } from "./types";
 
 type MyHttpOptions<O> = Partial<{
@@ -29,6 +44,7 @@ export default class TelegramCore implements ITelegramCore {
   ): Promise<T> {
     const options: RequestOptions = {
       method,
+      timeout: opts?.skipResponse ? undefined : 10000,
     };
 
     let data: string | undefined;
@@ -39,13 +55,13 @@ export default class TelegramCore implements ITelegramCore {
       form = new FormData();
       if (obj) {
         const f = form;
-        Object.keys(obj).forEach((key) => {
+        for (const key in obj) {
           if (key === opts.filePathKey) {
             f.append(key, createReadStream(obj[key] as string));
           } else {
             f.append(key, obj[key]);
           }
-        });
+        }
       }
       options.headers = form.getHeaders();
     } else if (obj !== undefined) {
@@ -55,48 +71,76 @@ export default class TelegramCore implements ITelegramCore {
         //"Content-Length": data.length,
       };
     }
+    global.VERBOSE && !url.endsWith("getUpdates") && console.warn("\nsent " + url + "\n" + data + "\n");
+
+    const reportError = (details: string, err?: ErrnoException | string) => {
+      const method = url.replace(this.getUrl("" as keyof TelegramPR), "");
+      const errMsg = `\nTelegramCore. Error for ${method}() ${new Date().toISOString()}.`;
+      console.error(errMsg, details);
+      if (global.DEBUG) {
+        console.log("err:", JSON.stringify(err));
+        console.log("obj:", JSON.stringify(obj));
+      }
+    };
+
+    let repeatCount = 0;
 
     const makeRequest = () => {
       return new Promise<T>((resolve, reject) => {
-        const req = https
-          .request(
-            url,
-            options,
-            opts?.skipResponse
-              ? undefined
-              : (res) => {
-                  let txt = "";
-                  res.on("data", (chunk) => {
-                    txt += chunk;
-                  });
-                  res.on("end", () => {
-                    const result = JSON.parse(txt) as T;
-                    if (!opts?.skipApiErrors && (!result || !((result as unknown) as ApiResponse<unknown>).ok)) {
-                      const rErr = (result as unknown) as ApiError | undefined;
-                      if (rErr?.error_code === 429) {
-                        // limits 30 usersOrMessages/sec and 20 messagesToSameGroup/minute === error_code 429
-                        // todo theoreticaly possible: Maximum call stack size exceeded
+        // handle response
+        const callbackRes = opts?.skipResponse
+          ? undefined
+          : (res: IncomingMessage) => {
+              let txt = "";
+              res.on("data", (chunk) => {
+                txt += chunk;
+              });
+              res.on("end", () => {
+                const result = JSON.parse(txt) as T;
+                if (!opts?.skipApiErrors && (!result || !((result as unknown) as ApiResponse<unknown>).ok)) {
+                  const rErr = (result as unknown) as ApiError | undefined;
 
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        const t = rErr.parameters?.retry_after || 1;
-                        console.warn(`TelegramCore. Got 429 error. Will retry response after ${t} sec`);
-                        setTimeout(() => {
-                          resolve(makeRequest());
-                        }, t);
-                      } else {
-                        console.error("TelegramCore. API error: \n" + txt);
-                        reject(result);
-                      }
-                    } else {
-                      resolve(result);
-                    }
-                  });
+                  if (rErr?.error_code === 429) {
+                    // limits 30 usersOrMessages/sec and 20 messagesToSameGroup/minute === error_code 429
+                    const t =
+                      ((rErr as ApiError & { parameters?: ResponseParameters }).parameters?.retry_after || 1) * 1000;
+                    reportError(`Got 429 error. Will retry response after ${t} sec`);
+                    setTimeout(() => resolve(makeRequest()), t);
+                  } else {
+                    reportError("API error. " + txt);
+                    reject({ ...result, data });
+                  }
+                } else {
+                  resolve(result);
                 }
-          )
-          .on("error", (err) => {
-            console.error("TelegramCore. HTTP error: \n" + err.message);
-            reject(err);
+              });
+            };
+
+        const req = https.request(url, options, callbackRes);
+
+        // handle http errors
+        let timeourErr = false;
+        req
+          .on("timeout", () => {
+            timeourErr = true;
+            req.destroy();
+          })
+          .on("error", (err: ErrnoException) => {
+            if (timeourErr) {
+              reportError(`Got timeout ${options.timeout}. Will retry request`);
+              setTimeout(() => resolve(makeRequest()), 50);
+            } else if (err.code === "ETIMEDOUT") {
+              reportError("Got ETIMEDOUT. Will retry request");
+              setTimeout(() => resolve(makeRequest()), 50);
+            } else {
+              ++repeatCount;
+              if (repeatCount >= 5) {
+                reject(err);
+              } else {
+                reportError(`HTTP error => ${err.message}. Will retry request"`, err);
+                setTimeout(() => resolve(makeRequest()), 5000);
+              }
+            }
           });
 
         if (form) {
@@ -123,6 +167,10 @@ export default class TelegramCore implements ITelegramCore {
     opts?: MyHttpOptions<O>
   ): Promise<ApiResponse<T>> => this.httpRequest<ApiResponse<T>, O>("POST", this.getUrl(cmd), obj, opts);
 
+  getMe(): P<R<UserFromGetMe>> {
+    return this.httpGet("getMe");
+  }
+
   getUpdates(args?: Opts<"getUpdates">): P<ApiResponse<Update[]>> {
     return this.httpPost("getUpdates", args);
   }
@@ -136,11 +184,25 @@ export default class TelegramCore implements ITelegramCore {
   }
 
   sendMessage(args: Opts<"sendMessage">): P<ApiResponse<Message.TextMessage>> {
+    if (!args.parse_mode) {
+      args.parse_mode = "HTML";
+    }
     return this.httpPost("sendMessage", args);
   }
 
+  sendVoice(args: Opts<"sendVoice">): P<ApiResponse<Message.VoiceMessage>> {
+    return this.httpPost("sendVoice", args);
+  }
+
+  editMessageText(args: Opts<"editMessageText">): P<ApiResponse<true | (Update.Edited & Message.TextMessage)>> {
+    if (!args.parse_mode) {
+      args.parse_mode = "HTML";
+    }
+    return this.httpPost("editMessageText", args);
+  }
+
   deleteMessage(args: Opts<"deleteMessage">): P<ApiResponse<true>> {
-    return this.httpPost("deleteMessage", args);
+    return this.httpPost("deleteMessage", args).catch((v) => v);
   }
 
   /** Removing message without getting response and errors */
@@ -151,31 +213,32 @@ export default class TelegramCore implements ITelegramCore {
   static webHooks: {
     ref: TelegramCore;
     callback: (v: Update) => unknown;
+    port: number;
   }[] = [];
   static webHookServer?: http.Server;
 
   async setWebhook(args: Opts<"setWebhook">): P<ApiResponse<true>> {
-    args.url += this.botToken;
+    args.url += "/" + this.botToken;
     const v = await this.httpPost("setWebhook", args, { filePathKey: "certificate" });
-    if (!v.ok) {
-      throw new Error(v.description);
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      TelegramCore.webHooks.push({ ref: this, callback: () => {} });
-      return v as ApiResponse<true>;
-    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    TelegramCore.webHooks.push({ ref: this, callback: () => {}, port: 0 });
+    return v as ApiResponse<true>;
   }
 
-  listenWebhook(port: string | number, callback: (v: Update) => unknown): void {
+  listenWebhook(port: number, callback: (v: Update) => unknown): void {
     const el = TelegramCore.webHooks.find((v) => v.ref === this);
     if (el) {
       el.callback = callback;
+      el.port = port;
     } else {
-      TelegramCore.webHooks.push({ ref: this, callback });
+      throw new Error("You should fire setWebhook before listenWebhook");
+      // TelegramCore.webHooks.push({ ref: this, callback, port });
     }
 
     if (TelegramCore.webHookServer) {
-      // todo it can be wrong if different ports
+      if (!TelegramCore.webHooks.every((v) => v.port !== port)) {
+        throw new Error(`Impossible to listen webhook on port:${port}. Multiport isn't implemeneted`);
+      }
       return;
     }
 
@@ -205,9 +268,7 @@ export default class TelegramCore implements ITelegramCore {
 
     TelegramCore.webHookServer.listen(port);
 
-    process.on("beforeExit", () => {
-      TelegramCore.webHookServer && TelegramCore.webHookServer.close();
-    });
+    onExit(() => TelegramCore.webHookServer && TelegramCore.webHookServer.close());
   }
 
   tryDeleteWebhook(args?: Opts<"deleteWebhook">): P<ApiResponse<true>> | P<void> {
@@ -231,4 +292,40 @@ export default class TelegramCore implements ITelegramCore {
   getWebhookInfo(): P<ApiResponse<WebhookInfo>> {
     return this.httpGet("getWebhookInfo");
   }
+
+  leaveChat(args: { chat_id: string | number }): P<ApiResponse<true>> {
+    return this.httpPost("leaveChat", args);
+  }
+
+  getChatAdministrators(args: { chat_id: string | number }): P<R<ChatMember[]>> {
+    return this.httpPost("getChatAdministrators", args);
+  }
+
+  getChatMembersCount(args: { chat_id: string | number }): P<R<number>> {
+    return this.httpPost("getChatMembersCount", args);
+  }
+
+  answerCallbackQuery(args?: Opts<"answerCallbackQuery">): P<R<true>> {
+    return this.httpPost("answerCallbackQuery", args);
+  }
+
+  kickChatMember(args: Opts<"kickChatMember">): P<R<true>> {
+    return this.httpPost("kickChatMember", args);
+  }
+
+  unbanChatMember(args: Opts<"unbanChatMember">): P<R<true>> {
+    return this.httpPost("unbanChatMember", args);
+  }
+
+  createChatInviteLink(args: Opts<"createChatInviteLink">): P<R<ChatInviteLink>> {
+    return this.httpPost("createChatInviteLink", args);
+  }
+}
+
+export interface ErrnoException extends Error {
+  errno?: number;
+  code?: string;
+  path?: string;
+  syscall?: string;
+  stack?: string;
 }

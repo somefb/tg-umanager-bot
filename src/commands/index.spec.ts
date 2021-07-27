@@ -11,7 +11,10 @@ describe("botCommands", () => {
         expect(/^[a-z0-9_]+$/.test(v.command)).toBeTruthy();
       });
       test("description length (3..256)", () => {
-        expect(v.command.length >= 3 && v.command.length <= 256).toBeTruthy();
+        expect(v.isHidden || (v.description.length >= 3 && v.description.length <= 256)).toBeTruthy();
+      });
+      test("command type is defined", () => {
+        expect(v.type).toBeDefined();
       });
     });
   });
